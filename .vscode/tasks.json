@@ -1,0 +1,7 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {"label": "Run Flappy Chess", "type": "shell", "command": "./gradlew :lwjgl3:run", "windows": {"command": ".\\gradlew.bat :lwjgl3:run"}, "problemMatcher": []},
+        {"label": "Build and test", "type": "shell", "command": "./gradlew build", "windows": {"command": ".\\gradlew.bat build"}, "group": {"kind": "build", "isDefault": true}, "problemMatcher": []}
+    ]
+}

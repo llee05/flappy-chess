@@ -1,0 +1,33 @@
+plugins {
+    id 'base'
+}
+
+allprojects {
+    group = 'com.example.flappychess'
+    version = '0.1.0-SNAPSHOT'
+    repositories {
+        mavenCentral()
+        maven {
+            url = uri('https://jitpack.io')
+            content { includeGroup 'com.github.bhlangonijr' }
+        }
+    }
+}
+
+subprojects {
+    apply plugin: 'java-library'
+    java {
+        toolchain { languageVersion = JavaLanguageVersion.of(17) }
+    }
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.release = 17
+    }
+    tasks.withType(Test).configureEach { useJUnitPlatform() }
+}
+
+tasks.named('wrapper') {
+    gradleVersion = '9.1.0'
+    distributionType = Wrapper.DistributionType.ALL
+    distributionSha256Sum = 'b84e04fa845fecba48551f425957641074fcc00a88a84d2aae5808743b35fc85'
+}

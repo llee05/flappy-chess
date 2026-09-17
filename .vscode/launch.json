@@ -1,0 +1,11 @@
+{
+    "version": "0.2.0",
+    "configurations": [{
+        "type": "java",
+        "name": "Flappy Chess",
+        "request": "launch",
+        "mainClass": "com.example.flappychess.lwjgl3.Lwjgl3Launcher",
+        "projectName": "lwjgl3",
+        "cwd": "${workspaceFolder}/assets"
+    }]
+}

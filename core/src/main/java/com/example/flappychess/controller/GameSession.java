@@ -1,0 +1,137 @@
+package com.example.flappychess.controller;
+
+import com.badlogic.gdx.Input.Keys;
+import com.badlogic.gdx.InputAdapter;
+import com.example.flappychess.model.Birb;
+import com.example.flappychess.model.ChessClock;
+import com.example.flappychess.model.ChessGameModel;
+import com.example.flappychess.view.ChessBoardView;
+import com.github.bhlangonijr.chesslib.PieceType;
+import com.github.bhlangonijr.chesslib.Side;
+import com.github.bhlangonijr.chesslib.Square;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.function.LongSupplier;
+
+/** Game rules and input can be tested without starting OpenGL. */
+public final class GameSession extends InputAdapter {
+    private static final double STEP = 1.0 / 60.0;
+    private final ChessBoardView boardView = new ChessBoardView();
+    private final ChessController chess;
+    private final ChessClock clock;
+    private final LongSupplier nanoTime;
+    private final List<ChessController.CompletedMove> history = new ArrayList<>();
+    private final Set<Integer> pressed = new HashSet<>();
+    private final Birb white = new Birb(425, 625, 50, 50);
+    private final Birb black = new Birb(425, 125, 50, 50, -1);
+    private final BirbController whiteControls = new BirbController(white, 800, 800);
+    private final BirbController blackControls = new BirbController(black, 800, 800, Keys.LEFT, Keys.RIGHT, Keys.UP);
+    private double accumulator;
+    private Side carrier;
+    private String result;
+    private String reason;
+
+    public GameSession() { this(new ChessGameModel(), Duration.ofMinutes(5), System::nanoTime); }
+
+    GameSession(ChessGameModel model, Duration initialTime, LongSupplier nanoTime) {
+        chess = new ChessController(boardView, model);
+        clock = new ChessClock(initialTime);
+        this.nanoTime = nanoTime;
+        clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
+    }
+
+    public void update(float delta) {
+        tickClock();
+        if (isGameOver()) return;
+        // Bound catch-up after a suspended window; the chess clock still uses real time.
+        accumulator += Math.max(0, Math.min(delta, 0.25f));
+        while (accumulator + 1e-9 >= STEP) {
+            whiteControls.update();
+            blackControls.update();
+            accumulator -= STEP;
+        }
+    }
+
+    @Override public boolean keyDown(int key) {
+        if (!pressed.add(key)) return true;
+        tickClock();
+        if (isGameOver()) return true;
+        if (chess.hasPendingPromotion()) {
+            PieceType type = switch (key) {
+                case Keys.Q -> PieceType.QUEEN;
+                case Keys.R -> PieceType.ROOK;
+                case Keys.B -> PieceType.BISHOP;
+                case Keys.N -> PieceType.KNIGHT;
+                default -> null;
+            };
+            if (type != null) finishMove(chess.choosePromotion(type));
+            return true;
+        }
+        whiteControls.handleKeyPressed(key);
+        blackControls.handleKeyPressed(key);
+        if (key == Keys.E) toggleCarry(Side.WHITE, white);
+        if (key == Keys.ENTER) toggleCarry(Side.BLACK, black);
+        return true;
+    }
+
+    @Override public boolean keyUp(int key) {
+        pressed.remove(key);
+        whiteControls.handleKeyReleased(key);
+        blackControls.handleKeyReleased(key);
+        return true;
+    }
+
+    public void releaseInput() {
+        for (int key : Set.copyOf(pressed)) keyUp(key);
+    }
+
+    private void toggleCarry(Side side, Birb bird) {
+        if ((carrier != null && carrier != side) || chess.getSideToMove() != side) return;
+        Square square = ChessBoardView.squareForPoint(bird.getX() + 25, bird.getY() + 25);
+        String symbol = chess.toggleCarryAt(square);
+        carrier = symbol == null ? null : side;
+        finishMove(chess.consumeCompletedMove());
+    }
+
+    private void finishMove(ChessController.CompletedMove move) {
+        if (move == null) return;
+        carrier = null;
+        history.add(move);
+        switch (chess.getGameStatus()) {
+            case CHECKMATE -> end(sideName(chess.getWinner()) + " wins", "Checkmate");
+            case STALEMATE -> end("Draw", "Stalemate");
+            case DRAW -> end("Draw", "Draw by chess rules");
+            default -> { }
+        }
+    }
+
+    private void tickClock() {
+        if (isGameOver()) return;
+        Side side = chess.getSideToMove();
+        // Input ticks before a move switches sides, charging the elapsed time correctly.
+        clock.tick(nanoTime.getAsLong(), side);
+        if (clock.isExpired(side)) end(sideName(side.flip()) + " wins", sideName(side) + " ran out of time");
+    }
+
+    private void end(String title, String reason) {
+        result = title;
+        this.reason = reason;
+        releaseInput();
+    }
+
+    public static String sideName(Side side) { return side == Side.WHITE ? "White" : "Black"; }
+    public boolean isGameOver() { return result != null; }
+    public String getResult() { return result; }
+    public String getReason() { return reason; }
+    public ChessBoardView getBoardView() { return boardView; }
+    public ChessController getChess() { return chess; }
+    public ChessClock getClock() { return clock; }
+    public Birb getWhite() { return white; }
+    public Birb getBlack() { return black; }
+    public Side getCarrier() { return carrier; }
+    public List<ChessController.CompletedMove> getHistory() { return Collections.unmodifiableList(history); }
+}
