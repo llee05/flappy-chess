@@ -46,8 +46,8 @@ class BirbControllerTest {
         controller.handleKeyPressed(Keys.UP);
         controller.update();
 
-        assertEquals(10.1, birb.getX(), EPSILON);
-        assertEquals(-0.797, birb.getVelocityY(), EPSILON);
+        assertEquals(10.6, birb.getX(), EPSILON);
+        assertEquals(-4.88, birb.getVelocityY(), EPSILON);
     }
 
     @Test
@@ -75,7 +75,7 @@ class BirbControllerTest {
         controller.handleKeyReleased(Keys.A);
         controller.update();
 
-        assertEquals(10.1, birb.getX(), EPSILON);
+        assertEquals(10.6, birb.getX(), EPSILON);
         assertTrue(birb.getVelocityX() > 0);
     }
 
@@ -87,18 +87,18 @@ class BirbControllerTest {
         controller.handleKeyPressed(Keys.SPACE);
         controller.update();
 
-        assertEquals(-0.797, birb.getVelocityY(), EPSILON);
+        assertEquals(-4.88, birb.getVelocityY(), EPSILON);
 
         controller.handleKeyPressed(Keys.SPACE);
         controller.update();
 
-        assertEquals(-0.794, birb.getVelocityY(), EPSILON);
+        assertEquals(-4.76, birb.getVelocityY(), EPSILON);
 
         controller.handleKeyReleased(Keys.SPACE);
         controller.handleKeyPressed(Keys.SPACE);
         controller.update();
 
-        assertEquals(-0.797, birb.getVelocityY(), EPSILON);
+        assertEquals(-4.88, birb.getVelocityY(), EPSILON);
     }
 
     @Test

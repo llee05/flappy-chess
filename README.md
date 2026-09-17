@@ -56,7 +56,7 @@ promotion and while the window is unfocused.
 
 ## Project layout
 
-- `core/src/main/java/com/example/flappychess/model`: original bird physics,
+- `core/src/main/java/com/example/flappychess/model`: tuned bird physics,
   chess rules, and clock models, with the package renamed.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
 - `core/.../view`: board presentation state and libGDX drawing.
@@ -65,6 +65,9 @@ promotion and while the window is unfocused.
 - `core/src/test`: migrated model/controller tests and new session/coordinate tests.
 
 The libGDX loop uses a fixed 60 Hz physics step and a real-time chess clock.
+Birds travel horizontally at up to 180 logical pixels/second. A flap climbs
+about one square (100 pixels), reaching its peak in about 0.7 seconds. Movement
+tuning lives in `Birb`; its constants use pixels per physics step, not per frame.
 The board scales with the window while retaining its original 800x800 logical
 coordinates. Focus loss releases held controls. GPU resources are disposed on exit.
 The original JavaFX views, FXML placeholder, and JavaFX-specific view tests were
@@ -75,6 +78,9 @@ Versions: Java 17, Gradle 9.1.0 (checksum-verified wrapper), libGDX 1.14.2,
 chesslib 1.3.6, JUnit 5.12.1. Dependencies resolve from Maven Central, with
 JitPack restricted to chesslib's group. Version settings are in
 `gradle.properties` and the wrapper configuration.
+
+See [AGENTS.md](AGENTS.md) for architecture, gameplay invariants, and contributor
+validation guidance.
 
 Reference: [libGDX development setup](https://libgdx.com/wiki/start/setup) and
 [project structure/setup](https://libgdx.com/wiki/start/project-generation).

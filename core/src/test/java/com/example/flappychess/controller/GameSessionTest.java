@@ -102,6 +102,6 @@ class GameSessionTest {
         game.update(1f / 60);
         game.releaseInput();
         game.keyDown(Keys.SPACE);
-        assertEquals(-0.8, game.getWhite().getVelocityY());
+        assertEquals(-5.0, game.getWhite().getVelocityY());
     }
 }

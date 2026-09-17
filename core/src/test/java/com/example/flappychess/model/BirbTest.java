@@ -26,8 +26,8 @@ class BirbTest {
 
         birb.update();
 
-        assertEquals(0.003, birb.getVelocityY(), EPSILON);
-        assertEquals(20.003, birb.getY(), EPSILON);
+        assertEquals(0.12, birb.getVelocityY(), EPSILON);
+        assertEquals(20.12, birb.getY(), EPSILON);
         assertEquals(10, birb.getX(), EPSILON);
     }
 
@@ -38,8 +38,8 @@ class BirbTest {
         birb.jump();
         birb.update();
 
-        assertEquals(-0.797, birb.getVelocityY(), EPSILON);
-        assertEquals(19.203, birb.getY(), EPSILON);
+        assertEquals(-4.88, birb.getVelocityY(), EPSILON);
+        assertEquals(15.12, birb.getY(), EPSILON);
     }
 
     @Test
@@ -50,7 +50,7 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(1.0, birb.getVelocityY(), EPSILON);
+        assertEquals(6.0, birb.getVelocityY(), EPSILON);
     }
 
     @Test
@@ -59,8 +59,8 @@ class BirbTest {
 
         birb.update();
 
-        assertEquals(-0.003, birb.getVelocityY(), EPSILON);
-        assertEquals(19.997, birb.getY(), EPSILON);
+        assertEquals(-0.12, birb.getVelocityY(), EPSILON);
+        assertEquals(19.88, birb.getY(), EPSILON);
         assertEquals(10, birb.getX(), EPSILON);
     }
 
@@ -71,8 +71,8 @@ class BirbTest {
         birb.jump();
         birb.update();
 
-        assertEquals(0.797, birb.getVelocityY(), EPSILON);
-        assertEquals(20.797, birb.getY(), EPSILON);
+        assertEquals(4.88, birb.getVelocityY(), EPSILON);
+        assertEquals(24.88, birb.getY(), EPSILON);
     }
 
     @Test
@@ -83,7 +83,7 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(-1.0, birb.getVelocityY(), EPSILON);
+        assertEquals(-6.0, birb.getVelocityY(), EPSILON);
     }
 
     @Test
@@ -95,7 +95,7 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(11.9, birb.getX(), EPSILON);
+        assertEquals(22.0, birb.getX(), EPSILON);
     }
 
     @Test
@@ -105,7 +105,7 @@ class BirbTest {
         birb.setHorizontalInput(999);
         birb.update();
 
-        assertEquals(10.1, birb.getX(), EPSILON);
+        assertEquals(10.6, birb.getX(), EPSILON);
     }
 
     @Test
@@ -117,8 +117,8 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(8.1, birb.getX(), EPSILON);
-        assertEquals(-0.45, birb.getVelocityX(), EPSILON);
+        assertEquals(-2.0, birb.getX(), EPSILON);
+        assertEquals(-3.0, birb.getVelocityX(), EPSILON);
     }
 
     @Test
