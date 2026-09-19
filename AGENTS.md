@@ -69,6 +69,7 @@ module's resources. Tests mirror the core packages in `core/src/test/java`.
 Keep game logic testable without an OpenGL context; rendering and GPU resources
 belong in the renderer/lifecycle layer. Use chesslib for legality and outcomes.
 Follow the surrounding Java style and avoid unrelated refactors or dependency changes.
+Where appropriate, split each task into several focused commits, each covering one coherent change.
 
 For physics or input changes, run `:core:test`; preserve mirrored gravity, bounds,
 single-press flaps, focus release, and render-rate independence. Adjust existing
