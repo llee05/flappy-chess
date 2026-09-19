@@ -1,8 +1,6 @@
 # Flappy Chess
 
-A desktop libGDX port of the JavaFX example in `../flappy-birb`, based on
-commit `5eebafb4e43d1c9a3dd2350c3a26636c1953f5cd` (Add promotion choices).
-The original project is preserved. This directory is an independent Git repository.
+A desktop libGDX chess game controlled by two flying birds.
 
 ## Run and develop
 
@@ -70,6 +68,10 @@ about one square (100 pixels), reaching its peak in about 0.7 seconds. Movement
 tuning lives in `Birb`; its constants use pixels per physics step, not per frame.
 The board scales with the window while retaining its original 800x800 logical
 coordinates. Focus loss releases held controls. GPU resources are disposed on exit.
+The ivory-and-sage board includes square coordinates, legal destination markers,
+and a bracket around the active bird's square. Gold identifies the white bird;
+blue identifies the black bird. The side panels show the move journal, control
+keycaps, and active clock, with a warning color in the final 30 seconds.
 The original JavaFX views, FXML placeholder, and JavaFX-specific view tests were
 replaced; this port has no JavaFX or FXGL dependency. Audio is disabled because
 the example contains no sound assets.
@@ -87,8 +89,8 @@ Reference: [libGDX development setup](https://libgdx.com/wiki/start/setup) and
 
 ## Attribution
 
-Game logic and images come from the existing
-[flappy-birb project](https://github.com/llee05/flappy-birb).
 `wings.png` is used in the game; the other original images are retained as assets.
 Noto Sans Symbols 2 is bundled under the SIL Open Font License; see
 `assets/fonts/OFL.txt`. No new license is assigned to the original game or images.
+Liberation Sans is bundled for the interface under the SIL Open Font License;
+see `assets/fonts/Liberation-LICENSE.txt` for its copyright and license.
