@@ -3,11 +3,11 @@ package com.example.flappychess.view;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.utils.Disposable;
@@ -16,64 +16,47 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.model.Birb;
 import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
+import java.util.Locale;
 
-/** libGDX drawing; model coordinates are converted from top-left to bottom-left here. */
+/** Pixel-art presentation; model coordinates retain their original top-left origin. */
 public final class GameRenderer implements Disposable {
-    private static final Color LIGHT = Color.valueOf("e5e7d6");
-    private static final Color DARK = Color.valueOf("7f9b8b");
-    private static final Color PANEL = Color.valueOf("162c28");
-    private static final Color CARD = Color.valueOf("203a33");
-    private static final Color EDGE = Color.valueOf("345047");
-    private static final Color INK = Color.valueOf("243d35");
-    private static final Color CREAM = Color.valueOf("f4efdf");
-    private static final Color MINT = Color.valueOf("b9ddba");
-    private static final Color GOLD = Color.valueOf("e9bc73");
-    private static final Color BLUE = Color.valueOf("a8ccdf");
-    private static final Color MUTED = Color.valueOf("a0b5a8");
-    private static final Color DANGER = Color.valueOf("f09983");
-    private static final Color SHADOW = new Color(0.06f, 0.12f, 0.10f, 0.18f);
-    private static final Color SELECTION = new Color(0.96f, 0.78f, 0.39f, 0.36f);
-    private static final Color TARGET = new Color(0.10f, 0.30f, 0.23f, 0.45f);
-    private static final Color VEIL = new Color(0.035f, 0.075f, 0.06f, 0.78f);
+    private static final Color LIGHT = Color.valueOf("daccaa");
+    private static final Color LIGHT_EDGE = Color.valueOf("bdb496");
+    private static final Color LIGHT_SHINE = Color.valueOf("e5d9ba");
+    private static final Color DARK = Color.valueOf("78958e");
+    private static final Color DARK_EDGE = Color.valueOf("657e7c");
+    private static final Color DARK_SHINE = Color.valueOf("87a297");
+    private static final Color PANEL = Color.valueOf("20283c");
+    private static final Color CARD = Color.valueOf("2c354d");
+    private static final Color EDGE = Color.valueOf("46516a");
+    private static final Color INK = Color.valueOf("202538");
+    private static final Color CREAM = Color.valueOf("f1dfb3");
+    private static final Color MINT = Color.valueOf("add2b2");
+    private static final Color GOLD = Color.valueOf("efb95b");
+    private static final Color BLUE = Color.valueOf("78c4d0");
+    private static final Color MUTED = Color.valueOf("94a3b8");
+    private static final Color DANGER = Color.valueOf("ed8c78");
+    private static final Color SELECTED = Color.valueOf("baa96d");
+    private static final Color SHADOW = new Color(0.08f, 0.12f, 0.18f, 0.22f);
+    private static final Color VEIL = new Color(0.06f, 0.08f, 0.15f, 0.86f);
     private final FitViewport viewport = new FitViewport(1200, 800);
     private final SpriteBatch batch = new SpriteBatch();
     private final ShapeRenderer shapes = new ShapeRenderer();
-    private final BitmapFont font = makeFont("LiberationSans-Regular.ttf", 18, null, null);
-    private final BitmapFont heading = makeFont("LiberationSans-Bold.ttf", 26, null, null);
-    private final BitmapFont clockFont = makeFont("LiberationSans-Regular.ttf", 44, null, null);
-    private final BitmapFont whitePieces = makeFont("NotoSansSymbols2-Regular.ttf", 66, CREAM, INK);
-    private final BitmapFont blackPieces = makeFont("NotoSansSymbols2-Regular.ttf", 66, INK, CREAM);
-    private final GlyphLayout layout = new GlyphLayout();
-    private final Texture wings = new Texture(Gdx.files.internal("images/wings.png"));
+    private final PixelFont font = new PixelFont();
+    private final PixelSprites sprites = new PixelSprites();
+    // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
+    private final FrameBuffer canvas = new FrameBuffer(Pixmap.Format.RGBA8888, 600, 400, false);
+    private final TextureRegion canvasImage;
     private float animationTime;
 
     public GameRenderer() {
-        wings.setFilter(Texture.TextureFilter.Linear, Texture.TextureFilter.Linear);
+        canvas.getColorBufferTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        canvasImage = new TextureRegion(canvas.getColorBufferTexture());
+        canvasImage.flip(false, true);
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-    }
-
-    private static BitmapFont makeFont(String file, int size, Color fill, Color border) {
-        FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("fonts/" + file));
-        try {
-            FreeTypeFontGenerator.FreeTypeFontParameter parameters = new FreeTypeFontGenerator.FreeTypeFontParameter();
-            parameters.size = size;
-            parameters.minFilter = Texture.TextureFilter.Linear;
-            parameters.magFilter = Texture.TextureFilter.Linear;
-            if (fill != null) {
-                // Use filled silhouettes for both sides, with contrasting edges on every tile.
-                parameters.characters = " \u265a\u265b\u265c\u265d\u265e\u265f";
-                parameters.color = fill;
-                parameters.borderColor = border;
-                parameters.borderWidth = 1.3f;
-                parameters.shadowOffsetY = 2;
-                parameters.shadowColor = SHADOW;
-            }
-            return generator.generateFont(parameters);
-        } finally {
-            generator.dispose();
-        }
     }
 
     public void resize(int width, int height) { viewport.update(width, height, true); }
@@ -81,13 +64,14 @@ public final class GameRenderer implements Disposable {
 
     public void render(GameSession game) {
         animationTime = (animationTime + Math.min(Gdx.graphics.getDeltaTime(), 0.1f)) % 1000;
-        ScreenUtils.clear(0.045f, 0.085f, 0.07f, 1);
-        viewport.apply();
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         batch.setProjectionMatrix(viewport.getCamera().combined);
+        canvas.begin();
+        ScreenUtils.clear(PANEL);
         beginShapes();
         drawBoard(game);
         drawPanels(game);
+        drawBirdMarkers(game);
         shapes.end();
 
         batch.begin();
@@ -96,22 +80,21 @@ public final class GameRenderer implements Disposable {
         for (Square square : Square.values()) {
             if (square == Square.NONE || square == board.getHiddenPieceSquare()) continue;
             Piece piece = board.getBoard().getPiece(square);
-            if (piece != Piece.NONE) drawPiece(piece, squareX(square) + 50, squareY(square) + 51, 1);
+            if (piece != Piece.NONE) drawPiece(piece, squareX(square) + 50, squareY(square) + 50, 4);
         }
-        drawWings(game.getWhite(), Side.WHITE, game);
-        drawWings(game.getBlack(), Side.BLACK, game);
+        drawBird(game.getWhite(), Side.WHITE, game);
+        drawBird(game.getBlack(), Side.BLACK, game);
         drawPanelText(game);
         batch.end();
-
-        beginShapes();
-        drawBirdBody(game.getWhite(), Side.WHITE, game);
-        drawBirdBody(game.getBlack(), Side.BLACK, game);
-        shapes.end();
-        batch.begin();
-        drawCarriedPiece(game.getWhite(), Side.WHITE, game);
-        drawCarriedPiece(game.getBlack(), Side.BLACK, game);
-        batch.end();
         if (game.isGameOver() || game.getChess().hasPendingPromotion()) overlay(game);
+        canvas.end();
+
+        ScreenUtils.clear(INK);
+        viewport.apply();
+        batch.begin();
+        batch.setColor(Color.WHITE);
+        batch.draw(canvasImage, 0, 0, 1200, 800);
+        batch.end();
     }
 
     private void drawBoard(GameSession game) {
@@ -120,194 +103,233 @@ public final class GameRenderer implements Disposable {
             for (int col = 0; col < 8; col++) {
                 Square square = ChessBoardView.squareForCell(row, col);
                 float x = squareX(square), y = squareY(square);
-                rect(x, y, 100, 100, (row + col) % 2 == 0 ? LIGHT : DARK);
+                boolean light = (row + col) % 2 == 0;
+                Color base = light ? LIGHT : DARK;
+                Color edge = light ? LIGHT_EDGE : DARK_EDGE;
+                Color shine = light ? LIGHT_SHINE : DARK_SHINE;
+                rect(x, y, 100, 100, edge);
+                rect(x + 2, y + 4, 96, 94, base);
+                rect(x + 4, y + 96, 92, 2, shine);
+                rect(x + 2, y + 6, 2, 88, shine);
+                // Sparse, deterministic stone flecks: no texture shimmer between frames.
+                for (int i = 0; i < 4; i++) {
+                    int dx = 12 + (row * 17 + col * 29 + i * 23) % 74;
+                    int dy = 12 + (row * 31 + col * 11 + i * 19) % 74;
+                    rect(x + dx / 2 * 2, y + dy / 2 * 2, i % 2 == 0 ? 4 : 2, 2, shine);
+                }
                 if (square == board.getSelectedSquare()) {
-                    rect(x, y, 100, 100, SELECTION);
-                    outline(x + 3, y + 3, 94, 94, 3, GOLD);
+                    rect(x + 4, y + 4, 92, 92, SELECTED);
+                    corners(x + 6, y + 6, 88, 88, 18, 4, GOLD);
                 }
                 Piece piece = board.getBoard().getPiece(square);
                 if (piece != Piece.NONE && square != board.getHiddenPieceSquare()) {
-                    shapes.setColor(SHADOW);
-                    shapes.ellipse(x + 25, y + 16, 50, 12, 32);
+                    rect(x + 26, y + 10, 48, 6, SHADOW);
+                    rect(x + 32, y + 8, 36, 2, SHADOW);
                 }
                 if (board.getLegalTargets().contains(square)) {
                     if (piece == Piece.NONE) {
-                        circle(x + 50, y + 50, 12, TARGET);
-                        circle(x + 50, y + 50, 4, MINT);
+                        diamond(x + 50, y + 50, 10, INK);
+                        diamond(x + 50, y + 52, 4, MINT);
                     } else {
-                        outline(x + 5, y + 5, 90, 90, 4, TARGET);
+                        corners(x + 8, y + 8, 84, 84, 22, 6, DANGER);
                     }
+                }
+                if (piece.getPieceType() == PieceType.KING && piece.getPieceSide() == game.getChess().getSideToMove()
+                        && board.getBoard().isKingAttacked()) {
+                    outline(x + 4, y + 4, 92, 92, 4, DANGER);
                 }
             }
         }
         if (!game.isGameOver() && !game.getChess().hasPendingPromotion()) {
-            Birb active = game.getChess().getSideToMove() == Side.WHITE ? game.getWhite() : game.getBlack();
+            Side side = game.getChess().getSideToMove();
+            Birb active = side == Side.WHITE ? game.getWhite() : game.getBlack();
             Square square = ChessBoardView.squareForPoint(active.getX() + 25, active.getY() + 25);
-            if (square != Square.NONE) {
-                float x = squareX(square), y = squareY(square);
-                // Corner brackets mark the exact square used by pickup/drop.
-                Color color = game.getChess().getSideToMove() == Side.WHITE ? GOLD : BLUE;
-                for (int i = 0; i < 2; i++) {
-                    for (int j = 0; j < 2; j++) {
-                        rect(x + 6 + i * 73, y + 6 + j * 85, 15, 3, color);
-                        rect(x + 6 + i * 85, y + 6 + j * 73, 3, 15, color);
-                    }
-                }
-            }
+            if (square != Square.NONE) corners(squareX(square) + 8, squareY(square) + 8, 84, 84, 14, 4, accent(side));
         }
     }
 
     private void drawPanels(GameSession game) {
         rect(0, 0, 200, 800, PANEL);
         rect(1000, 0, 200, 800, PANEL);
-        rect(196, 0, 4, 800, EDGE);
-        rect(1000, 0, 4, 800, EDGE);
-        rect(20, 771, 28, 3, GOLD);
-        rounded(20, 640, 156, 26, 7, CARD);
-        rect(20, 613, 156, 1, EDGE);
-        rect(20, 551, 156, 1, EDGE);
+        rect(192, 0, 4, 800, EDGE);
+        rect(196, 0, 4, 800, INK);
+        rect(1000, 0, 4, 800, INK);
+        rect(1004, 0, 4, 800, EDGE);
+        rect(20, 776, 24, 4, GOLD);
+        rect(48, 776, 8, 4, GOLD);
+        star(168, 744, 4, GOLD);
+        star(158, 704, 2, BLUE);
+        stepped(16, 580, 168, 76, CARD, EDGE);
+        star(36, 640, 2, MUTED);
+        star(112, 646, 2, CREAM);
+        star(164, 630, 2, BLUE);
+        rect(34, 606, 46, 4, DARK_SHINE);
+        rect(40, 600, 34, 6, DARK_EDGE);
+        rect(120, 612, 42, 4, DARK_SHINE);
+        rect(126, 606, 30, 6, DARK_EDGE);
+        rect(20, 566, 156, 2, EDGE);
         int rows = (game.getHistory().size() + 1) / 2;
-        int firstRow = Math.max(0, rows - 16);
+        int firstRow = Math.max(0, rows - 15);
         for (int row = firstRow; row < rows; row++) {
-            float y = 518 - (row - firstRow) * 23;
-            if ((row - firstRow) % 2 == 0) rounded(15, y - 5, 166, 23, 4, CARD);
-            if (row == rows - 1) rect(15, y - 2, 2, 17, GOLD);
+            float y = 480 - (row - firstRow) * 22;
+            if ((row - firstRow) % 2 == 0) rect(16, y - 2, 168, 22, CARD);
+            if (row == rows - 1) rect(16, y, 2, 16, accent(game.getHistory().get(game.getHistory().size() - 1).side()));
         }
-        rect(20, 130, 156, 1, EDGE);
+        rect(20, 134, 156, 2, EDGE);
+        stepped(16, 24, 42, 24, CARD, EDGE);
         drawClockCard(game, Side.BLACK, 650);
-        drawClockCard(game, Side.WHITE, 28);
-        rounded(1016, 550, 168, 76, 10, CARD);
-        circle(1032, 603, 4, game.isGameOver() ? MUTED : MINT);
-        rect(1020, 336, 160, 1, EDGE);
-        drawKey(1020, 464, 61);
-        drawKey(1020, 431, 61);
-        drawKey(1020, 398, 61);
-        drawKey(1020, 261, 77);
-        drawKey(1020, 228, 77);
-        drawKey(1020, 195, 77);
+        drawClockCard(game, Side.WHITE, 24);
+        stepped(1016, 550, 168, 76, CARD, EDGE);
+        diamond(1032, 608, 4, game.isGameOver() ? MUTED : MINT);
+        rect(1020, 340, 160, 2, EDGE);
+        for (int y : new int[] {462, 428, 394, 260, 226, 192}) drawKey(1020, y, 68);
     }
 
     private void drawClockCard(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        Color accent = seconds <= 30 ? DANGER : side == Side.WHITE ? GOLD : BLUE;
-        rounded(1016, y, 168, 130, 10, active ? EDGE : CARD);
-        if (active) rect(1016, y + 20, 3, 90, accent);
-        circle(1035, y + 105, 7, side == Side.WHITE ? CREAM : INK);
-        if (side == Side.BLACK) circle(1035, y + 105, 3, BLUE);
-        rect(1032, y + 14, 136, 3, PANEL);
-        rect(1032, y + 14, 136 * Math.min(1, seconds / 300f), 3, accent);
+        Color color = seconds <= 30 ? DANGER : accent(side);
+        stepped(1016, y, 168, 130, CARD, active ? color : EDGE);
+        if (active) rect(1016, y + 38, 4, 54, color);
+        for (int i = 0; i < 17; i++) {
+            rect(1032 + i * 8, y + 14, 6, 4, i < (int) Math.ceil(17 * Math.min(1, seconds / 300f)) ? color : EDGE);
+        }
     }
 
     private void drawKey(float x, float y, float width) {
-        rounded(x, y - 2, width, 26, 5, PANEL);
-        rounded(x, y, width, 26, 5, EDGE);
+        stepped(x, y, width, 26, EDGE, INK);
+        rect(x + 4, y + 22, width - 8, 2, MUTED);
     }
 
     private void drawCoordinates() {
         for (int i = 0; i < 8; i++) {
-            text(font, Integer.toString(8 - i), 207, 791 - i * 100, 0.67f, i % 2 == 0 ? INK : CREAM);
-            text(font, Character.toString((char) ('a' + i)), 287 + i * 100, 17, 0.67f, i % 2 == 0 ? CREAM : INK);
+            text(Integer.toString(8 - i), 208, 792 - i * 100, 2, i % 2 == 0 ? DARK_EDGE : LIGHT_SHINE);
+            text(Character.toString((char) ('a' + i)), 286 + i * 100, 18, 2, i % 2 == 0 ? LIGHT_SHINE : DARK_EDGE);
         }
     }
 
     private void drawPanelText(GameSession game) {
-        text(heading, "FLAPPY", 20, 751, 1.03f, CREAM);
-        text(heading, "CHESS", 20, 720, 1.03f, CREAM);
-        text(font, "A little flight. A little strategy.", 20, 683, 0.65f, MUTED);
-        centered(font, "LOCAL DUEL   /   5 MIN", 98, 658, 0.65f, MINT);
-        text(heading, "Move journal", 20, 595, 0.67f, CREAM);
-        text(font, "#", 23, 570, 0.65f, MUTED);
-        text(font, "WHITE", 53, 570, 0.65f, MUTED);
-        text(font, "BLACK", 119, 570, 0.65f, MUTED);
+        text("FLAPPY", 20, 760, 4, CREAM);
+        text("CHESS", 20, 720, 4, CREAM);
+        text("SKY-HIGH DUELS", 16, 674, 2, MUTED);
+        drawBirdSprite(Side.WHITE, 56, 630, 2, false, frame());
+        drawBirdSprite(Side.BLACK, 140, 636, 2, true, (frame() + 1) % 3);
+        centered("LOCAL / 5 MIN", 100, 598, 2, MINT);
+        text("MOVE LOG", 20, 550, 2, CREAM);
+        text("#", 22, 520, 2, MUTED);
+        text("WHITE", 44, 520, 2, GOLD);
+        text("BLACK", 116, 520, 2, BLUE);
         var moves = game.getHistory();
         if (moves.isEmpty()) {
-            text(font, "The board is yours.", 20, 525, 0.82f, CREAM);
-            text(font, "Take flight and make\nthe first move.", 20, 498, 0.78f, MUTED);
+            text("TAKE FLIGHT.", 20, 478, 2, CREAM);
+            text("Find a piece.\nE to pick up.", 20, 448, 2, MUTED);
+            text("01", 20, 358, 4, EDGE);
+            text("FLY", 78, 354, 2, MINT);
+            text("02", 20, 306, 4, EDGE);
+            text("PICK UP", 78, 302, 2, GOLD);
+            text("03", 20, 254, 4, EDGE);
+            text("DELIVER", 78, 250, 2, BLUE);
         } else {
             int rows = (moves.size() + 1) / 2;
-            int firstRow = Math.max(0, rows - 16);
+            int firstRow = Math.max(0, rows - 15);
             for (int row = firstRow; row < rows; row++) {
                 int index = row * 2;
-                float y = 534 - (row - firstRow) * 23;
-                text(font, Integer.toString(row + 1), 23, y, 0.7f, MUTED);
-                text(font, moves.get(index).notation(), 53, y, 0.8f, CREAM);
-                if (index + 1 < moves.size()) text(font, moves.get(index + 1).notation(), 119, y, 0.8f, CREAM);
+                float y = 496 - (row - firstRow) * 22;
+                String number = Integer.toString(row + 1);
+                text(number, 40 - font.width(number, 2), y, 2, MUTED);
+                journalMove(moves.get(index).notation(), 44, y);
+                if (index + 1 < moves.size()) journalMove(moves.get(index + 1).notation(), 116, y);
             }
         }
-        text(font, "FLY. PICK UP. DELIVER.", 20, 110, 0.66f, GOLD);
-        text(font, "Carry your piece to a\nmarked destination.", 20, 86, 0.78f, MUTED);
-        text(font, "ESC", 20, 28, 0.65f, CREAM);
-        text(font, "Leave game", 54, 28, 0.7f, MUTED);
+        text("MAKE EVERY", 20, 114, 2, CREAM);
+        text("FLAP COUNT.", 20, 92, 2, GOLD);
+        centered("ESC", 37, 42, 2, CREAM);
+        text("EXIT GAME", 66, 42, 2, MUTED);
         drawClockText(game, Side.BLACK, 650);
-        drawClockText(game, Side.WHITE, 28);
-        text(font, game.isGameOver() ? "GAME COMPLETE" : "ON THE WING", 1044, 610, 0.64f, MINT);
-        String status = game.isGameOver() ? "Well played." : GameSession.sideName(game.getChess().getSideToMove()) + " to move";
-        if (!game.isGameOver() && game.getBoardView().getBoard().isKingAttacked()) status = "King in check";
-        text(heading, status, 1030, 587, 0.70f, CREAM);
-        text(font, "WHITE", 1020, 529, 0.73f, GOLD);
-        text(font, "Gravity pulls down", 1020, 509, 0.7f, MUTED);
-        control("A / D", "Move", 464, 61);
-        control("SPACE", "Flap", 431, 61);
-        control("E", "Pick / drop", 398, 61);
-        text(font, "BLACK", 1020, 326, 0.73f, BLUE);
-        text(font, "Gravity pulls up", 1020, 306, 0.7f, MUTED);
-        control("LEFT / RIGHT", "Move", 261, 77);
-        control("UP", "Flap", 228, 77);
-        control("ENTER", "Pick / drop", 195, 77);
-        text(font, "One press. One flap.", 1020, 182, 0.7f, MUTED);
+        drawClockText(game, Side.WHITE, 24);
+        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", moves.size() / 2 + 1), 1046, 614, 2, MINT);
+        String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
+        if (!game.isGameOver()) {
+            if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
+            else if (game.getCarrier() != null) status = "DELIVER PIECE";
+        }
+        centered(status, 1100, 584, 2, CREAM);
+        text("WHITE", 1020, 534, 2, GOLD);
+        text("FALLS DOWN", 1020, 508, 2, MUTED);
+        control("A / D", "MOVE", 462);
+        control("SPACE", "FLAP", 428);
+        control("E", "CARRY", 394);
+        text("PICK UP / DROP", 1020, 376, 2, MUTED);
+        text("BLACK", 1020, 328, 2, BLUE);
+        text("FALLS UP", 1020, 302, 2, MUTED);
+        control("< / >", "MOVE", 260);
+        control("UP", "FLAP", 226);
+        control("ENTER", "CARRY", 192);
+        text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
     }
 
-    private void control(String key, String action, float y, float width) {
-        centered(font, key, 1020 + width / 2, y + 18, key.length() > 8 ? 0.55f : 0.65f, CREAM);
-        text(font, action, 1020 + width + 9, y + 19, 0.72f, MUTED);
+    private void journalMove(String notation, float x, float y) {
+        font.drawCompact(batch, notation, snap(x), snap(y), 2, CREAM);
+    }
+
+    private void control(String key, String action, float y) {
+        centered(key, 1054, y + 20, 2, CREAM);
+        text(action, 1098, y + 20, 2, MUTED);
     }
 
     private void drawClockText(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        text(font, GameSession.sideName(side).toUpperCase(), 1050, y + 111, 0.73f, CREAM);
-        text(clockFont, time(seconds), 1031, y + 86, 1, seconds <= 30 ? DANGER : CREAM);
-        text(font, game.isGameOver() ? "FINISHED" : active ? "YOUR MOVE" : "WAITING", 1032, y + 34, 0.61f, active ? MINT : MUTED);
+        drawBirdSprite(side, 1038, y + 106, 2, false, active ? frame() : 1);
+        text(GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
+        text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
+        text(game.isGameOver() ? "FINISHED" : active ? "> YOUR MOVE" : "  WAITING", 1032, y + 40, 2, active ? MINT : MUTED);
     }
 
-    private void drawWings(Birb bird, Side side, GameSession game) {
-        float x = 200 + (float) bird.getX(), y = 750 - (float) bird.getY();
-        float flutter = game.isGameOver() ? 0 : (float) Math.sin(animationTime * 9) * 4;
-        batch.setColor(side == Side.WHITE ? CREAM : BLUE);
-        batch.draw(wings, x - 7, y + 2 - flutter / 2, 64, 46 + flutter);
-        batch.setColor(Color.WHITE);
-    }
-
-    private void drawBirdBody(Birb bird, Side side, GameSession game) {
-        float x = 225 + (float) bird.getX(), y = 775 - (float) bird.getY();
-        boolean active = !game.isGameOver() && side == game.getChess().getSideToMove();
-        Color accent = side == Side.WHITE ? GOLD : BLUE;
-        circle(x, y - 3, 17, SHADOW);
-        circle(x, y, active ? 17 : 14, active ? accent : EDGE);
-        circle(x, y, 12, side == Side.WHITE ? CREAM : INK);
-        if (side != game.getCarrier()) {
-            circle(x + 4, y + 4, 4, CREAM);
-            circle(x + 5, y + 4, 2, INK);
-            shapes.setColor(GOLD);
-            shapes.triangle(x + 10, y + 1, x + 20, y - 2, x + 10, y - 5);
+    private void drawBirdMarkers(GameSession game) {
+        for (Side side : Side.values()) {
+            Birb bird = side == Side.WHITE ? game.getWhite() : game.getBlack();
+            float x = snap(225 + (float) bird.getX()), y = snap(775 - (float) bird.getY());
+            rect(x - 18, y - 24, 36, 6, SHADOW);
+            if (!game.isGameOver() && side == game.getChess().getSideToMove()) {
+                float markerY = Math.max(16, Math.min(784, y + (side == Side.WHITE ? 40 : -40)));
+                diamond(x, markerY, 6, INK);
+                diamond(x, markerY, 2, accent(side));
+            }
+            if (side == game.getCarrier()) {
+                float pieceY = carriedY(y, side);
+                rect(x - 8, Math.min(y, pieceY), 2, Math.abs(y - pieceY), GOLD);
+                rect(x + 6, Math.min(y, pieceY), 2, Math.abs(y - pieceY), GOLD);
+            }
         }
     }
 
-    private void drawCarriedPiece(Birb bird, Side side, GameSession game) {
+    private void drawBird(Birb bird, Side side, GameSession game) {
+        float x = snap(225 + (float) bird.getX()), y = snap(775 - (float) bird.getY());
+        drawBirdSprite(side, x, y, 4, bird.getVelocityX() < -0.1, game.isGameOver() ? 1 : frame());
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
-            if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried),
-                    225 + (float) bird.getX(), 775 - (float) bird.getY(), 0.53f);
+            if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x, carriedY(y, side), 2);
         }
     }
 
-    private void drawPiece(Piece piece, float centerX, float centerY, float scale) {
-        BitmapFont pieceFont = piece.getPieceSide() == Side.WHITE ? whitePieces : blackPieces;
-        String symbol = Piece.make(Side.BLACK, piece.getPieceType()).getFanSymbol();
-        pieceFont.getData().setScale(scale);
-        layout.setText(pieceFont, symbol);
-        pieceFont.draw(batch, layout, centerX - layout.width / 2, centerY + layout.height / 2);
+    private static float carriedY(float birdY, Side side) {
+        return Math.max(24, Math.min(776, birdY + (side == Side.WHITE ? -32 : 32)));
+    }
+
+    private int frame() {
+        int step = (int) (animationTime * 7) % 4;
+        return step == 3 ? 1 : step;
+    }
+
+    private void drawBirdSprite(Side side, float x, float y, int scale, boolean left, int frame) {
+        TextureRegion sprite = sprites.bird(side, frame);
+        batch.draw(sprite, snap(x + (left ? 8 : -8) * scale), snap(y - 8 * scale),
+                (left ? -16 : 16) * scale, 16 * scale);
+    }
+
+    private void drawPiece(Piece piece, float x, float y, int scale) {
+        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - 8 * scale), snap(y - 10 * scale), 16 * scale, 20 * scale);
     }
 
     private void overlay(GameSession game) {
@@ -315,78 +337,102 @@ public final class GameRenderer implements Disposable {
         boolean hover = pointer.x >= 450 && pointer.x <= 750 && pointer.y >= 260 && pointer.y <= 320;
         beginShapes();
         rect(0, 0, 1200, 800, VEIL);
-        rounded(334, 209, 532, 366, 18, SHADOW);
-        rounded(340, 220, 520, 360, 16, EDGE);
-        rounded(342, 222, 516, 356, 15, PANEL);
-        rect(565, 545, 70, 3, GOLD);
+        stepped(332, 216, 536, 368, PANEL, EDGE);
+        outline(344, 228, 512, 344, 2, CARD);
+        star(370, 548, 4, GOLD);
+        star(830, 548, 4, GOLD);
+        rect(564, 554, 72, 4, GOLD);
         if (game.isGameOver()) {
-            rounded(450, 260, 300, 60, 9, hover ? CREAM : MINT);
+            stepped(450, 260, 300, 60, hover ? CREAM : MINT, INK);
+            rect(458, 312, 284, 4, hover ? Color.WHITE : CREAM);
         } else {
-            for (int i = 0; i < 4; i++) rounded(384 + i * 112, 279, 96, 118, 8, CARD);
+            for (int i = 0; i < 4; i++) stepped(384 + i * 112, 278, 96, 118, CARD, EDGE);
         }
         shapes.end();
         batch.begin();
-        centered(font, game.isGameOver() ? "END OF THE FLIGHT" : "A NEW PERSPECTIVE", 600, 524, 0.72f, GOLD);
-        centered(heading, game.isGameOver() ? game.getResult() : "Promote your pawn", 600, 484, 1.23f, CREAM);
-        centered(font, game.isGameOver() ? game.getReason() : "Choose a piece. Your clock is still running.", 600, 435, 0.95f, MUTED);
+        centered(game.isGameOver() ? "END OF THE FLIGHT" : "LEVEL UP", 600, 528, 2, GOLD);
+        centered(game.isGameOver() ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
+        centered(game.isGameOver() ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
         if (game.isGameOver()) {
-            centered(font, "Ready for another round?", 600, 371, 1, CREAM);
-            centered(heading, "Play again   [R]", 600, 301, 0.85f, PANEL);
+            drawBirdSprite(Side.WHITE, 566, 376, 4, false, 1);
+            drawBirdSprite(Side.BLACK, 634, 376, 4, true, 1);
+            centered("PLAY AGAIN  [R]", 600, 298, 2, INK);
         } else {
-            Piece[] options = {Piece.BLACK_QUEEN, Piece.BLACK_ROOK, Piece.BLACK_BISHOP, Piece.BLACK_KNIGHT};
-            String[] labels = {"Q  Queen", "R  Rook", "B  Bishop", "N  Knight"};
+            PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
+            String[] labels = {"[Q]", "[R]", "[B]", "[N]"};
             for (int i = 0; i < options.length; i++) {
-                drawPiece(Piece.make(game.getChess().getSideToMove(), options[i].getPieceType()), 432 + i * 112, 357, 0.7f);
-                centered(font, labels[i], 432 + i * 112, 307, 0.83f, CREAM);
+                drawPiece(Piece.make(game.getChess().getSideToMove(), options[i]), 432 + i * 112, 352, 4);
+                centered(labels[i], 432 + i * 112, 306, 2, GOLD);
             }
         }
-        centered(font, "ESC  Leave game", 600, 245, 0.68f, MUTED);
+        centered("ESC  EXIT GAME", 600, 248, 2, MUTED);
         batch.end();
     }
 
+    private static Color accent(Side side) { return side == Side.WHITE ? GOLD : BLUE; }
     private static float squareX(Square square) { return 200 + square.getFile().ordinal() * 100; }
     private static float squareY(Square square) { return square.getRank().ordinal() * 100; }
+    private static float snap(float value) { return Math.round(value / 2) * 2; }
+
     private void beginShapes() {
         Gdx.gl.glEnable(GL20.GL_BLEND);
-        Gdx.gl.glBlendFunc(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA);
+        Gdx.gl.glBlendFuncSeparate(GL20.GL_SRC_ALPHA, GL20.GL_ONE_MINUS_SRC_ALPHA,
+                GL20.GL_ONE, GL20.GL_ONE_MINUS_SRC_ALPHA);
         shapes.begin(ShapeRenderer.ShapeType.Filled);
     }
-    private void rect(float x, float y, float w, float h, Color color) { shapes.setColor(color); shapes.rect(x, y, w, h); }
-    private void circle(float x, float y, float radius, Color color) { shapes.setColor(color); shapes.circle(x, y, radius, 32); }
+
+    private void rect(float x, float y, float w, float h, Color color) {
+        shapes.setColor(color);
+        shapes.rect(snap(x), snap(y), snap(w), snap(h));
+    }
+
     private void outline(float x, float y, float w, float h, float thickness, Color color) {
         rect(x, y, w, thickness, color);
         rect(x, y + h - thickness, w, thickness, color);
         rect(x, y, thickness, h, color);
         rect(x + w - thickness, y, thickness, h, color);
     }
-    private void rounded(float x, float y, float w, float h, float radius, Color color) {
-        rect(x + radius, y, w - radius * 2, h, color);
-        rect(x, y + radius, radius, h - radius * 2, color);
-        rect(x + w - radius, y + radius, radius, h - radius * 2, color);
-        circle(x + radius, y + radius, radius, color);
-        circle(x + w - radius, y + radius, radius, color);
-        circle(x + radius, y + h - radius, radius, color);
-        circle(x + w - radius, y + h - radius, radius, color);
+
+    private void corners(float x, float y, float w, float h, float length, float thickness, Color color) {
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 2; j++) {
+                rect(x + i * (w - length), y + j * (h - thickness), length, thickness, color);
+                rect(x + i * (w - thickness), y + j * (h - length), thickness, length, color);
+            }
+        }
     }
-    private void text(BitmapFont face, String value, float x, float y, float scale, Color color) {
-        face.getData().setScale(scale);
-        face.setColor(color);
-        face.draw(batch, value, x, y);
+
+    private void stepped(float x, float y, float w, float h, Color fill, Color border) {
+        rect(x + 6, y - 4, w - 8, h, INK);
+        rect(x + 4, y, w - 8, h, border);
+        rect(x, y + 4, w, h - 8, border);
+        rect(x + 4, y + 4, w - 8, h - 8, fill);
     }
-    private void centered(BitmapFont face, String value, float x, float y, float scale, Color color) {
-        face.getData().setScale(scale);
-        layout.setText(face, value);
-        text(face, value, x - layout.width / 2, y, scale, color);
+
+    private void diamond(float x, float y, int radius, Color color) {
+        for (int offset = -radius + 2; offset < radius; offset += 2) {
+            int width = radius - Math.abs(offset);
+            rect(x - width, y + offset, width * 2, 2, color);
+        }
     }
-    private String time(long seconds) { return String.format("%02d:%02d", seconds / 60, seconds % 60); }
+
+    private void star(float x, float y, int radius, Color color) {
+        rect(x - radius, y, radius * 2 + 2, 2, color);
+        rect(x, y - radius, 2, radius * 2 + 2, color);
+    }
+
+    private void text(String value, float x, float y, int scale, Color color) {
+        font.draw(batch, value, snap(x), snap(y), scale, color);
+    }
+
+    private void centered(String value, float x, float y, int scale, Color color) {
+        text(value, x - font.width(value, scale) / 2f, y, scale, color);
+    }
 
     @Override public void dispose() {
-        wings.dispose();
-        whitePieces.dispose();
-        blackPieces.dispose();
+        canvas.dispose();
+        sprites.dispose();
         font.dispose();
-        heading.dispose();
-        clockFont.dispose();
         batch.dispose();
         shapes.dispose();
     }

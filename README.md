@@ -2,6 +2,8 @@
 
 A desktop libGDX chess game controlled by two flying birds.
 
+![Pixel-art board, animated birds, and retro HUD](docs/pixel-art.png)
+
 ## Run and develop
 
 Requires a Java 17 JDK, a graphical desktop, and OpenGL support. Java 17 and the
@@ -59,19 +61,30 @@ promotion and while the window is unfocused.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
 - `core/.../view`: board presentation state and libGDX drawing.
 - `lwjgl3`: desktop launcher and distribution configuration.
-- `assets`: original images and a bundled font for chess symbols.
+- `assets`: retained original images and licensed fonts.
 - `core/src/test`: migrated model/controller tests and new session/coordinate tests.
 
 The libGDX loop uses a fixed 60 Hz physics step and a real-time chess clock.
-Birds travel horizontally at up to 180 logical pixels/second. A flap climbs
+Birds travel horizontally at up to 216 logical pixels/second, easing into motion
+and coasting about 70 pixels after releasing a movement key at full speed.
+Falling is capped at 252 pixels/second for a gentler glide. A flap climbs
 about one square (100 pixels), reaching its peak in about 0.7 seconds. Movement
 tuning lives in `Birb`; its constants use pixels per physics step, not per frame.
 The board scales with the window while retaining its original 800x800 logical
 coordinates. Focus loss releases held controls. GPU resources are disposed on exit.
-The ivory-and-sage board includes square coordinates, legal destination markers,
-and a bracket around the active bird's square. Gold identifies the white bird;
-blue identifies the black bird. The side panels show the move journal, control
-keycaps, and active clock, with a warning color in the final 30 seconds.
+The pixel-art presentation pairs moss-and-sand stone tiles with midnight-blue
+panels, hand-authored chess sprites, and animated birds. Gold identifies the
+white bird; blue identifies the black bird. Pixel lettering, stepped frames,
+control keycaps, and segmented clock bars carry the style through the HUD and
+promotion/game-over screens. Square coordinates, legal destination diamonds,
+capture brackets, and a coral check warning keep the board readable. The active
+clock changes to a warning color in the final 30 seconds.
+
+`PixelSprites` and `PixelFont` build their small texture atlases from original
+code-defined artwork at startup. A 600x400 framebuffer is scaled with nearest
+filtering inside the 1200x800 logical fit viewport, keeping the pixel grid
+consistent as the window resizes. Visual pixel snapping does not affect bird
+physics or the coordinates used for pickup/drop.
 The original JavaFX views, FXML placeholder, and JavaFX-specific view tests were
 replaced; this port has no JavaFX or FXGL dependency. Audio is disabled because
 the example contains no sound assets.
@@ -89,8 +102,9 @@ Reference: [libGDX development setup](https://libgdx.com/wiki/start/setup) and
 
 ## Attribution
 
-`wings.png` is used in the game; the other original images are retained as assets.
-Noto Sans Symbols 2 is bundled under the SIL Open Font License; see
+The original `wings.png`, `bird.jpeg`, and `background.png` images are retained
+as assets; the pixel-art renderer uses its own code-defined artwork.
+Noto Sans Symbols 2 remains bundled under the SIL Open Font License; see
 `assets/fonts/OFL.txt`. No new license is assigned to the original game or images.
-Liberation Sans is bundled for the interface under the SIL Open Font License;
+Liberation Sans remains bundled under the SIL Open Font License;
 see `assets/fonts/Liberation-LICENSE.txt` for its copyright and license.

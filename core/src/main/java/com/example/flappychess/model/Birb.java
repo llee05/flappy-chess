@@ -2,14 +2,14 @@ package com.example.flappychess.model;
 
 public class Birb {
     // Logical pixels per 60 Hz step (acceleration is pixels per step squared).
-    // A flap climbs about one 100px square; horizontal travel is 180px/second.
+    // A flap climbs about one 100px square; horizontal travel is 216px/second.
     private static final double GRAVITY = 0.12;
     private static final double JUMP_SPEED = 5.0;
-    private static final double HORIZONTAL_MOVE_SPEED = 3.0;
-    private static final double MAX_FALL_SPEED = 6.0;
-    private static final double HORIZONTAL_ACCELERATION = 0.60;
-    private static final double HORIZONTAL_TURN_ACCELERATION = 0.80;
-    private static final double HORIZONTAL_FRICTION = 0.90;
+    private static final double HORIZONTAL_MOVE_SPEED = 3.6;
+    private static final double MAX_FALL_SPEED = 4.2;
+    private static final double HORIZONTAL_ACCELERATION = 0.36;
+    private static final double HORIZONTAL_TURN_ACCELERATION = 0.54;
+    private static final double HORIZONTAL_FRICTION = 0.95;
     private static final double MIN_HORIZONTAL_SPEED = 0.01;
 
     private double x;

@@ -50,7 +50,7 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(6.0, birb.getVelocityY(), EPSILON);
+        assertEquals(4.2, birb.getVelocityY(), EPSILON);
     }
 
     @Test
@@ -83,7 +83,7 @@ class BirbTest {
             birb.update();
         }
 
-        assertEquals(-6.0, birb.getVelocityY(), EPSILON);
+        assertEquals(-4.2, birb.getVelocityY(), EPSILON);
     }
 
     @Test
@@ -91,11 +91,12 @@ class BirbTest {
         Birb birb = new Birb(10, 20, 30, 40);
 
         birb.setHorizontalInput(1);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 12; i++) {
             birb.update();
         }
 
-        assertEquals(22.0, birb.getX(), EPSILON);
+        assertEquals(37.0, birb.getX(), EPSILON);
+        assertEquals(3.6, birb.getVelocityX(), EPSILON);
     }
 
     @Test
@@ -105,7 +106,7 @@ class BirbTest {
         birb.setHorizontalInput(999);
         birb.update();
 
-        assertEquals(10.6, birb.getX(), EPSILON);
+        assertEquals(10.36, birb.getX(), EPSILON);
     }
 
     @Test
@@ -113,12 +114,12 @@ class BirbTest {
         Birb birb = new Birb(10, 20, 30, 40);
 
         birb.setHorizontalInput(-1);
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < 12; i++) {
             birb.update();
         }
 
-        assertEquals(-2.0, birb.getX(), EPSILON);
-        assertEquals(-3.0, birb.getVelocityX(), EPSILON);
+        assertEquals(-17.0, birb.getX(), EPSILON);
+        assertEquals(-3.6, birb.getVelocityX(), EPSILON);
     }
 
     @Test
@@ -176,6 +177,56 @@ class BirbTest {
         birb.update();
 
         assertEquals(restingX, birb.getX(), EPSILON);
+    }
+
+    @Test
+    void releasingAtFullSpeedGlidesLessThanOneSquareBeforeStopping() {
+        for (int direction : new int[] {-1, 1}) {
+            Birb birb = new Birb(300, 300, 50, 50);
+            birb.setHorizontalInput(direction);
+            for (int i = 0; i < 12; i++) birb.update();
+
+            double releaseX = birb.getX();
+            double releaseSpeed = Math.abs(birb.getVelocityX());
+            birb.setHorizontalInput(0);
+            for (int i = 0; i < 15; i++) birb.update();
+
+            // Retain useful sideways momentum a quarter-second after release.
+            double retainedSpeed = Math.abs(birb.getVelocityX()) / releaseSpeed;
+            assertTrue(retainedSpeed > 0.4 && retainedSpeed < 0.6);
+            double initialGlide = (birb.getX() - releaseX) * direction;
+            assertTrue(initialGlide > 30 && initialGlide < 45);
+
+            for (int i = 0; i < 180; i++) birb.update();
+
+            double totalGlide = (birb.getX() - releaseX) * direction;
+            assertTrue(totalGlide > 60 && totalGlide < 75);
+            assertEquals(0, birb.getVelocityX(), EPSILON);
+        }
+    }
+
+    @Test
+    void oppositeGravityMirrorsFlappingSteeringCoastingAndBounds() {
+        Birb white = new Birb(375, 375, 50, 50);
+        Birb black = new Birb(375, 375, 50, 50, -1);
+        for (int step = 0; step < 300; step++) {
+            if (step == 0 || step == 90) {
+                white.jump();
+                black.jump();
+            }
+            int direction = step < 30 ? 1 : step < 60 ? 0 : step < 150 ? -1 : 0;
+            white.setHorizontalInput(direction);
+            black.setHorizontalInput(direction);
+            white.update();
+            black.update();
+            white.constrainToBounds(800, 800);
+            black.constrainToBounds(800, 800);
+
+            assertEquals(white.getX(), black.getX(), EPSILON);
+            assertEquals(750, white.getY() + black.getY(), EPSILON);
+            assertEquals(white.getVelocityX(), black.getVelocityX(), EPSILON);
+            assertEquals(-white.getVelocityY(), black.getVelocityY(), EPSILON);
+        }
     }
 
     @Test

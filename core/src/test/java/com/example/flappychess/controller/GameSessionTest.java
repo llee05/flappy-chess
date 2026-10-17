@@ -22,13 +22,26 @@ class GameSessionTest {
         GameSession at120 = session(new AtomicLong());
         at30.keyDown(Keys.D);
         at120.keyDown(Keys.D);
+        at30.keyDown(Keys.RIGHT);
+        at120.keyDown(Keys.RIGHT);
         press(at30, Keys.SPACE);
         press(at120, Keys.SPACE);
-        for (int i = 0; i < 30; i++) at30.update(1f / 30);
-        for (int i = 0; i < 120; i++) at120.update(1f / 120);
+        press(at30, Keys.UP);
+        press(at120, Keys.UP);
+        for (int i = 0; i < 15; i++) at30.update(1f / 30);
+        for (int i = 0; i < 60; i++) at120.update(1f / 120);
+        at30.keyUp(Keys.D);
+        at120.keyUp(Keys.D);
+        at30.keyUp(Keys.RIGHT);
+        at120.keyUp(Keys.RIGHT);
+        for (int i = 0; i < 15; i++) at30.update(1f / 30);
+        for (int i = 0; i < 60; i++) at120.update(1f / 120);
         assertEquals(at30.getWhite().getX(), at120.getWhite().getX(), 1e-7);
         assertEquals(at30.getWhite().getY(), at120.getWhite().getY(), 1e-7);
+        assertEquals(at30.getWhite().getVelocityX(), at120.getWhite().getVelocityX(), 1e-7);
+        assertEquals(at30.getBlack().getX(), at120.getBlack().getX(), 1e-7);
         assertEquals(at30.getBlack().getY(), at120.getBlack().getY(), 1e-7);
+        assertEquals(at30.getBlack().getVelocityX(), at120.getBlack().getVelocityX(), 1e-7);
     }
 
     @Test void inactivePlayerCannotPickUpAndHeldCarryDoesNotDrop() {

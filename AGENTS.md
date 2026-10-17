@@ -52,7 +52,8 @@ module's resources. Tests mirror the core packages in `core/src/test/java`.
 - `GameSession` advances physics at 60 Hz, with catch-up delta capped at 0.25s.
   `Birb` velocities are pixels per step; accelerations are pixels per step squared.
   Tune constants in `Birb`, not the render rate or chess clock. Current targets:
-  180px/s horizontal travel, roughly 100px flap height, and a 0.7s climb.
+  216px/s horizontal travel, roughly 100px flap height, a 0.7s climb, and
+  252px/s terminal fall speed.
 - Horizontal motion accelerates, reverses, and coasts; bounds stop outward velocity.
   Flapping requires a new key press. Focus loss releases held input.
 - Only the active side may carry a piece. Dropping on the starting square

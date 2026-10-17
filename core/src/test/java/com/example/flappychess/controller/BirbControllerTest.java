@@ -46,7 +46,7 @@ class BirbControllerTest {
         controller.handleKeyPressed(Keys.UP);
         controller.update();
 
-        assertEquals(10.6, birb.getX(), EPSILON);
+        assertEquals(10.36, birb.getX(), EPSILON);
         assertEquals(-4.88, birb.getVelocityY(), EPSILON);
     }
 
@@ -75,7 +75,7 @@ class BirbControllerTest {
         controller.handleKeyReleased(Keys.A);
         controller.update();
 
-        assertEquals(10.6, birb.getX(), EPSILON);
+        assertEquals(10.36, birb.getX(), EPSILON);
         assertTrue(birb.getVelocityX() > 0);
     }
 
@@ -99,6 +99,39 @@ class BirbControllerTest {
         controller.update();
 
         assertEquals(-4.88, birb.getVelocityY(), EPSILON);
+    }
+
+    @Test
+    void releasingHorizontalKeyPreservesFlapTrajectoryWhileGliding() {
+        for (int gravity : new int[] {-1, 1}) {
+            Birb released = new Birb(300, 350, 50, 50, gravity);
+            Birb held = new Birb(300, 350, 50, 50, gravity);
+            BirbController releasedControls = new BirbController(released, 800, 800);
+            BirbController heldControls = new BirbController(held, 800, 800);
+            for (BirbController controls : new BirbController[] {releasedControls, heldControls}) {
+                controls.handleKeyPressed(Keys.D);
+                controls.handleKeyPressed(Keys.SPACE);
+            }
+            for (int i = 0; i < 12; i++) {
+                releasedControls.update();
+                heldControls.update();
+            }
+
+            double releaseSpeed = released.getVelocityX();
+            double verticalSpeed = released.getVelocityY();
+            releasedControls.handleKeyReleased(Keys.D);
+            assertEquals(verticalSpeed, released.getVelocityY(), EPSILON);
+
+            for (int i = 0; i < 15; i++) {
+                releasedControls.update();
+                heldControls.update();
+                assertEquals(held.getY(), released.getY(), EPSILON);
+                assertEquals(held.getVelocityY(), released.getVelocityY(), EPSILON);
+            }
+            assertTrue(released.getVelocityX() > releaseSpeed * 0.4);
+            assertTrue(released.getVelocityX() < releaseSpeed * 0.6);
+            assertTrue(released.getVelocityY() * gravity < 0);
+        }
     }
 
     @Test
