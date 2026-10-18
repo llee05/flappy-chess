@@ -181,6 +181,26 @@ the upper-left panel to mute or unmute; this preference is saved on the device.
 Visual feedback remains available while muted. Online feedback comes from the
 host and each numbered event is presented once, including invalid guest drops.
 
+The previous move's origin and destination stay highlighted on the board. The
+move log shows the latest ten full moves; **White took** and **Black took** show
+captured pieces grouped by type, with counts for duplicates. En passant and
+promotion captures count the piece actually removed from the board.
+
+After a match ends, click **Review** or press **V** to inspect the game without
+changing its result or clocks. Left/Right step through moves, Home/End jump to
+the start/final position, and V returns to the result screen. These controls are
+also clickable in the right panel. Review highlights the move just played and
+shows captures up to that position. Each online player reviews independently;
+the usual two-player rematch agreement still applies.
+
+Press **P** to export a PGN at any time during a match, or use **PGN** on the
+result screen or **Export PGN** during review. Browsers download
+`flappy-chess.pgn`. Desktop saves a timestamped `.pgn` in the `exports/` directory
+under the launcher's working directory and prints the absolute path to the
+console. Exports include SAN moves, the result, the time control, and a FEN tag
+when the game began from a custom position. Date is left unknown, as the game
+does not record a match date. Exports contain completed moves only.
+
 Both birds move continuously, with opposite gravity. Fly the active player's
 bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original
@@ -206,6 +226,8 @@ including the promotion choice. Invalid drops and cancelled pickups add no time.
 - `core/.../controller/FlightSchool`: untimed, guided deliveries for both gravity directions.
 - `model/MatchSettings` and `controller/MatchSetup`: bounded time controls and local setup choices.
 - `core/.../controller/GameFeedback`: bounded presentation events shared with online peers.
+- `core/.../controller/GameRecord` and `PostgameReview`: exact moves, PGN export,
+  and a separate board for postgame navigation.
 - `core/.../controller/PeerMatch`: host/guest input ownership, snapshots,
   heartbeat, prediction, disconnects, and rematch agreement; no browser dependency.
 - `core/.../view`: board presentation state and libGDX drawing.

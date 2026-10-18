@@ -7,15 +7,18 @@ import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.example.flappychess.model.Birb;
 import com.example.flappychess.model.MatchSettings;
 import com.github.bhlangonijr.chesslib.Board;
+import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
+import com.github.bhlangonijr.chesslib.move.Move;
 import java.util.ArrayList;
 import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 3;
-    static final int MAX_MESSAGE = 65_536;
+    static final int VERSION = 4;
+    static final int MAX_MESSAGE = 262_144;
 
     static JsonValue packet(String type) {
         JsonValue result = new JsonValue(ValueType.object);
@@ -69,6 +72,7 @@ final class PeerProtocol {
     static JsonValue snapshot(SessionSnapshot state) {
         JsonValue value = new JsonValue(ValueType.object);
         put(value, "fen", state.fen());
+        put(value, "initialFen", state.initialFen());
         value.addChild("white", motion(state.white()));
         value.addChild("black", motion(state.black()));
         put(value, "whiteMillis", state.whiteMillis());
@@ -85,9 +89,11 @@ final class PeerProtocol {
         value.addChild("targets", targets);
         JsonValue history = new JsonValue(ValueType.array);
         for (var move : state.history()) {
-            JsonValue entry = new JsonValue(ValueType.object);
-            put(entry, "side", move.side().name());
-            put(entry, "notation", move.notation());
+            JsonValue entry = new JsonValue(ValueType.array);
+            entry.addChild(new JsonValue(move.side().name()));
+            entry.addChild(new JsonValue(move.notation()));
+            entry.addChild(new JsonValue(move.coordinate()));
+            entry.addChild(new JsonValue(move.captured().name()));
             history.addChild(entry);
         }
         value.addChild("history", history);
@@ -114,6 +120,12 @@ final class PeerProtocol {
 
     static SessionSnapshot snapshot(JsonValue value) {
         String fen = string(value, "fen", 128);
+        String initialFen = string(value, "initialFen", 128);
+        Board initial = new Board();
+        initial.loadFromFen(initialFen);
+        if (initial.getKingSquare(Side.WHITE) == Square.NONE || initial.getKingSquare(Side.BLACK) == Square.NONE) {
+            throw new IllegalArgumentException("Missing initial king");
+        }
         Board position = new Board();
         position.loadFromFen(fen);
         if (position.getKingSquare(Side.WHITE) == Square.NONE || position.getKingSquare(Side.BLACK) == Square.NONE) {
@@ -127,7 +139,22 @@ final class PeerProtocol {
         for (JsonValue square : targets) squares.add(Square.valueOf(square.asString()));
         List<ChessController.CompletedMove> history = new ArrayList<>();
         for (JsonValue move : moves) {
-            history.add(new ChessController.CompletedMove(Side.valueOf(string(move, "side", 5)), string(move, "notation", 12)));
+            if (!move.isArray() || move.size != 4) throw new IllegalArgumentException("Invalid move");
+            for (JsonValue field : move) if (!field.isString()) throw new IllegalArgumentException("Invalid move field");
+            Side side = Side.valueOf(move.get(0).asString());
+            String notation = move.get(1).asString(), coordinate = move.get(2).asString();
+            if (notation.length() > 12 || !coordinate.matches("[a-h][1-8][a-h][1-8][qrbn]?")) {
+                throw new IllegalArgumentException("Invalid move notation");
+            }
+            Move exact = new Move(coordinate, side);
+            Piece captured = Piece.valueOf(move.get(3).asString());
+            if (captured != Piece.NONE && (captured.getPieceSide() == side || captured.getPieceType() == PieceType.KING)) {
+                throw new IllegalArgumentException("Invalid capture");
+            }
+            if (side != (history.size() % 2 == 0 ? initial.getSideToMove() : initial.getSideToMove().flip())) {
+                throw new IllegalArgumentException("Invalid move order");
+            }
+            history.add(new ChessController.CompletedMove(side, notation, exact.getFrom(), exact.getTo(), exact.getPromotion(), captured));
         }
         JsonValue promotion = value.require("promotion");
         var request = promotion.isNull() ? null : new ChessController.PromotionRequest(
@@ -155,7 +182,7 @@ final class PeerProtocol {
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),
                 squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason, events,
                 new MatchSettings(number(value, "initialMillis", 0, MatchSettings.MAX_INITIAL_MILLIS),
-                        number(value, "incrementMillis", 0, MatchSettings.MAX_INCREMENT_MILLIS)));
+                        number(value, "incrementMillis", 0, MatchSettings.MAX_INCREMENT_MILLIS)), initialFen);
     }
 
     private static JsonValue motion(Birb.Motion motion) {

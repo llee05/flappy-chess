@@ -9,7 +9,9 @@ import com.badlogic.gdx.math.Vector2;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.controller.MatchSetup;
+import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.model.MatchSettings;
+import java.util.function.Function;
 import com.example.flappychess.view.GameRenderer;
 
 public final class FlappyChessGame extends ApplicationAdapter {
@@ -24,6 +26,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private MatchSettings settings;
     private MatchSetup setup;
     private boolean waitingToStart;
+    private final Function<String, String> pgnExporter;
 
     public FlappyChessGame() { this(false); }
     public FlappyChessGame(boolean smokeTest) {
@@ -39,10 +42,16 @@ public final class FlappyChessGame extends ApplicationAdapter {
     }
 
     public FlappyChessGame(boolean smokeTest, Runnable exitAction, boolean startInSchool, MatchSettings settings) {
+        this(smokeTest, exitAction, startInSchool, settings, FlappyChessGame::savePgn);
+    }
+
+    public FlappyChessGame(boolean smokeTest, Runnable exitAction, boolean startInSchool, MatchSettings settings,
+            Function<String, String> pgnExporter) {
         this.smokeTest = smokeTest;
         this.exitAction = exitAction;
         this.startInSchool = startInSchool;
         this.settings = settings;
+        this.pgnExporter = pgnExporter;
     }
 
     @Override public void create() {
@@ -73,6 +82,8 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     return true;
                 }
                 if (key == Keys.S) { openSetup(); return true; }
+                if (school == null && key == Keys.P) { renderer.exportPgn(session, pgnExporter); return true; }
+                if (school == null && renderer.historyKey(session, key)) return true;
                 if (key == Keys.T) { restart(true); return true; }
                 if (school != null && school.isComplete()) {
                     if (key == Keys.ENTER) restart(false);
@@ -99,8 +110,12 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     return true;
                 }
                 if (renderer.isSetupAt(point)) { openSetup(); return true; }
-                if ((session.isGameOver() || school != null && school.isComplete()) && point.x >= 450 && point.x <= 750
-                        && point.y >= 260 && point.y <= 320) {
+                if (school == null && renderer.isExportAt(session, point)) {
+                    renderer.exportPgn(session, pgnExporter);
+                    return true;
+                }
+                if (school == null && renderer.historyClick(session, point)) return true;
+                if ((session.isGameOver() || school != null && school.isComplete()) && renderer.isPlayAgainAt(point)) {
                     restart(false);
                     return true;
                 }
@@ -134,6 +149,13 @@ public final class FlappyChessGame extends ApplicationAdapter {
     }
     public boolean isSoundEnabled() { return renderer.isSoundEnabled(); }
     public String feedbackMessage() { return renderer.feedbackMessage(); }
+    public PostgameReview getReview() { return renderer.getReview(); }
+    private static String savePgn(String pgn) {
+        String path = "exports/flappy-chess-" + System.currentTimeMillis() + ".pgn";
+        Gdx.files.local(path).writeString(pgn, false, "UTF-8");
+        Gdx.app.log("PGN", "Saved " + Gdx.files.local(path).file().getAbsolutePath());
+        return "Saved PGN in exports.";
+    }
     @Override public void pause() { releaseInput(); }
     public void releaseInput() {
         soundHeld = false;

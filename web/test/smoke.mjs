@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
+import { checkHistory } from './history.mjs';
 
 await withBrowser(async browser => {
   const { send, evaluate, key, press, screenshot, until } = await browser.page();
@@ -136,5 +137,6 @@ await withBrowser(async browser => {
   await evaluate("document.getElementById('play').click()");
   await until(() => evaluate("document.body.dataset.game === 'ready' && document.body.dataset.timeControl === 'UNTIMED'"), 'starting untimed practice');
   await screenshot('untimed-practice');
+  await checkHistory(browser);
   console.log(`Browser smoke checks passed. Screenshots: ${browser.reports}`);
 });

@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 3;
+  const PROTOCOL = 4;
   let startGame, receive, closed, pulse;
   let peer, connection, timer, connectTimeout, started = false, ended = false;
   const pending = [];
@@ -43,7 +43,7 @@
     connection = candidate;
     candidate.on('data', data => {
       if (ended) return;
-      if (typeof data !== 'string' || data.length > 65536) {
+      if (typeof data !== 'string' || data.length > 262144) {
         fail('The other player sent incompatible match data.');
         return;
       }

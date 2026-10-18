@@ -17,11 +17,14 @@ public class ChessController {
     private final ChessGameModel model;
     private final ChessBoardView view;
     private final MoveList moveHistory;
+    private String initialFen;
     private Square carriedSquare = Square.NONE;
     private CompletedMove completedMove;
     private PromotionRequest promotionRequest;
 
-    public record CompletedMove(Side side, String notation) {
+    public record CompletedMove(Side side, String notation, Square from, Square to, Piece promotion, Piece captured) {
+        public Move move() { return new Move(from, to, promotion); }
+        public String coordinate() { return move().toString(); }
     }
 
     public record PromotionRequest(Side side, Square from, Square to) {
@@ -35,6 +38,7 @@ public class ChessController {
         this.model = model;
         this.view = view;
         this.moveHistory = new MoveList(model.getBoard().getFen());
+        this.initialFen = model.getBoard().getFen();
         this.view.update(model.getBoard());
     }
 
@@ -46,6 +50,7 @@ public class ChessController {
     public Side getSideToMove() {
         return model.getSideToMove();
     }
+    public String getInitialFen() { return initialFen; }
 
     public GameStatus getGameStatus() {
         return model.getGameStatus();
@@ -85,6 +90,7 @@ public class ChessController {
     }
 
     void restoreRemote(SessionSnapshot state) {
+        initialFen = state.initialFen();
         model.restorePosition(state.fen());
         carriedSquare = state.hidden();
         promotionRequest = state.promotion();
@@ -105,11 +111,12 @@ public class ChessController {
         }
 
         Side movingSide = model.getSideToMove();
+        Piece captured = capturedBy(move);
         if (!model.tryMove(move)) {
             return null;
         }
 
-        completedMove = new CompletedMove(movingSide, recordMove(move));
+        completedMove = completed(move, movingSide, captured);
         promotionRequest = null;
         carriedSquare = Square.NONE;
         view.setHiddenPieceSquare(Square.NONE);
@@ -144,8 +151,9 @@ public class ChessController {
         }
 
         Move move = model.getLegalMove(from, square);
+        Piece captured = move == null ? Piece.NONE : capturedBy(move);
         if (move != null && model.tryMove(move)) {
-            completedMove = new CompletedMove(movingSide, recordMove(move));
+            completedMove = completed(move, movingSide, captured);
             carriedSquare = Square.NONE;
             view.setHiddenPieceSquare(Square.NONE);
             refresh();
@@ -163,6 +171,19 @@ public class ChessController {
         } catch (MoveConversionException exception) {
             return move.toString();
         }
+    }
+
+    private Piece capturedBy(Move move) {
+        Piece target = model.getPiece(move.getTo());
+        if (target == Piece.NONE && model.getPiece(move.getFrom()).getPieceType() == PieceType.PAWN
+                && move.getFrom().getFile() != move.getTo().getFile()) {
+            return Piece.make(model.getSideToMove().flip(), PieceType.PAWN); // Legal en passant.
+        }
+        return target;
+    }
+
+    private CompletedMove completed(Move move, Side side, Piece captured) {
+        return new CompletedMove(side, recordMove(move), move.getFrom(), move.getTo(), move.getPromotion(), captured);
     }
 
     private String getCarriedPieceSymbol() {

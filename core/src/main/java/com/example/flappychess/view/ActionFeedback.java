@@ -155,6 +155,13 @@ final class ActionFeedback implements Disposable {
     }
 
     String message() { return messageTime > 0 ? message : ""; }
+    void clearPresentation() { bursts.clear(); messageTime = 0; }
+    void notice(String text) {
+        message = text;
+        messageLines = wrap(text);
+        messageTime = 3;
+        messageColor = MINT;
+    }
     void toggleSound() { audio.toggle(); }
     boolean isSoundEnabled() { return audio.isEnabled(); }
     @Override public void dispose() { audio.dispose(); }

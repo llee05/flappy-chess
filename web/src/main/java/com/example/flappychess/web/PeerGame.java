@@ -32,6 +32,11 @@ final class PeerGame extends ApplicationAdapter {
                     soundHeld = true;
                     return true;
                 }
+                if (key == Keys.P) {
+                    renderer.exportPgn(match.getSession(), WebLauncher::exportPgn);
+                    return true;
+                }
+                if (renderer.historyKey(match.getSession(), key)) return true;
                 if (key != Keys.ESCAPE) return false;
                 WebLauncher.leaveGame();
                 return true;
@@ -44,8 +49,12 @@ final class PeerGame extends ApplicationAdapter {
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
-                if (match.getSession().isGameOver() && point.x >= 450 && point.x <= 750
-                        && point.y >= 260 && point.y <= 320) {
+                if (renderer.isExportAt(match.getSession(), point)) {
+                    renderer.exportPgn(match.getSession(), WebLauncher::exportPgn);
+                    return true;
+                }
+                if (renderer.historyClick(match.getSession(), point)) return true;
+                if (match.getSession().isGameOver() && renderer.isPlayAgainAt(point)) {
                     match.requestRematch();
                     return true;
                 }
@@ -63,6 +72,7 @@ final class PeerGame extends ApplicationAdapter {
         renderer.render(match.getSession());
         WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
         WebLauncher.describeTimeControl(match.getSession().getSettings().label());
+        WebLauncher.describeHistory(match.getSession(), renderer.getReview());
         PeerNetwork.status(match.status(), host, match.isStarted());
         GameSession session = match.getSession();
         var history = session.getHistory();

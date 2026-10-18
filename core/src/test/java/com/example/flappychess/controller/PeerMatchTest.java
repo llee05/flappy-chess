@@ -272,6 +272,52 @@ class PeerMatchTest {
         assertEquals(state, snapshot(snapshot(state)));
     }
 
+    @Test void peersKeepExactCaptureHistoryAndCanReviewIndependently() {
+        Pair pair = new Pair(Duration.ofSeconds(1), "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1");
+        pair.host.getSession().getWhite().setY(325);
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(325, 225, 0, 0));
+        pair.press(pair.host, Keys.E);
+        assertEquals(Piece.BLACK_PAWN, pair.guest.getSession().getHistory().get(0).captured());
+        assertEquals(pair.host.getSession().getHistory(), pair.guest.getSession().getHistory());
+        pair.advance(61);
+        assertTrue(pair.guest.getSession().isGameOver());
+        assertEquals(new GameRecord(pair.host.getSession()).pgn(), new GameRecord(pair.guest.getSession()).pgn());
+        SessionSnapshot finished = pair.host.getSession().snapshot();
+        PostgameReview guestReview = new PostgameReview();
+        guestReview.bind(pair.guest.getSession());
+        guestReview.keyDown(Keys.V);
+        guestReview.keyDown(Keys.HOME);
+        assertEquals(0, guestReview.getPly());
+        assertEquals(finished, pair.host.getSession().snapshot());
+        pair.host.requestRematch();
+        pair.guest.requestRematch();
+        pair.flush();
+        guestReview.bind(pair.guest.getSession());
+        assertFalse(guestReview.isActive());
+        assertTrue(pair.guest.getSession().getHistory().isEmpty());
+    }
+
+    @Test void maximumMoveHistoryFitsTheBoundedWireFormat() {
+        Pair pair = new Pair();
+        SessionSnapshot state = pair.host.getSession().snapshot();
+        var moves = new java.util.ArrayList<ChessController.CompletedMove>();
+        for (int i = 0; i < 2048; i++) {
+            Side side = i % 2 == 0 ? Side.WHITE : Side.BLACK;
+            moves.add(new ChessController.CompletedMove(side, "exd8=Q+", Square.E7, Square.D8,
+                    Piece.make(side, com.github.bhlangonijr.chesslib.PieceType.QUEEN),
+                    Piece.make(side.flip(), com.github.bhlangonijr.chesslib.PieceType.ROOK)));
+        }
+        SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(), state.whiteMillis(), state.blackMillis(),
+                state.selected(), state.hidden(), state.targets(), state.promotion(), state.carrier(), moves, state.result(), state.reason(),
+                state.feedback(), state.settings(), state.initialFen());
+        JsonValue packet = packet("state");
+        packet.addChild("state", snapshot(full));
+        String text = encode(packet);
+        assertTrue(text.length() < MAX_MESSAGE);
+        assertEquals(full, snapshot(parse(text).require("state")));
+    }
+
     @Test void guestReceivesInvalidDropFeedbackOnceEvenWhenInputsOrSnapshotsRepeat() {
         Pair pair = new Pair();
         pair.press(pair.host, Keys.E);

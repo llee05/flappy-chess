@@ -8,6 +8,7 @@ import com.example.flappychess.model.ChessGameModel;
 import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.view.ChessBoardView;
 import com.github.bhlangonijr.chesslib.PieceType;
+import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import static com.example.flappychess.controller.GameFeedback.Kind.*;
@@ -150,7 +151,7 @@ public final class GameSession extends InputAdapter {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
-                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings);
+                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen());
     }
 
     public void restoreReplica(SessionSnapshot state) {
@@ -187,7 +188,7 @@ public final class GameSession extends InputAdapter {
         carrier = null;
         history.add(move);
         if (isTimed()) clock.addIncrement(move.side(), settings.incrementMillis());
-        feedback.emit(move.notation().contains("x") ? CAPTURE : DROP, move.side(), destination);
+        feedback.emit(move.captured() != Piece.NONE ? CAPTURE : DROP, move.side(), destination);
         if (boardView.getBoard().isKingAttacked()) {
             Side checked = chess.getSideToMove();
             feedback.emit(CHECK, checked, boardView.getBoard().getKingSquare(checked));

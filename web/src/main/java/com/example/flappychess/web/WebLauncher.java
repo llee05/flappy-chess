@@ -5,6 +5,10 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.example.flappychess.FlappyChessGame;
 import com.example.flappychess.model.MatchSettings;
+import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.controller.PostgameReview;
+import com.github.bhlangonijr.chesslib.Piece;
+import com.github.bhlangonijr.chesslib.Side;
 import com.github.xpenatan.gdx.teavm.backends.web.WebApplication;
 import com.github.xpenatan.gdx.teavm.backends.web.WebApplicationConfiguration;
 import org.teavm.jso.JSBody;
@@ -20,7 +24,7 @@ public final class WebLauncher {
 
     private static void start(boolean tutorial) {
         showLoading();
-        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings());
+        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings(), WebLauncher::exportPgn);
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
@@ -36,6 +40,7 @@ public final class WebLauncher {
                 describeFeedback(game.feedbackMessage(), game.isSoundEnabled());
                 describeTimeControl(game.getSession().getSettings().label());
                 describeSetup(game.getMatchSetup() == null ? "" : game.getMatchSetup().settings().label());
+                describeHistory(game.getSession(), game.getReview());
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
@@ -62,6 +67,29 @@ public final class WebLauncher {
     @JSBody(params = "label", script = "document.body.dataset.setup = label; const summary = document.getElementById('setup-summary'); const text = label ? 'New match setup: ' + label + '. Left and Right change time; Up and Down change bonus; Enter starts a new match. Existing match clocks keep running.' : ''; if (summary.textContent !== text) summary.textContent = text;")
     private static native void describeSetup(String label);
 
+    static String exportPgn(String pgn) { downloadPgn(pgn); return "PGN downloaded."; }
+
+    @JSBody(params = "pgn", script = "const url = URL.createObjectURL(new Blob([pgn], {type: 'application/x-chess-pgn;charset=utf-8'})); const link = document.createElement('a'); link.href = url; link.download = 'flappy-chess.pgn'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);")
+    private static native void downloadPgn(String pgn);
+
+    static void describeHistory(GameSession game, PostgameReview review) {
+        var moves = game.getHistory();
+        int ply = review.isActive() ? review.getPly() : moves.size();
+        var last = ply == 0 ? null : moves.get(ply - 1);
+        int whiteCaptures = 0, blackCaptures = 0;
+        for (int i = 0; i < ply; i++) {
+            var move = moves.get(i);
+            if (move.captured() == Piece.NONE) continue;
+            if (move.side() == Side.WHITE) whiteCaptures++; else blackCaptures++;
+        }
+        historySummary(game.isGameOver(), review.isActive(), ply, moves.size(), whiteCaptures, blackCaptures,
+                last == null ? "" : last.coordinate(),
+                review.isActive() ? review.getView().getBoard().getFen() : game.getBoardView().getBoard().getFen());
+    }
+
+    @JSBody(params = {"ended", "review", "ply", "count", "whiteCaptures", "blackCaptures", "last", "fen"}, script = "const summary = document.getElementById('history-summary'); summary.dataset.ended = String(ended); summary.dataset.review = String(review); summary.dataset.ply = String(ply); summary.dataset.moves = String(count); summary.dataset.whiteCaptured = String(whiteCaptures); summary.dataset.blackCaptured = String(blackCaptures); summary.dataset.last = last; summary.dataset.fen = fen; const text = review ? 'Reviewing position ' + ply + ' of ' + count + '. White captured ' + whiteCaptures + ' pieces; Black captured ' + blackCaptures + '. Left and Right step through moves; Home and End jump; V returns to the result; P exports PGN.' : ended ? 'Game finished. V reviews the moves, P exports PGN, R plays again.' : ''; if (summary.textContent !== text) summary.textContent = text;")
+    private static native void historySummary(boolean ended, boolean review, int ply, int count, int whiteCaptures, int blackCaptures, String last, String fen);
+
     private static void launch(ApplicationAdapter game, boolean online) {
         WebApplicationConfiguration config = new WebApplicationConfiguration("canvas");
         config.width = 0;
@@ -76,7 +104,7 @@ public final class WebLauncher {
     }
 
     static void catchGameKeys() {
-        for (int key : new int[] {Keys.SPACE, Keys.UP, Keys.LEFT, Keys.RIGHT, Keys.ENTER}) {
+        for (int key : new int[] {Keys.SPACE, Keys.UP, Keys.DOWN, Keys.LEFT, Keys.RIGHT, Keys.HOME, Keys.END, Keys.ENTER}) {
             Gdx.input.setCatchKey(key, true);
         }
     }

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
+import { readFile, rm, rename } from 'node:fs/promises';
+import { resolve } from 'node:path';
 
 await withBrowser(async browser => {
   const host = await browser.page();
@@ -66,6 +68,14 @@ await withBrowser(async browser => {
   assert.equal((await summary(guest)).turn, 'White');
   await host.screenshot('online-white');
   await guest.screenshot('online-black');
+  assert.equal(await guest.evaluate("document.getElementById('history-summary').dataset.last"), 'e7e6');
+  const download = resolve(browser.reports, 'flappy-chess.pgn');
+  await rm(download, { force: true });
+  await guest.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: browser.reports });
+  await guest.press('KeyP', 'p', 80);
+  await guest.until(async () => { try { return (await readFile(download, 'utf8')).includes('1. e3 e6 *'); } catch { return false; } }, 'exporting the synchronized game from the guest');
+  assert.match(await readFile(download, 'utf8'), /\[TimeControl "600\+5"\]/);
+  await rename(download, resolve(browser.reports, 'online-match.pgn'));
   for (const page of [host, guest]) {
     assert.equal(await page.evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
   }

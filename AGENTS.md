@@ -44,6 +44,8 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
   regular session's input and physics, with both gravity directions.
 - `controller/GameFeedback`: bounded, numbered presentation events for local
   and online play; graphics and audio remain in the view layer.
+- `controller/GameRecord` and `PostgameReview`: exact moves, captured pieces,
+  portable PGN export, and an isolated board for postgame navigation.
 - `controller/PeerMatch`: portable host/guest match synchronization, input
   ownership, prediction, heartbeat, disconnects, and rematch agreement.
 - `controller/PeerProtocol` and `SessionSnapshot`: versioned, bounded JSON
@@ -99,6 +101,10 @@ can be overridden in `peer-config.js`. The npm dependency is for local tests onl
 - Desktop play begins with match setup; S opens setup for a new local match.
   Existing clocks keep running while setup is open. Online settings come from
   the host and survive rematches; untimed replicas must not tick their clocks.
+- Completed moves retain origin, destination, promotion, and the actual captured
+  piece, including en passant. Last-move highlights persist through the next turn.
+  V opens postgame review; arrows and Home/End navigate without mutating the
+  session, clocks, or result. P exports PGN; browser download interop stays in web.
 - Online: creator is White and authoritative for both birds, chess, clocks,
   and results; guest is Black and sends intent only. Either key layout controls
   the local player's bird. Guest predicts movement and smooths host corrections.
