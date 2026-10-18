@@ -41,4 +41,14 @@ public class ChessClock {
     public boolean isExpired(Side side) {
         return (side == Side.BLACK ? blackRemainingNanos : whiteRemainingNanos) == 0;
     }
+
+    public long getRemainingMillis(Side side) {
+        return (side == Side.BLACK ? blackRemainingNanos : whiteRemainingNanos) / 1_000_000;
+    }
+
+    public void restore(long whiteMillis, long blackMillis, long nowNanos) {
+        whiteRemainingNanos = whiteMillis * 1_000_000;
+        blackRemainingNanos = blackMillis * 1_000_000;
+        lastTickNanos = nowNanos;
+    }
 }

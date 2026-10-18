@@ -1,6 +1,7 @@
 package com.example.flappychess.model;
 
 public class Birb {
+    public record Motion(double x, double y, double velocityX, double velocityY) { }
     // Logical pixels per 60 Hz step (acceleration is pixels per step squared).
     // A flap climbs about one 100px square; horizontal travel is 216px/second.
     private static final double GRAVITY = 0.12;
@@ -134,5 +135,21 @@ public class Birb {
 
     public void setVelocityX(double x) {
         this.velocityX = x;
+    }
+
+    public Motion snapshot() { return new Motion(x, y, velocityX, velocityY); }
+
+    public void restore(Motion motion) {
+        x = motion.x();
+        y = motion.y();
+        velocityX = motion.velocityX();
+        velocityY = motion.velocityY();
+    }
+
+    public void reconcile(Motion motion, double blend) {
+        x += (motion.x() - x) * blend;
+        y += (motion.y() - y) * blend;
+        velocityX = motion.velocityX();
+        velocityY = motion.velocityY();
     }
 }

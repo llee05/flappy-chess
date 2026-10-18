@@ -32,6 +32,11 @@ public class ChessGameModel {
         return board;
     }
 
+    public void restorePosition(String fen) {
+        board.loadFromFen(fen);
+        update();
+    }
+
     private void update() {
         // could be redundant; consider moving this logic to view
         for (Piece[] row : boardState) {

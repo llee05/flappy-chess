@@ -87,6 +87,58 @@ public final class GameSession extends InputAdapter {
 
     public void releaseInput() {
         for (int key : Set.copyOf(pressed)) keyUp(key);
+        releaseInput(Side.WHITE);
+        releaseInput(Side.BLACK);
+    }
+
+    public void releaseInput(Side side) {
+        BirbController controls = side == Side.WHITE ? whiteControls : blackControls;
+        for (GameAction action : GameAction.values()) {
+            int key = action.keyFor(side);
+            keyUp(key);
+            controls.handleKeyReleased(key);
+        }
+    }
+
+    public void command(Side side, GameAction action, boolean down) {
+        if (action.isPromotion() && chess.getSideToMove() != side) return;
+        int key = action.keyFor(side);
+        if (down) keyDown(key); else keyUp(key);
+    }
+
+    /** Predict movement only; guest pickup, promotion, and outcomes wait for the host. */
+    public void predict(Side side, GameAction action, boolean down) {
+        if (!action.isMovement() || down && (isGameOver() || chess.hasPendingPromotion())) return;
+        BirbController controls = side == Side.WHITE ? whiteControls : blackControls;
+        if (down) controls.handleKeyPressed(action.keyFor(side));
+        else controls.handleKeyReleased(action.keyFor(side));
+    }
+
+    public void updateReplica(float delta, Side ownSide) {
+        if (isGameOver()) return;
+        clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
+        accumulator += Math.max(0, Math.min(delta, 0.25f));
+        while (accumulator + 1e-9 >= STEP) {
+            (ownSide == Side.WHITE ? whiteControls : blackControls).update();
+            accumulator -= STEP;
+        }
+    }
+
+    public SessionSnapshot snapshot() {
+        return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
+                clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
+                boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
+                chess.getPromotionRequest(), carrier, history, result, reason);
+    }
+
+    public void restoreReplica(SessionSnapshot state) {
+        chess.restoreRemote(state);
+        clock.restore(state.whiteMillis(), state.blackMillis(), nanoTime.getAsLong());
+        carrier = state.carrier();
+        history.clear();
+        history.addAll(state.history());
+        result = state.result();
+        reason = state.reason();
     }
 
     private void toggleCarry(Side side, Birb bird) {

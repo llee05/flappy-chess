@@ -84,6 +84,16 @@ public class ChessController {
         return promotionRequest != null;
     }
 
+    void restoreRemote(SessionSnapshot state) {
+        model.restorePosition(state.fen());
+        carriedSquare = state.hidden();
+        promotionRequest = state.promotion();
+        completedMove = null;
+        view.update(model.getBoard());
+        view.setHiddenPieceSquare(state.hidden());
+        view.showSelection(state.selected(), state.targets());
+    }
+
     public CompletedMove choosePromotion(PieceType promotionType) {
         if (promotionRequest == null) {
             return null;
