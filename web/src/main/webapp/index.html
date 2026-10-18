@@ -15,16 +15,43 @@
       <p class="eyebrow">FLAP FLAP</p>
       <h1>FLAPPY<br>CHESS</h1>
       <p>FLAP FLAP<br>FLAP FLAP</p>
-      <button id="play" type="button" disabled>PLAY</button>
+      <button id="play" type="button" disabled>LOCAL PLAY</button>
+      <button id="host" type="button" disabled>CREATE ONLINE ROOM</button>
+      <form id="join-form">
+        <label for="room">Join a friend's room</label>
+        <div class="join-controls">
+          <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Paste room link or code" maxlength="2048">
+          <button id="join" type="submit" disabled>JOIN</button>
+        </div>
+      </form>
+      <section id="share-room" hidden>
+        <label for="invite-link">Your room link · You play White</label>
+        <input id="invite-link" type="text" readonly aria-label="Invite link">
+        <button id="copy-room" type="button">COPY ROOM LINK</button>
+        <button id="cancel-room" type="button">CANCEL ROOM</button>
+      </section>
       <p id="status" role="status" aria-live="polite">Loading the game...</p>
       <div class="controls">
         <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
         <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
       </div>
-      <p class="note">Keyboard required. Five minutes per side.<br>Esc returns here and ends the current game.</p>
+      <p class="note">Online: room creator is White, guest is Black. Either control layout flies your own bird.<br>Keyboard required. Five minutes per side. Esc leaves the game.</p>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
   </main>
+  <aside id="network-bar" hidden aria-label="Online match">
+    <strong id="player-role"></strong>
+    <span id="network-status" role="status" aria-live="polite"></span>
+    <button id="leave-room" type="button">LEAVE</button>
+  </aside>
+  <output id="match-summary" class="sr-only" aria-live="polite"></output>
+  <section id="connection-failure" hidden role="alertdialog" aria-labelledby="failure-title" aria-describedby="failure-message">
+    <article>
+      <h2 id="failure-title">CONNECTION ENDED</h2>
+      <p id="failure-message"></p>
+      <button id="return-lobby" type="button">BACK TO LOBBY</button>
+    </article>
+  </section>
   <script>
     window.addEventListener('error', () => {
       document.getElementById('welcome').hidden = false;
@@ -32,6 +59,8 @@
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
     });
   </script>
+  <script src="./peer-config.js"></script>
+  <script src="./network.js"></script>
   <script src="./game.js" onload="main()"></script>
 </body>
 </html>

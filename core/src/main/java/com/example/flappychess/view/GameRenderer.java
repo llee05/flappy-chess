@@ -50,9 +50,13 @@ public final class GameRenderer implements Disposable {
     // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
     private final FrameBuffer canvas = new FrameBuffer(Pixmap.Format.RGBA8888, 600, 400, false);
     private final TextureRegion canvasImage;
+    private final boolean online;
     private float animationTime;
 
-    public GameRenderer() {
+    public GameRenderer() { this(false); }
+
+    public GameRenderer(boolean online) {
+        this.online = online;
         canvas.getColorBufferTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         canvasImage = new TextureRegion(canvas.getColorBufferTexture());
         canvasImage.flip(false, true);
@@ -214,7 +218,7 @@ public final class GameRenderer implements Disposable {
         text("SKY-HIGH DUELS", 16, 674, 2, MUTED);
         drawBirdSprite(Side.WHITE, 56, 630, 2, false, frame());
         drawBirdSprite(Side.BLACK, 140, 636, 2, true, (frame() + 1) % 3);
-        centered("LOCAL / 5 MIN", 100, 598, 2, MINT);
+        centered(online ? "ONLINE / 5 MIN" : "LOCAL / 5 MIN", 100, 598, 2, MINT);
         text("MOVE LOG", 20, 550, 2, CREAM);
         text("#", 22, 520, 2, MUTED);
         text("WHITE", 44, 520, 2, GOLD);
