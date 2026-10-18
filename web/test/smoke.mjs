@@ -53,5 +53,15 @@ await withBrowser(async browser => {
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0, 'Expected no WebGL error');
   await press('Escape', 'Escape', 27);
   await until(() => evaluate("!document.body.dataset.game && document.getElementById('play')?.disabled === false"), 'returning to the welcome screen');
+  await evaluate("document.getElementById('tutorial').click()");
+  await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'starting Flight School');
+  assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
+  assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /SPACE/);
+  await press('Space', ' ', 32);
+  await screenshot('flight-school');
+  await press('KeyT', 't', 84);
+  await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'restarting Flight School');
+  await press('Escape', 'Escape', 27);
+  await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'leaving Flight School');
   console.log(`Browser smoke checks passed. Screenshots: ${browser.reports}`);
 });

@@ -24,6 +24,7 @@ public final class GameSession extends InputAdapter {
     private final ChessController chess;
     private final ChessClock clock;
     private final LongSupplier nanoTime;
+    private final boolean timed;
     private final List<ChessController.CompletedMove> history = new ArrayList<>();
     private final Set<Integer> pressed = new HashSet<>();
     private final Birb white = new Birb(425, 625, 50, 50);
@@ -38,9 +39,14 @@ public final class GameSession extends InputAdapter {
     public GameSession() { this(new ChessGameModel(), Duration.ofMinutes(5), System::nanoTime); }
 
     GameSession(ChessGameModel model, Duration initialTime, LongSupplier nanoTime) {
+        this(model, initialTime, nanoTime, true);
+    }
+
+    GameSession(ChessGameModel model, Duration initialTime, LongSupplier nanoTime, boolean timed) {
         chess = new ChessController(boardView, model);
         clock = new ChessClock(initialTime);
         this.nanoTime = nanoTime;
+        this.timed = timed;
         clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
     }
 
@@ -162,7 +168,7 @@ public final class GameSession extends InputAdapter {
     }
 
     private void tickClock() {
-        if (isGameOver()) return;
+        if (!timed || isGameOver()) return;
         Side side = chess.getSideToMove();
         // Input ticks before a move switches sides, charging the elapsed time correctly.
         clock.tick(nanoTime.getAsLong(), side);
@@ -177,6 +183,7 @@ public final class GameSession extends InputAdapter {
 
     public static String sideName(Side side) { return side == Side.WHITE ? "White" : "Black"; }
     public boolean isGameOver() { return result != null; }
+    public boolean isTimed() { return timed; }
     public String getResult() { return result; }
     public String getReason() { return reason; }
     public ChessBoardView getBoardView() { return boardView; }

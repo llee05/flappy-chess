@@ -11,21 +11,27 @@ import org.teavm.jso.browser.Window;
 
 public final class WebLauncher {
     public static void main(String[] args) {
-        Window.current().getDocument().getElementById("play").addEventListener("click", event -> start());
+        Window.current().getDocument().getElementById("play").addEventListener("click", event -> start(false));
+        Window.current().getDocument().getElementById("tutorial").addEventListener("click", event -> start(true));
         PeerNetwork.install(WebLauncher::startPeer);
         enablePlay();
     }
 
-    private static void start() {
+    private static void start(boolean tutorial) {
         showLoading();
-        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame);
+        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial);
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
                 catchGameKeys();
-                ready();
+                ready(tutorial);
             }
-            @Override public void render() { game.render(); }
+            @Override public void render() {
+                game.render();
+                var school = game.getFlightSchool();
+                describeLesson(school == null ? "" : school.getStage().name(),
+                        school == null ? "" : school.title() + ". " + school.instruction());
+            }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
             @Override public void resume() { game.resume(); }
@@ -59,14 +65,17 @@ public final class WebLauncher {
     @JSBody(script = "return new URL('.', document.baseURI).href;")
     private static native String assetBaseUrl();
 
-    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('status').textContent = 'Two players. One keyboard.';")
+    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('status').textContent = 'Try Flight School, or play with a friend.';")
     private static native void enablePlay();
 
-    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
+    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
     private static native void showLoading();
 
-    @JSBody(script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready';")
-    private static native void ready();
+    @JSBody(params = "tutorial", script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready'; document.body.dataset.mode = tutorial ? 'tutorial' : 'local';")
+    private static native void ready(boolean tutorial);
+
+    @JSBody(params = {"stage", "text"}, script = "const summary = document.getElementById('lesson-summary'); summary.dataset.stage = stage; if (summary.textContent !== text) summary.textContent = text; document.body.dataset.mode = stage ? 'tutorial' : 'local';")
+    private static native void describeLesson(String stage, String text);
 
     @JSBody(script = "window.FlappyNetwork.leave();")
     static native void leaveGame();

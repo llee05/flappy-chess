@@ -7,7 +7,7 @@
   const byId = id => document.getElementById(id);
   const status = text => { byId('status').textContent = text; };
   const controls = disabled => {
-    for (const id of ['play', 'host', 'join']) byId(id).disabled = disabled;
+    for (const id of ['play', 'tutorial', 'host', 'join']) byId(id).disabled = disabled;
   };
   const roomFrom = value => {
     value = value.trim();

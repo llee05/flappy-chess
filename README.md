@@ -153,6 +153,13 @@ finish before visiting the updated game.
 
 ## Play
 
+Choose **Flight School** in the browser, or press **T** during local desktop or
+browser play, for an untimed lesson. Fly to White's E2 pawn, pick it up, and
+deliver it to E3 or E4, then practice Black's reversed gravity with D7 to D6 or
+D5. The lesson highlights the pawn, shows each objective, and allows retries and
+cancelled pickups. After both deliveries, **Enter** or **Play local** starts a
+regular match; **R** repeats the lesson. **Esc** exits as usual.
+
 Both birds move continuously, with opposite gravity. Fly the active player's
 bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original

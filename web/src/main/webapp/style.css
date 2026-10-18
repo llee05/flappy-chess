@@ -21,6 +21,7 @@ input:focus-visible { outline: 2px solid #78c4d0; }
 #host { background: #78c4d0; border-top-color: #c6f0e7; font-size: 17px; }
 #share-room { padding-top: 8px; }
 body[data-room-state="waiting"] #play,
+body[data-room-state="waiting"] #tutorial,
 body[data-room-state="waiting"] #host,
 body[data-room-state="waiting"] #join-form,
 body[data-room-state="waiting"] .controls { display: none; }

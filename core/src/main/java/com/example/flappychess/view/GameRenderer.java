@@ -14,6 +14,7 @@ import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.model.Birb;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.PieceType;
@@ -52,6 +53,7 @@ public final class GameRenderer implements Disposable {
     private final TextureRegion canvasImage;
     private final boolean online;
     private float animationTime;
+    private FlightSchool school;
 
     public GameRenderer() { this(false); }
 
@@ -67,6 +69,11 @@ public final class GameRenderer implements Disposable {
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
 
     public void render(GameSession game) {
+        render(game, null);
+    }
+
+    public void render(GameSession game, FlightSchool school) {
+        this.school = school;
         animationTime = (animationTime + Math.min(Gdx.graphics.getDeltaTime(), 0.1f)) % 1000;
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         batch.setProjectionMatrix(viewport.getCamera().combined);
@@ -90,7 +97,8 @@ public final class GameRenderer implements Disposable {
         drawBird(game.getBlack(), Side.BLACK, game);
         drawPanelText(game);
         batch.end();
-        if (game.isGameOver() || game.getChess().hasPendingPromotion()) overlay(game);
+        if (school != null && !school.isComplete()) lessonBanner();
+        if (game.isGameOver() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
         canvas.end();
 
         ScreenUtils.clear(INK);
@@ -143,6 +151,11 @@ public final class GameRenderer implements Disposable {
                     outline(x + 4, y + 4, 92, 92, 4, DANGER);
                 }
             }
+        }
+        if (school != null && school.target() != Square.NONE) {
+            Square target = school.target();
+            corners(squareX(target) + 6, squareY(target) + 6, 88, 88, 26, 6,
+                    (int) (animationTime * 3) % 2 == 0 ? GOLD : INK);
         }
         if (!game.isGameOver() && !game.getChess().hasPendingPromotion()) {
             Side side = game.getChess().getSideToMove();
@@ -218,7 +231,48 @@ public final class GameRenderer implements Disposable {
         text("SKY-HIGH DUELS", 16, 674, 2, MUTED);
         drawBirdSprite(Side.WHITE, 56, 630, 2, false, frame());
         drawBirdSprite(Side.BLACK, 140, 636, 2, true, (frame() + 1) % 3);
-        centered(online ? "ONLINE / 5 MIN" : "LOCAL / 5 MIN", 100, 598, 2, MINT);
+        centered(school != null ? "FLIGHT SCHOOL" : online ? "ONLINE / 5 MIN" : "LOCAL / 5 MIN", 100, 598, 2, MINT);
+        if (school != null) {
+            text("YOUR LESSON", 20, 550, 2, CREAM);
+            text("NO CLOCK.\nNO RUSH.", 16, 508, 2, MINT);
+            String[] steps = {"WHITE: FLY", "PICK UP", "DELIVER", "BLACK: FLY", "PICK UP", "DELIVER"};
+            for (int i = 0; i < steps.length; i++) {
+                text((i + 1) + " " + steps[i], 16, 434 - i * 38, 2,
+                        i < school.getStage().ordinal() ? MINT : i == school.getStage().ordinal() ? GOLD : MUTED);
+            }
+            text("DROP AT START\nTO CANCEL.", 16, 216, 2, MUTED);
+        } else {
+            drawMoveLog(game);
+        }
+        if (!online) text("T FLIGHT SCHOOL", 16, 154, 2, MINT);
+        text("MAKE EVERY", 20, 114, 2, CREAM);
+        text("FLAP COUNT.", 20, 92, 2, GOLD);
+        centered("ESC", 37, 42, 2, CREAM);
+        text("EXIT GAME", 66, 42, 2, MUTED);
+        drawClockText(game, Side.BLACK, 650);
+        drawClockText(game, Side.WHITE, 24);
+        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", game.getHistory().size() / 2 + 1), 1046, 614, 2, MINT);
+        String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
+        if (!game.isGameOver()) {
+            if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
+            else if (game.getCarrier() != null) status = "DELIVER PIECE";
+        }
+        centered(status, 1100, 584, 2, CREAM);
+        text("WHITE", 1020, 534, 2, GOLD);
+        text("FALLS DOWN", 1020, 508, 2, MUTED);
+        control("A / D", "MOVE", 462);
+        control("SPACE", "FLAP", 428);
+        control("E", "CARRY", 394);
+        text("PICK UP / DROP", 1020, 376, 2, MUTED);
+        text("BLACK", 1020, 328, 2, BLUE);
+        text("FALLS UP", 1020, 302, 2, MUTED);
+        control("< / >", "MOVE", 260);
+        control("UP", "FLAP", 226);
+        control("ENTER", "CARRY", 192);
+        text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
+    }
+
+    private void drawMoveLog(GameSession game) {
         text("MOVE LOG", 20, 550, 2, CREAM);
         text("#", 22, 520, 2, MUTED);
         text("WHITE", 44, 520, 2, GOLD);
@@ -245,31 +299,6 @@ public final class GameRenderer implements Disposable {
                 if (index + 1 < moves.size()) journalMove(moves.get(index + 1).notation(), 116, y);
             }
         }
-        text("MAKE EVERY", 20, 114, 2, CREAM);
-        text("FLAP COUNT.", 20, 92, 2, GOLD);
-        centered("ESC", 37, 42, 2, CREAM);
-        text("EXIT GAME", 66, 42, 2, MUTED);
-        drawClockText(game, Side.BLACK, 650);
-        drawClockText(game, Side.WHITE, 24);
-        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", moves.size() / 2 + 1), 1046, 614, 2, MINT);
-        String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
-        if (!game.isGameOver()) {
-            if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
-            else if (game.getCarrier() != null) status = "DELIVER PIECE";
-        }
-        centered(status, 1100, 584, 2, CREAM);
-        text("WHITE", 1020, 534, 2, GOLD);
-        text("FALLS DOWN", 1020, 508, 2, MUTED);
-        control("A / D", "MOVE", 462);
-        control("SPACE", "FLAP", 428);
-        control("E", "CARRY", 394);
-        text("PICK UP / DROP", 1020, 376, 2, MUTED);
-        text("BLACK", 1020, 328, 2, BLUE);
-        text("FALLS UP", 1020, 302, 2, MUTED);
-        control("< / >", "MOVE", 260);
-        control("UP", "FLAP", 226);
-        control("ENTER", "CARRY", 192);
-        text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
     }
 
     private void journalMove(String notation, float x, float y) {
@@ -286,7 +315,8 @@ public final class GameRenderer implements Disposable {
         long seconds = game.getClock().getRemainingSeconds(side);
         drawBirdSprite(side, 1038, y + 106, 2, false, active ? frame() : 1);
         text(GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
-        text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
+        if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
+        else text("UNTIMED", 1032, y + 82, 2, CREAM);
         text(game.isGameOver() ? "FINISHED" : active ? "> YOUR MOVE" : "  WAITING", 1032, y + 40, 2, active ? MINT : MUTED);
     }
 
@@ -337,6 +367,8 @@ public final class GameRenderer implements Disposable {
     }
 
     private void overlay(GameSession game) {
+        boolean complete = school != null && school.isComplete();
+        boolean ended = game.isGameOver() || complete;
         Vector2 pointer = unproject(Gdx.input.getX(), Gdx.input.getY());
         boolean hover = pointer.x >= 450 && pointer.x <= 750 && pointer.y >= 260 && pointer.y <= 320;
         beginShapes();
@@ -346,7 +378,7 @@ public final class GameRenderer implements Disposable {
         star(370, 548, 4, GOLD);
         star(830, 548, 4, GOLD);
         rect(564, 554, 72, 4, GOLD);
-        if (game.isGameOver()) {
+        if (ended) {
             stepped(450, 260, 300, 60, hover ? CREAM : MINT, INK);
             rect(458, 312, 284, 4, hover ? Color.WHITE : CREAM);
         } else {
@@ -354,13 +386,13 @@ public final class GameRenderer implements Disposable {
         }
         shapes.end();
         batch.begin();
-        centered(game.isGameOver() ? "END OF THE FLIGHT" : "LEVEL UP", 600, 528, 2, GOLD);
-        centered(game.isGameOver() ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
-        centered(game.isGameOver() ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
-        if (game.isGameOver()) {
+        centered(complete ? "FLIGHT SCHOOL COMPLETE" : ended ? "END OF THE FLIGHT" : "LEVEL UP", 600, 528, 2, GOLD);
+        centered(complete ? "READY TO PLAY!" : ended ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
+        centered(complete ? "Both birds mastered. R to practice again." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
+        if (ended) {
             drawBirdSprite(Side.WHITE, 566, 376, 4, false, 1);
             drawBirdSprite(Side.BLACK, 634, 376, 4, true, 1);
-            centered("PLAY AGAIN  [R]", 600, 298, 2, INK);
+            centered(complete ? "PLAY LOCAL [ENTER]" : "PLAY AGAIN  [R]", 600, 298, 2, INK);
         } else {
             PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
             String[] labels = {"[Q]", "[R]", "[B]", "[N]"};
@@ -370,6 +402,18 @@ public final class GameRenderer implements Disposable {
             }
         }
         centered("ESC  EXIT GAME", 600, 248, 2, MUTED);
+        batch.end();
+    }
+
+    private void lessonBanner() {
+        beginShapes();
+        stepped(216, 712, 768, 72, PANEL, EDGE);
+        for (int i = 0; i < 6; i++) rect(236 + i * 18, 722, 12, 4,
+                i <= school.getStage().ordinal() ? MINT : EDGE);
+        shapes.end();
+        batch.begin();
+        text(school.title(), 236, 774, 2, GOLD);
+        text(school.instruction(), 236, 750, 2, CREAM);
         batch.end();
     }
 

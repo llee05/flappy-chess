@@ -14,7 +14,8 @@
     <article>
       <p class="eyebrow">FLAP FLAP</p>
       <h1>FLAPPY<br>CHESS</h1>
-      <p>FLAP FLAP<br>FLAP FLAP</p>
+      <p>Learn to fly. Carry your pieces. Rule the board.</p>
+      <button id="tutorial" type="button" disabled>FLIGHT SCHOOL</button>
       <button id="play" type="button" disabled>LOCAL PLAY</button>
       <button id="host" type="button" disabled>CREATE ONLINE ROOM</button>
       <form id="join-form">
@@ -35,7 +36,7 @@
         <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
         <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
       </div>
-      <p class="note">Online: room creator is White, guest is Black. Either control layout flies your own bird.<br>Keyboard required. Five minutes per side. Esc leaves the game.</p>
+      <p class="note">Flight School: an untimed lesson for both birds. T restarts the lesson during local play.<br>Online: room creator is White, guest is Black. Either control layout flies your own bird.<br>Keyboard required. Matches: five minutes per side. Esc leaves the game.</p>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
   </main>
@@ -45,6 +46,7 @@
     <button id="leave-room" type="button">LEAVE</button>
   </aside>
   <output id="match-summary" class="sr-only" aria-live="polite"></output>
+  <output id="lesson-summary" class="sr-only" aria-live="polite"></output>
   <section id="connection-failure" hidden role="alertdialog" aria-labelledby="failure-title" aria-describedby="failure-message">
     <article>
       <h2 id="failure-title">CONNECTION ENDED</h2>
@@ -56,6 +58,7 @@
     window.addEventListener('error', () => {
       document.getElementById('welcome').hidden = false;
       document.getElementById('play').disabled = true;
+      document.getElementById('tutorial').disabled = true;
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
     });
   </script>
