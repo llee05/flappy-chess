@@ -142,6 +142,15 @@ publishes static files and requires no application server or extra secrets.
 GitHub Pages serves both local and online modes. PeerJS handles signaling and
 WebRTC handles match traffic separately from static hosting.
 
+If a push replaces the game with the README, check **Settings → Pages → Build
+and deployment → Source** and select **GitHub Actions**. **Deploy from a branch**
+runs GitHub's built-in Jekyll publisher against repository files, which can
+replace the compiled game. A successful manual game deployment does not change
+that setting. The game workflow checks the publishing source before deploying
+and reports the settings link if it needs changing. Once the source is correct,
+pushes to `main` deploy automatically after checks pass; allow the workflow to
+finish before visiting the updated game.
+
 ## Play
 
 Both birds move continuously, with opposite gravity. Fly the active player's

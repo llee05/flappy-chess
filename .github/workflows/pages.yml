@@ -62,6 +62,16 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Check Pages publishing source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          build_type="$(gh api "repos/$GH_REPO/pages" --jq .build_type)"
+          if [[ "$build_type" != "workflow" ]]; then
+            echo "::error::Set Settings > Pages > Build and deployment > Source to GitHub Actions: https://github.com/$GH_REPO/settings/pages. Branch publishing runs Jekyll and replaces the game with the README."
+            exit 1
+          fi
       - uses: actions/configure-pages@v5
       - name: Publish game
         id: deployment
