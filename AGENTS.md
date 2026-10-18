@@ -2,7 +2,8 @@
 
 ## Project and commands
 
-This is a Java 17 desktop libGDX chess game controlled by two flying birds.
+This is a Java 17 libGDX chess game with desktop and TeaVM browser launchers,
+controlled by two flying birds.
 It is an independent port of the sibling `../flappy-birb` JavaFX project;
 make changes in this repository and preserve the original project.
 Read `README.md` for setup, controls, distribution details, and attribution.
@@ -10,11 +11,15 @@ Read `README.md` for setup, controls, distribution details, and attribution.
 Use the checked-in Gradle wrapper from the repository root:
 
 - `./gradlew :core:test`: model, input, session, and coordinate tests; no display required.
-- `./gradlew build`: compile, test, and package both modules.
+- `./gradlew build`: compile, test, and package all modules, including the browser distribution.
 - `./gradlew :lwjgl3:run`: launch the desktop game (requires a display and OpenGL).
 - `./gradlew :lwjgl3:run --args=--smoke-test`: render 30 frames and exit.
 - `./gradlew :lwjgl3:installDist`: generate the launcher under
   `lwjgl3/build/install/flappy-chess/bin/flappy-chess`.
+- `./gradlew :web:dist`: compile the static browser game into `web/build/dist`.
+- `./gradlew :web:run`: build and serve at `http://localhost:8080` (optional `-PwebPort=8088`).
+- `./gradlew :web:browserTest`: browser smoke checks; requires Node 22+ and Chromium,
+  or set `CHROME_BIN` to the Chrome executable.
 
 Use `gradlew.bat` on Windows. Dependency versions live in `gradle.properties`;
 the Gradle version and checksum live in `gradle/wrapper/gradle-wrapper.properties`.
@@ -39,6 +44,13 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
 `lwjgl3/src/main/java/.../lwjgl3/Lwjgl3Launcher` configures the desktop window,
 focus handling, and launcher arguments. `assets` is bundled through the core
 module's resources. Tests mirror the core packages in `core/src/test/java`.
+
+`web` uses the released gdx-teavm JavaScript backend. Its `WebLauncher` hosts the
+same local two-player game, `BuildWeb` compiles it, and `ServeWeb` previews the
+static output using the JDK. Browser-specific code and JavaScript interop belong
+in `web`; keep `core` portable. `FlappyChessGame` accepts an exit callback so
+Escape can return to the browser start screen. Pages deployment is configured in
+`.github/workflows/pages.yml`; remote multiplayer is not implemented yet.
 
 ## Gameplay and timing invariants
 
@@ -79,6 +91,12 @@ session tests instead of sleeps. Run `build` for changes spanning modules or pac
 For rendering/assets/lifecycle changes, also run the graphical smoke test when
 a display is available; report any check that could not run. A smoke test does
 not replace manual assessment of gameplay feel.
+
+For browser or shared lifecycle changes, also run `:web:browserTest` when Node
+and Chromium are available. It verifies project-site asset paths, keyboard
+input, focus release, resizing, WebGL errors, and returning to the start screen.
+Keep browser URLs relative so the game works below a GitHub Pages repository
+path. Preserve clock accounting across browser focus and visibility changes.
 
 Dispose owned GPU resources. Audio is currently disabled and there are no sound
 assets. Preserve the existing image attribution and the bundled font's SIL Open

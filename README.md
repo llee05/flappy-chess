@@ -1,13 +1,14 @@
 # Flappy Chess
 
-A desktop libGDX chess game controlled by two flying birds.
+A desktop and browser libGDX chess game controlled by two flying birds.
 
 ![Pixel-art board, animated birds, and retro HUD](docs/pixel-art.png)
 
 ## Run and develop
 
-Requires a Java 17 JDK, a graphical desktop, and OpenGL support. Java 17 and the
-Linux graphics libraries were already installed on the development machine.
+Building requires a Java 17 JDK. Running the desktop version also requires a
+graphical desktop and OpenGL support. Java 17 and the Linux graphics libraries
+were already installed on the development machine.
 The checked-in Gradle wrapper downloads Gradle and all Java/native dependencies;
 no global Gradle, Maven, JavaFX, or Android SDK installation is needed.
 
@@ -19,7 +20,7 @@ cd /home/amicablepigeon/Projects/flappy-chess
 On Windows, use `gradlew.bat` instead of `./gradlew`.
 
 ```sh
-./gradlew build                 # Compile, test, and package
+./gradlew build                 # Compile, test, and package desktop + browser
 ./gradlew :core:test            # Run game logic/input tests without a display
 ./gradlew :lwjgl3:installDist   # Create a launcher and dependency directory
 ./gradlew :lwjgl3:run --args=--smoke-test  # Render 30 frames, then exit
@@ -34,7 +35,60 @@ In IntelliJ IDEA, open this directory as a Gradle project, select JDK 17 for the
 project and Gradle JVM, and use the shared **Flappy Chess** run configuration.
 In VS Code, install the workspace's recommended Java/Gradle extensions and use
 the supplied run/debug configuration or build/run tasks. Linux desktop is the
-validated target; additional libGDX platforms can be added later.
+validated desktop target; the browser prototype is validated in Chromium.
+
+## Browser prototype
+
+The browser version runs the same local two-player game, with both players on
+one keyboard. It is the first step toward online play; remote multiplayer,
+room links, and a match server are future work. Players need a keyboard and a
+WebGL-capable browser, with no Java installation.
+
+Build and serve locally using the Java 17 JDK:
+
+```sh
+./gradlew :web:run
+# Open http://localhost:8080; Ctrl+C stops the server.
+./gradlew :web:run -PwebPort=8088  # Optional alternate port
+./gradlew :web:dist               # Build static files without starting a server
+```
+
+The distribution is `web/build/dist/`. Serve the entire directory over HTTP;
+opening `index.html` directly with `file://` will not load browser assets.
+The start screen shows both players' controls. Arrow keys and Space are captured
+by the game, and losing focus releases held input. Clocks continue while the
+game is unfocused. Escape returns to the start screen and ends the current game.
+
+Browser smoke checks require Node.js 22+ and an installed Chromium or Chrome:
+
+```sh
+./gradlew :web:browserTest
+# If your executable is named google-chrome:
+CHROME_BIN=google-chrome ./gradlew :web:browserTest
+```
+
+These checks use Chromium's DevTools protocol without npm dependencies. They
+load the game under `/flappy-chess/`, exercise pickup/drop and keyboard input,
+check coasting after focus loss, resize the canvas, check WebGL errors, and
+return to the start screen. Screenshots are saved under
+`web/build/reports/browser/`. Regular `build` runs all JVM tests and compiles the
+browser distribution; browser smoke checks are a separate task.
+
+## Publish on GitHub Pages
+
+The [Pages workflow](.github/workflows/pages.yml) builds and tests pull requests.
+Pushes to `main` also publish the browser distribution after the tests pass.
+
+1. In the GitHub repository, open **Settings → Pages**.
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**.
+3. Push these commits to `main`, or run **Build and publish browser game** from
+   the repository's **Actions** tab after the workflow has been pushed.
+
+The deployment job reports the published URL. The game uses relative asset
+URLs so it works at a project-site path such as `/flappy-chess/`. The workflow
+publishes static files and requires no application server or extra secrets.
+GitHub Pages hosts this local-play prototype; future remote multiplayer will
+need a separate match server.
 
 ## Play
 
@@ -61,6 +115,7 @@ promotion and while the window is unfocused.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
 - `core/.../view`: board presentation state and libGDX drawing.
 - `lwjgl3`: desktop launcher and distribution configuration.
+- `web`: TeaVM browser launcher, JavaScript build, local server, and browser smoke checks.
 - `assets`: retained original images and licensed fonts.
 - `core/src/test`: migrated model/controller tests and new session/coordinate tests.
 
@@ -90,7 +145,7 @@ replaced; this port has no JavaFX or FXGL dependency. Audio is disabled because
 the example contains no sound assets.
 
 Versions: Java 17, Gradle 9.1.0 (checksum-verified wrapper), libGDX 1.14.2,
-chesslib 1.3.6, JUnit 5.12.1. Dependencies resolve from Maven Central, with
+gdx-teavm 1.6.2, chesslib 1.3.6, JUnit 5.12.1. Dependencies resolve from Maven Central, with
 JitPack restricted to chesslib's group. Version settings are in
 `gradle.properties` and the wrapper configuration.
 
