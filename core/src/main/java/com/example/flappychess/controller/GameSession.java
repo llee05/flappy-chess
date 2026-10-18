@@ -101,7 +101,7 @@ public final class GameSession extends InputAdapter {
     }
 
     public void command(Side side, GameAction action, boolean down) {
-        if (action.isPromotion() && chess.getSideToMove() != side) return;
+        if (down && action.isPromotion() && chess.getSideToMove() != side) return;
         int key = action.keyFor(side);
         if (down) keyDown(key); else keyUp(key);
     }

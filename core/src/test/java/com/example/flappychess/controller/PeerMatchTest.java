@@ -128,6 +128,26 @@ class PeerMatchTest {
         assertTrue(pair.host.getSession().getWhite().getVelocityX() > 0);
     }
 
+    @Test void bothPlayersCanUseTheSamePromotionKeyOnFollowingTurns() {
+        Pair pair = new Pair(Duration.ofMinutes(5), "k7/4P3/8/8/8/8/3p4/7K w - - 0 1");
+        pair.host.getSession().getWhite().setY(125);
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(25);
+        pair.press(pair.host, Keys.E);
+        pair.press(pair.host, Keys.N);
+        assertEquals(Side.BLACK, pair.host.getSession().getChess().getSideToMove());
+
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(325, 625, 0, 0));
+        pair.press(pair.guest, Keys.E);
+        pair.host.getSession().getBlack().setY(725);
+        pair.press(pair.guest, Keys.E);
+        assertTrue(pair.guest.getSession().getChess().hasPendingPromotion());
+        pair.press(pair.guest, Keys.N);
+        assertFalse(pair.host.getSession().getChess().hasPendingPromotion());
+        assertEquals(Piece.BLACK_KNIGHT, pair.guest.getSession().getBoardView().getBoard().getPiece(Square.D1));
+        assertEquals(2, pair.guest.getSession().getHistory().size());
+    }
+
     @Test void releasingOneKeyboardAliasDoesNotReleaseTheOther() {
         Pair pair = new Pair();
         pair.guest.keyDown(Keys.D);
