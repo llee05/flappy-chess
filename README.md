@@ -35,14 +35,31 @@ In IntelliJ IDEA, open this directory as a Gradle project, select JDK 17 for the
 project and Gradle JVM, and use the shared **Flappy Chess** run configuration.
 In VS Code, install the workspace's recommended Java/Gradle extensions and use
 the supplied run/debug configuration or build/run tasks. Linux desktop is the
-validated desktop target; the browser prototype is validated in Chromium.
+validated desktop target; browser play is validated in Chromium.
 
-## Browser prototype
+## Browser and online play
 
-The browser version runs the same local two-player game, with both players on
-one keyboard. It is the first step toward online play; remote multiplayer,
-room links, and a match server are future work. Players need a keyboard and a
-WebGL-capable browser, with no Java installation.
+The browser version supports local play on one keyboard and online two-player
+rooms over WebRTC. Players need a keyboard and a WebGL-capable browser, with no
+Java installation. The desktop launcher continues to support local play.
+
+1. Open the game and choose **Create online room**.
+2. Choose **Copy room link** and send the link to your friend. Keep the page open.
+3. Your friend opens the link and chooses **Join friend**. The creator plays
+   White and the guest plays Black; the clock starts when both boards are ready.
+
+Online, either keyboard layout controls your own bird: A/D or Left/Right,
+Space or Up, and E or Enter. Your opponent controls their own bird. Chess moves,
+legal targets, carried pieces, promotion, clocks, and results synchronize from
+the host. After game over, both players must press **R** or **Play again** to
+start a rematch. **Leave** or Escape ends the connection; disconnection freezes
+the match and offers a return to the lobby. There is no match recovery or host
+migration. Keep the host's game visible for continuous physics; clocks continue
+when the tab is hidden, but browsers can suspend background pages.
+
+The host is trusted to run the rules and clock, so rooms are intended for
+friends rather than ranked competitive play. Guest movement is predicted
+locally and reconciled with host snapshots; the opponent's movement is smoothed.
 
 Build and serve locally using the Java 17 JDK:
 
@@ -59,20 +76,55 @@ The start screen shows both players' controls. Arrow keys and Space are captured
 by the game, and losing focus releases held input. Clocks continue while the
 game is unfocused. Escape returns to the start screen and ends the current game.
 
-Browser smoke checks require Node.js 22+ and an installed Chromium or Chrome:
+Browser checks require Node.js 22+ and an installed Chromium or Chrome:
 
 ```sh
 ./gradlew :web:browserTest
+npm ci --prefix web --ignore-scripts  # Install the test-only local PeerServer
+./gradlew :web:peerTest
 # If your executable is named google-chrome:
 CHROME_BIN=google-chrome ./gradlew :web:browserTest
 ```
 
-These checks use Chromium's DevTools protocol without npm dependencies. They
-load the game under `/flappy-chess/`, exercise pickup/drop and keyboard input,
-check coasting after focus loss, resize the canvas, check WebGL errors, and
-return to the start screen. Screenshots are saved under
+The local-play smoke check uses Chromium's DevTools protocol without npm
+dependencies. It loads the game under `/flappy-chess/`, exercises pickup/drop,
+keyboard input, coasting after focus loss, resizing, WebGL, and returning to the
+start screen. The peer check uses a local signaling server and real WebRTC data
+channels between browser pages, exercises moves from both players, rejects a
+third player, and verifies disconnect and missing-room feedback. It does not
+contact public signaling or TURN services. Screenshots are saved under
 `web/build/reports/browser/`. Regular `build` runs all JVM tests and compiles the
-browser distribution; browser smoke checks are a separate task.
+browser distribution; browser checks are separate tasks and both run in CI.
+
+### Connection services
+
+The vendored [PeerJS](https://peerjs.com/client/getting-started) client uses
+PeerServer Cloud for room discovery/signaling and its default STUN/TURN servers
+for NAT traversal. Match traffic uses an encrypted WebRTC data channel between
+players, relayed through TURN when a direct connection is unavailable. The
+static game therefore runs on GitHub Pages without your own match server, but
+online connections depend on these external services and the players' networks.
+No camera or microphone is used.
+
+Site owners can edit `web/src/main/webapp/peer-config.js` before building to
+configure their own [PeerServer](https://github.com/peers/peerjs-server) and ICE
+servers. Both players must use the same signaling service. For example:
+
+```js
+window.FLAPPY_PEER_OPTIONS = {
+  host: 'signal.example.com', port: 443, path: '/peerjs', secure: true,
+  config: { iceServers: [
+    { urls: 'stun:stun.example.com:3478' },
+    { urls: 'turn:turn.example.com:3478', username: 'issued-user', credential: 'issued-token' }
+  ] }
+};
+```
+
+These values are public browser configuration. For production TURN credentials,
+use a service that issues short-lived tokens rather than embedding a private
+permanent secret. HTTPS is required on deployed sites; localhost HTTP is suitable
+for development. A localhost invite works on the same machine; use the deployed
+Pages URL when inviting someone elsewhere.
 
 ## Publish on GitHub Pages
 
@@ -87,8 +139,8 @@ Pushes to `main` also publish the browser distribution after the tests pass.
 The deployment job reports the published URL. The game uses relative asset
 URLs so it works at a project-site path such as `/flappy-chess/`. The workflow
 publishes static files and requires no application server or extra secrets.
-GitHub Pages hosts this local-play prototype; future remote multiplayer will
-need a separate match server.
+GitHub Pages serves both local and online modes. PeerJS handles signaling and
+WebRTC handles match traffic separately from static hosting.
 
 ## Play
 
@@ -113,9 +165,12 @@ promotion and while the window is unfocused.
 - `core/src/main/java/com/example/flappychess/model`: tuned bird physics,
   chess rules, and clock models, with the package renamed.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
+- `core/.../controller/PeerMatch`: host/guest input ownership, snapshots,
+  heartbeat, prediction, disconnects, and rematch agreement; no browser dependency.
 - `core/.../view`: board presentation state and libGDX drawing.
 - `lwjgl3`: desktop launcher and distribution configuration.
-- `web`: TeaVM browser launcher, JavaScript build, local server, and browser smoke checks.
+- `web`: TeaVM browser launcher, WebRTC room lobby, static build, local server,
+  and browser checks. `web/package.json` is only needed for multiplayer tests.
 - `assets`: retained original images and licensed fonts.
 - `core/src/test`: migrated model/controller tests and new session/coordinate tests.
 
@@ -163,3 +218,5 @@ Noto Sans Symbols 2 remains bundled under the SIL Open Font License; see
 `assets/fonts/OFL.txt`. No new license is assigned to the original game or images.
 Liberation Sans remains bundled under the SIL Open Font License;
 see `assets/fonts/Liberation-LICENSE.txt` for its copyright and license.
+PeerJS 1.5.5 is vendored under the MIT License; see
+`web/src/main/webapp/vendor/PeerJS-LICENSE.txt` and the adjacent provenance note.

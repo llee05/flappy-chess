@@ -20,6 +20,8 @@ Use the checked-in Gradle wrapper from the repository root:
 - `./gradlew :web:run`: build and serve at `http://localhost:8080` (optional `-PwebPort=8088`).
 - `./gradlew :web:browserTest`: browser smoke checks; requires Node 22+ and Chromium,
   or set `CHROME_BIN` to the Chrome executable.
+- `npm ci --prefix web --ignore-scripts` then `./gradlew :web:peerTest`: real
+  WebRTC multiplayer checks using a local test-only PeerServer and Chromium.
 
 Use `gradlew.bat` on Windows. Dependency versions live in `gradle.properties`;
 the Gradle version and checksum live in `gradle/wrapper/gradle-wrapper.properties`.
@@ -37,6 +39,10 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
 - `controller/ChessController`: pickup/drop, selection, promotion, and SAN history.
 - `controller/GameSession`: input routing, both birds, fixed-step simulation,
   real-time clocks, completed moves, and game-over state.
+- `controller/PeerMatch`: portable host/guest match synchronization, input
+  ownership, prediction, heartbeat, disconnects, and rematch agreement.
+- `controller/PeerProtocol` and `SessionSnapshot`: versioned, bounded JSON
+  messages and complete presentation snapshots; no reflection or browser APIs.
 - `view/ChessBoardView`: presentation state and square mapping, independent of graphics.
 - `view/GameRenderer`: OpenGL drawing, viewport, fonts, sprites, HUD, and overlays.
 - `FlappyChessGame`: libGDX lifecycle, input multiplexer, restart, and smoke-test exit.
@@ -46,11 +52,14 @@ focus handling, and launcher arguments. `assets` is bundled through the core
 module's resources. Tests mirror the core packages in `core/src/test/java`.
 
 `web` uses the released gdx-teavm JavaScript backend. Its `WebLauncher` hosts the
-same local two-player game, `BuildWeb` compiles it, and `ServeWeb` previews the
+local two-player game or `PeerGame`, `BuildWeb` compiles it, and `ServeWeb` previews the
 static output using the JDK. Browser-specific code and JavaScript interop belong
 in `web`; keep `core` portable. `FlappyChessGame` accepts an exit callback so
 Escape can return to the browser start screen. Pages deployment is configured in
-`.github/workflows/pages.yml`; remote multiplayer is not implemented yet.
+`.github/workflows/pages.yml`. `network.js` owns the room lobby, PeerJS signaling,
+and reliable WebRTC data channel; `PeerNetwork` bridges it to `PeerGame`.
+PeerJS is pinned and vendored with its license; public signaling/ICE defaults
+can be overridden in `peer-config.js`. The npm dependency is for local tests only.
 
 ## Gameplay and timing invariants
 
@@ -76,6 +85,13 @@ Escape can return to the browser start screen. Pages deployment is configured in
   switching sides; do not derive clock time from the capped physics delta.
 - Game over freezes play. R or the Play again button starts a new session;
   Escape exits. White uses A/D, Space, E; black uses Left/Right, Up, Enter.
+- Online: creator is White and authoritative for both birds, chess, clocks,
+  and results; guest is Black and sends intent only. Either key layout controls
+  the local player's bird. Guest predicts movement and smooths host corrections.
+  Start clocks after both peers are ready; release only the local player's input
+  on focus loss. Both players must request a rematch. Each round has a new epoch;
+  stale snapshots and repeated inputs cannot rewind the game or repeat a flap.
+  Disconnection freezes the match; reconnecting or migrating a match is unsupported.
 
 ## Change and validation guidance
 
@@ -97,6 +113,8 @@ and Chromium are available. It verifies project-site asset paths, keyboard
 input, focus release, resizing, WebGL errors, and returning to the start screen.
 Keep browser URLs relative so the game works below a GitHub Pages repository
 path. Preserve clock accounting across browser focus and visibility changes.
+For networking changes, also run `:web:peerTest`; keep its signaling local and
+exercise actual WebRTC rather than replacing the data channel with a stub.
 
 Dispose owned GPU resources. Audio is currently disabled and there are no sound
 assets. Preserve the existing image attribution and the bundled font's SIL Open
