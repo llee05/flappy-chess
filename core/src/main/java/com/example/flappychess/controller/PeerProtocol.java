@@ -5,6 +5,7 @@ import com.badlogic.gdx.utils.JsonValue;
 import com.badlogic.gdx.utils.JsonValue.ValueType;
 import com.badlogic.gdx.utils.JsonWriter.OutputType;
 import com.example.flappychess.model.Birb;
+import com.example.flappychess.model.MatchSettings;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
@@ -13,7 +14,7 @@ import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 2;
+    static final int VERSION = 3;
     static final int MAX_MESSAGE = 65_536;
 
     static JsonValue packet(String type) {
@@ -72,6 +73,8 @@ final class PeerProtocol {
         value.addChild("black", motion(state.black()));
         put(value, "whiteMillis", state.whiteMillis());
         put(value, "blackMillis", state.blackMillis());
+        put(value, "initialMillis", state.settings().initialMillis());
+        put(value, "incrementMillis", state.settings().incrementMillis());
         put(value, "selected", state.selected().name());
         put(value, "hidden", state.hidden().name());
         put(value, "carrier", state.carrier() == null ? null : state.carrier().name());
@@ -147,9 +150,12 @@ final class PeerProtocol {
             lastEvent = sequence;
         }
         return new SessionSnapshot(fen, motion(value.require("white")), motion(value.require("black")),
-                number(value, "whiteMillis", 0, 300_000), number(value, "blackMillis", 0, 300_000),
+                number(value, "whiteMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
+                number(value, "blackMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),
-                squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason, events);
+                squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason, events,
+                new MatchSettings(number(value, "initialMillis", 0, MatchSettings.MAX_INITIAL_MILLIS),
+                        number(value, "incrementMillis", 0, MatchSettings.MAX_INCREMENT_MILLIS)));
     }
 
     private static JsonValue motion(Birb.Motion motion) {

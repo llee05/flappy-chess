@@ -11,6 +11,7 @@ await withBrowser(async browser => {
   };
   const failure = page => page.evaluate("document.getElementById('connection-failure').hidden === false");
   await open(host, browser.url);
+  await host.evaluate("document.getElementById('match-minutes').value = '10'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
   await host.evaluate("document.getElementById('host').click()");
   await host.until(() => host.evaluate("!!document.getElementById('invite-link').value"), 'creating a room');
   const invite = await host.evaluate("document.getElementById('invite-link').value");
@@ -26,6 +27,7 @@ await withBrowser(async browser => {
     }, `starting ${side}`);
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
     assert.equal(await page.evaluate('document.body.dataset.connection'), 'open');
+    assert.equal(await page.evaluate('document.body.dataset.timeControl'), '10+5', 'Both peers must use the creator\'s time control');
   }
   // Both pages must display the host's pickup and legal pawn move.
   // The white bird starts over e2 and can reach e3 with a single flap.

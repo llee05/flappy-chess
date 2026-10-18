@@ -21,8 +21,11 @@ await withBrowser(async browser => {
   await send('Page.navigate', { url: browser.url });
   await until(() => evaluate("document.getElementById('play')?.disabled === false"), 'loading the compiled game');
   await screenshot('welcome');
+  assert.deepEqual(await evaluate("window.FlappySettings.read()"), { minutes: 5, increment: 0 });
+  await evaluate("document.getElementById('match-minutes').value = '10'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
   await evaluate("document.getElementById('play').click()");
   await until(() => evaluate("document.body.dataset.game === 'ready'"), 'creating the game');
+  assert.equal(await evaluate("document.body.dataset.timeControl"), '10+5');
   await evaluate("(() => { window.effectPlays = 0; for (const sound of Howler._howls) sound.on('play', () => window.effectPlays++); })()");
   // Exercise chesslib legal-target generation and a carried pawn in the browser.
   await press('KeyE', 'e', 69);
@@ -79,6 +82,7 @@ await withBrowser(async browser => {
   await evaluate("document.getElementById('tutorial').click()");
   await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'starting Flight School');
   assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
+  assert.equal(await evaluate("document.body.dataset.timeControl"), 'UNTIMED');
   assert.equal(await evaluate("document.body.dataset.sound"), 'off', 'Mute preference must survive returning to the lobby');
   await press('KeyM', 'm', 77);
   assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /SPACE/);
@@ -117,7 +121,20 @@ await withBrowser(async browser => {
   await screenshot('flight-school-complete');
   await press('Enter', 'Enter', 13);
   await until(() => evaluate("document.body.dataset.mode === 'local'"), 'starting a match after Flight School');
+  assert.equal(await evaluate("document.body.dataset.timeControl"), '10+5');
+  await press('KeyS', 's', 83);
+  await until(() => evaluate("document.body.dataset.setup === '10+5'"), 'opening match setup');
+  await screenshot('match-setup');
+  await press('ArrowLeft', 'ArrowLeft', 37);
+  await press('ArrowDown', 'ArrowDown', 40);
+  await press('Enter', 'Enter', 13);
+  await until(() => evaluate("document.body.dataset.timeControl === '5+2' && !document.body.dataset.setup"), 'starting a configured match');
   await press('Escape', 'Escape', 27);
   await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
+  await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change'))");
+  assert.equal(await evaluate("document.getElementById('match-increment').disabled"), true);
+  await evaluate("document.getElementById('play').click()");
+  await until(() => evaluate("document.body.dataset.game === 'ready' && document.body.dataset.timeControl === 'UNTIMED'"), 'starting untimed practice');
+  await screenshot('untimed-practice');
   console.log(`Browser smoke checks passed. Screenshots: ${browser.reports}`);
 });

@@ -153,6 +153,18 @@ finish before visiting the updated game.
 
 ## Play
 
+Choose a time per side and a bonus per completed move in the browser lobby.
+Choices range from one to sixty minutes, with increments up to sixty seconds,
+or **Untimed practice** with no clock. The default is five minutes with no bonus.
+The online room creator chooses the time control for both players, and rematches
+keep it. The browser remembers your last choice. Flight School stays untimed.
+
+The desktop opens a **New match** setup screen. Left/Right change the time,
+Up/Down change the bonus, and Enter starts play; you can also click each choice
+and **Start**. During local play, **S** or the setup card opens this screen for a
+new match. Opening setup during a game releases movement keys and keeps the
+current match's clock running until you start a new match or press S to return.
+
 Choose **Flight School** in the browser, or press **T** during local desktop or
 browser play, for an untimed lesson. Fly to White's E2 pawn, pick it up, and
 deliver it to E3 or E4, then practice Black's reversed gravity with D7 to D6 or
@@ -182,8 +194,9 @@ square cancels the pickup; an illegal destination keeps the piece carried.
 
 Promotion: **Q** queen, **R** rook, **B** bishop, **N** knight.
 After a game ends, press **R** or click **Play again**. **Esc** exits.
-Each side has five minutes; the active player's clock keeps running during
-promotion and while the window is unfocused.
+Timed matches charge the active player's clock during promotion and while the
+window is unfocused. The bonus is added only when a legal move is complete,
+including the promotion choice. Invalid drops and cancelled pickups add no time.
 
 ## Project layout
 
@@ -191,6 +204,7 @@ promotion and while the window is unfocused.
   chess rules, and clock models, with the package renamed.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
 - `core/.../controller/FlightSchool`: untimed, guided deliveries for both gravity directions.
+- `model/MatchSettings` and `controller/MatchSetup`: bounded time controls and local setup choices.
 - `core/.../controller/GameFeedback`: bounded presentation events shared with online peers.
 - `core/.../controller/PeerMatch`: host/guest input ownership, snapshots,
   heartbeat, prediction, disconnects, and rematch agreement; no browser dependency.

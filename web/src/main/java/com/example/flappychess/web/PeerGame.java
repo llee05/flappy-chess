@@ -8,21 +8,23 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.math.Vector2;
 import com.example.flappychess.controller.PeerMatch;
 import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.view.GameRenderer;
 
 /** Browser lifecycle for a single online match; local play keeps its existing lifecycle. */
 final class PeerGame extends ApplicationAdapter {
     private final boolean host;
+    private final MatchSettings settings;
     private PeerMatch match;
     private GameRenderer renderer;
     private boolean reportedDisconnect;
     private boolean soundHeld;
 
-    PeerGame(boolean host) { this.host = host; }
+    PeerGame(boolean host, MatchSettings settings) { this.host = host; this.settings = settings; }
 
     @Override public void create() {
         renderer = new GameRenderer(true);
-        match = new PeerMatch(host, PeerNetwork::send, System::nanoTime);
+        match = new PeerMatch(host, PeerNetwork::send, System::nanoTime, settings);
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
                 if (key == Keys.M) {
@@ -60,6 +62,7 @@ final class PeerGame extends ApplicationAdapter {
         match.update(Gdx.graphics.getDeltaTime());
         renderer.render(match.getSession());
         WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
+        WebLauncher.describeTimeControl(match.getSession().getSettings().label());
         PeerNetwork.status(match.status(), host, match.isStarted());
         GameSession session = match.getSession();
         var history = session.getHistory();

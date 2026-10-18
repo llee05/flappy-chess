@@ -6,6 +6,7 @@ import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import com.example.flappychess.model.ChessGameModel;
+import com.example.flappychess.model.MatchSettings;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.concurrent.atomic.AtomicLong;
@@ -19,6 +20,13 @@ class PeerMatchTest {
         final ArrayDeque<String> toHost = new ArrayDeque<>(), toGuest = new ArrayDeque<>();
         final PeerMatch host, guest;
         Pair() { this(Duration.ofMinutes(5), null); }
+        Pair(MatchSettings settings) {
+            host = new PeerMatch(true, toGuest::add, time::get, settings);
+            guest = new PeerMatch(false, toHost::add, time::get);
+            host.open();
+            guest.open();
+            flush();
+        }
         Pair(Duration duration, String fen) {
             host = new PeerMatch(true, toGuest::add, time::get, () -> session(duration, fen));
             guest = new PeerMatch(false, toHost::add, time::get, () -> session(duration, fen));
@@ -60,6 +68,33 @@ class PeerMatchTest {
         pair.advance(60);
         assertEquals(299, pair.host.getSession().getClock().getRemainingSeconds(Side.WHITE));
         assertEquals(300, pair.host.getSession().getClock().getRemainingSeconds(Side.BLACK));
+    }
+
+    @Test void hostsTimeControlOverridesGuestsDefaultAndIncrementCanExceedInitialTime() {
+        Pair pair = new Pair(MatchSettings.minutes(10, 5));
+        assertEquals(MatchSettings.minutes(10, 5), pair.guest.getSession().getSettings());
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.host, Keys.E);
+        assertEquals(605_000, pair.guest.getSession().getClock().getRemainingMillis(Side.WHITE));
+        assertFalse(pair.guest.isDisconnected());
+        assertEquals(pair.host.getSession().snapshot(), PeerProtocol.snapshot(PeerProtocol.snapshot(pair.host.getSession().snapshot())));
+    }
+
+    @Test void untimedReplicasDoNotConsumeClockTimeAndRematchesKeepHostSettings() {
+        Pair untimed = new Pair(MatchSettings.UNTIMED);
+        untimed.advance(180);
+        assertEquals(MatchSettings.UNTIMED, untimed.guest.getSession().getSettings());
+        assertEquals(untimed.host.getSession().snapshot().whiteMillis(), untimed.guest.getSession().snapshot().whiteMillis());
+        assertFalse(untimed.guest.getSession().isGameOver());
+        Pair timed = new Pair(new MatchSettings(1000, 2000));
+        timed.advance(61);
+        assertTrue(timed.guest.getSession().isGameOver());
+        timed.host.requestRematch();
+        timed.guest.requestRematch();
+        timed.flush();
+        assertEquals(new MatchSettings(1000, 2000), timed.guest.getSession().getSettings());
+        assertFalse(timed.guest.getSession().isGameOver());
     }
 
     @Test void eachKeyboardControlsOnlyItsOwnBirdAndGuestPredictsImmediately() {

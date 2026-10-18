@@ -5,6 +5,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.example.flappychess.model.Birb;
 import com.example.flappychess.model.ChessClock;
 import com.example.flappychess.model.ChessGameModel;
+import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.view.ChessBoardView;
 import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
@@ -25,7 +26,7 @@ public final class GameSession extends InputAdapter {
     private final ChessController chess;
     private final ChessClock clock;
     private final LongSupplier nanoTime;
-    private final boolean timed;
+    private MatchSettings settings;
     private final GameFeedback feedback = new GameFeedback();
     private final Set<Side> warnedLowTime = new HashSet<>();
     private final List<ChessController.CompletedMove> history = new ArrayList<>();
@@ -39,7 +40,14 @@ public final class GameSession extends InputAdapter {
     private String result;
     private String reason;
 
-    public GameSession() { this(new ChessGameModel(), Duration.ofMinutes(5), System::nanoTime); }
+    public GameSession() { this(MatchSettings.DEFAULT); }
+
+    public GameSession(MatchSettings settings) { this(new ChessGameModel(), settings, System::nanoTime); }
+
+    GameSession(ChessGameModel model, MatchSettings settings, LongSupplier nanoTime) {
+        this(model, settings.initialTime(), nanoTime, settings.timed());
+        this.settings = settings;
+    }
 
     GameSession(ChessGameModel model, Duration initialTime, LongSupplier nanoTime) {
         this(model, initialTime, nanoTime, true);
@@ -49,8 +57,8 @@ public final class GameSession extends InputAdapter {
         chess = new ChessController(boardView, model);
         clock = new ChessClock(initialTime);
         this.nanoTime = nanoTime;
-        this.timed = timed;
-        clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
+        this.settings = timed ? new MatchSettings(initialTime.toMillis(), 0) : MatchSettings.UNTIMED;
+        if (isTimed()) clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
     }
 
     public void update(float delta) {
@@ -130,7 +138,7 @@ public final class GameSession extends InputAdapter {
 
     public void updateReplica(float delta, Side ownSide) {
         if (isGameOver()) return;
-        clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
+        if (isTimed()) clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
             (ownSide == Side.WHITE ? whiteControls : blackControls).update();
@@ -142,7 +150,7 @@ public final class GameSession extends InputAdapter {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
-                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events());
+                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings);
     }
 
     public void restoreReplica(SessionSnapshot state) {
@@ -154,6 +162,7 @@ public final class GameSession extends InputAdapter {
         result = state.result();
         reason = state.reason();
         feedback.restore(state.feedback());
+        settings = state.settings();
     }
 
     private void toggleCarry(Side side, Birb bird) {
@@ -177,6 +186,7 @@ public final class GameSession extends InputAdapter {
         if (move == null) return;
         carrier = null;
         history.add(move);
+        if (isTimed()) clock.addIncrement(move.side(), settings.incrementMillis());
         feedback.emit(move.notation().contains("x") ? CAPTURE : DROP, move.side(), destination);
         if (boardView.getBoard().isKingAttacked()) {
             Side checked = chess.getSideToMove();
@@ -191,7 +201,7 @@ public final class GameSession extends InputAdapter {
     }
 
     private void tickClock() {
-        if (!timed || isGameOver()) return;
+        if (!isTimed() || isGameOver()) return;
         Side side = chess.getSideToMove();
         // Input ticks before a move switches sides, charging the elapsed time correctly.
         clock.tick(nanoTime.getAsLong(), side);
@@ -210,7 +220,8 @@ public final class GameSession extends InputAdapter {
 
     public static String sideName(Side side) { return side == Side.WHITE ? "White" : "Black"; }
     public boolean isGameOver() { return result != null; }
-    public boolean isTimed() { return timed; }
+    public boolean isTimed() { return settings.timed(); }
+    public MatchSettings getSettings() { return settings; }
     public GameFeedback getFeedback() { return feedback; }
     public String getResult() { return result; }
     public String getReason() { return reason; }

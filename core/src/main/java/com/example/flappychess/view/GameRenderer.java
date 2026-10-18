@@ -15,6 +15,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
+import com.example.flappychess.controller.MatchSetup;
 import com.example.flappychess.model.Birb;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.PieceType;
@@ -74,12 +75,19 @@ public final class GameRenderer implements Disposable {
     public boolean isSoundToggleAt(Vector2 point) {
         return point.x >= 16 && point.x <= 184 && point.y >= 658 && point.y <= 684;
     }
+    public boolean isSetupAt(Vector2 point) {
+        return !online && point.x >= 16 && point.x <= 184 && point.y >= 580 && point.y <= 656;
+    }
 
     public void render(GameSession game) {
         render(game, null);
     }
 
     public void render(GameSession game, FlightSchool school) {
+        render(game, school, null);
+    }
+
+    public void render(GameSession game, FlightSchool school, MatchSetup setup) {
         this.school = school;
         float delta = Math.max(0, Math.min(Gdx.graphics.getDeltaTime(), 0.1f));
         animationTime = (animationTime + delta) % 1000;
@@ -115,6 +123,7 @@ public final class GameRenderer implements Disposable {
         batch.end();
         if (school != null && !school.isComplete()) lessonBanner();
         if (game.isGameOver() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
+        if (setup != null) setupOverlay(setup);
         canvas.end();
 
         ScreenUtils.clear(INK);
@@ -221,11 +230,12 @@ public final class GameRenderer implements Disposable {
     private void drawClockCard(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        Color color = seconds <= 30 ? DANGER : accent(side);
+        Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
         stepped(1016, y, 168, 130, CARD, active ? color : EDGE);
         if (active) rect(1016, y + 38, 4, 54, color);
         for (int i = 0; i < 17; i++) {
-            rect(1032 + i * 8, y + 14, 6, 4, i < (int) Math.ceil(17 * Math.min(1, seconds / 300f)) ? color : EDGE);
+            double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
+            rect(1032 + i * 8, y + 14, 6, 4, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
         }
     }
 
@@ -247,7 +257,7 @@ public final class GameRenderer implements Disposable {
         text(feedback.isSoundEnabled() ? "M SOUND: ON" : "M SOUND: OFF", 16, 674, 2, MUTED);
         drawBirdSprite(Side.WHITE, 56, 630, 2, false, frame());
         drawBirdSprite(Side.BLACK, 140, 636, 2, true, (frame() + 1) % 3);
-        centered(school != null ? "FLIGHT SCHOOL" : online ? "ONLINE / 5 MIN" : "LOCAL / 5 MIN", 100, 598, 2, MINT);
+        centered(school != null ? "FLIGHT SCHOOL" : (online ? "ONLINE " : "S SETUP ") + game.getSettings().label(), 100, 598, 2, MINT);
         if (school != null) {
             text("YOUR LESSON", 20, 550, 2, CREAM);
             text("NO CLOCK.\nNO RUSH.", 16, 508, 2, MINT);
@@ -433,6 +443,26 @@ public final class GameRenderer implements Disposable {
         batch.begin();
         text(school.title(), 236, 774, 2, GOLD);
         text(school.instruction(), 236, 750, 2, CREAM);
+        batch.end();
+    }
+
+    private void setupOverlay(MatchSetup setup) {
+        beginShapes();
+        rect(0, 0, 1200, 800, VEIL);
+        stepped(292, 206, 616, 388, PANEL, EDGE);
+        stepped(380, 430, 440, 50, CARD, EDGE);
+        stepped(380, 354, 440, 50, CARD, EDGE);
+        stepped(450, 260, 300, 60, MINT, INK);
+        shapes.end();
+        batch.begin();
+        centered("NEW MATCH", 600, 558, 4, CREAM);
+        centered("Choose time per side and bonus for each move.", 600, 510, 2, MUTED);
+        centered(setup.timeLabel(), 600, 464, 2, GOLD);
+        centered("LEFT / RIGHT OR CLICK", 600, 424, 2, MUTED);
+        centered(setup.incrementLabel(), 600, 388, 2, BLUE);
+        centered("UP / DOWN OR CLICK", 600, 348, 2, MUTED);
+        centered("START [ENTER]", 600, 298, 2, INK);
+        centered("S CLOSE SETUP    ESC EXIT", 600, 240, 2, MUTED);
         batch.end();
     }
 

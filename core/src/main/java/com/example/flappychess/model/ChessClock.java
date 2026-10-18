@@ -38,6 +38,11 @@ public class ChessClock {
         return (remainingNanos + NANOS_PER_SECOND - 1) / NANOS_PER_SECOND;
     }
 
+    public void addIncrement(Side side, long millis) {
+        if (side == Side.WHITE) whiteRemainingNanos += millis * 1_000_000;
+        else blackRemainingNanos += millis * 1_000_000;
+    }
+
     public boolean isExpired(Side side) {
         return (side == Side.BLACK ? blackRemainingNanos : whiteRemainingNanos) == 0;
     }

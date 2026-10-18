@@ -4,6 +4,7 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.example.flappychess.FlappyChessGame;
+import com.example.flappychess.model.MatchSettings;
 import com.github.xpenatan.gdx.teavm.backends.web.WebApplication;
 import com.github.xpenatan.gdx.teavm.backends.web.WebApplicationConfiguration;
 import org.teavm.jso.JSBody;
@@ -19,11 +20,12 @@ public final class WebLauncher {
 
     private static void start(boolean tutorial) {
         showLoading();
-        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial);
+        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings());
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
                 catchGameKeys();
+                describeTimeControl(game.getSession().getSettings().label());
                 ready(tutorial);
             }
             @Override public void render() {
@@ -32,6 +34,8 @@ public final class WebLauncher {
                 describeLesson(school == null ? "" : school.getStage().name(),
                         school == null ? "" : school.title() + ". " + school.instruction());
                 describeFeedback(game.feedbackMessage(), game.isSoundEnabled());
+                describeTimeControl(game.getSession().getSettings().label());
+                describeSetup(game.getMatchSetup() == null ? "" : game.getMatchSetup().settings().label());
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
@@ -41,8 +45,22 @@ public final class WebLauncher {
     }
 
     private static void startPeer(boolean host) {
-        launch(new PeerGame(host), true);
+        launch(new PeerGame(host, host ? selectedSettings() : MatchSettings.DEFAULT), true);
     }
+
+    static MatchSettings selectedSettings() { return MatchSettings.minutes(selectedMinutes(), selectedIncrement()); }
+
+    @JSBody(script = "return window.FlappySettings.read().minutes;")
+    private static native int selectedMinutes();
+
+    @JSBody(script = "return window.FlappySettings.read().increment;")
+    private static native int selectedIncrement();
+
+    @JSBody(params = "label", script = "document.body.dataset.timeControl = label;")
+    static native void describeTimeControl(String label);
+
+    @JSBody(params = "label", script = "document.body.dataset.setup = label; const summary = document.getElementById('setup-summary'); const text = label ? 'New match setup: ' + label + '. Left and Right change time; Up and Down change bonus; Enter starts a new match. Existing match clocks keep running.' : ''; if (summary.textContent !== text) summary.textContent = text;")
+    private static native void describeSetup(String label);
 
     private static void launch(ApplicationAdapter game, boolean online) {
         WebApplicationConfiguration config = new WebApplicationConfiguration("canvas");

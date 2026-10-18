@@ -14,6 +14,26 @@
     <article>
       <h1>FLAPPY<br>CHESS</h1>
       <button id="tutorial" type="button" disabled>FLIGHT SCHOOL</button>
+      <fieldset id="match-settings">
+        <legend>Match settings · local play or room creator</legend>
+        <div class="setting-controls">
+          <label>Time per side
+            <select id="match-minutes">
+              <option value="0">Untimed practice</option><option value="1">1 minute</option>
+              <option value="5" selected>5 minutes</option><option value="10">10 minutes</option>
+              <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option>
+            </select>
+          </label>
+          <label>Bonus per move
+            <select id="match-increment">
+              <option value="0">None</option><option value="2">2 seconds</option><option value="5">5 seconds</option>
+              <option value="10">10 seconds</option><option value="15">15 seconds</option>
+              <option value="30">30 seconds</option><option value="60">60 seconds</option>
+            </select>
+          </label>
+        </div>
+        <p id="time-control-note">Five minutes per side. No bonus.</p>
+      </fieldset>
       <button id="play" type="button" disabled>LOCAL PLAY</button>
       <button id="host" type="button" disabled>CREATE ONLINE ROOM</button>
       <form id="join-form">
@@ -34,7 +54,7 @@
         <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
         <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
       </div>
-      <p class="note">Flight School: an untimed lesson for both birds. T restarts the lesson during local play.<br>Online: room creator is White, guest is Black. Either control layout flies your own bird.<br>M toggles sound effects. Keyboard required. Matches: five minutes per side. Esc leaves the game.</p>
+      <p class="note">Flight School is always untimed. T restarts the lesson during local play. S opens a new match setup.<br>Online: room creator chooses the clock and plays White; guest plays Black. Either control layout flies your own bird.<br>M toggles sound effects. Keyboard required. Esc leaves the game.</p>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
   </main>
@@ -46,6 +66,7 @@
   <output id="match-summary" class="sr-only" aria-live="polite"></output>
   <output id="lesson-summary" class="sr-only" aria-live="polite"></output>
   <output id="action-feedback" class="sr-only" aria-live="polite"></output>
+  <output id="setup-summary" class="sr-only" aria-live="polite"></output>
   <section id="connection-failure" hidden role="alertdialog" aria-labelledby="failure-title" aria-describedby="failure-message">
     <article>
       <h2 id="failure-title">CONNECTION ENDED</h2>
@@ -61,6 +82,7 @@
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
     });
   </script>
+  <script src="./settings.js"></script>
   <script src="./peer-config.js"></script>
   <script src="./network.js"></script>
   <script src="./game.js" onload="main()"></script>

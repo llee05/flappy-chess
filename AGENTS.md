@@ -35,6 +35,7 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
   and bounds. Keep the existing `Birb` spelling.
 - `model/ChessGameModel`: chesslib board, legal moves, promotion, and game status.
 - `model/ChessClock`: elapsed-time accounting for each side.
+- `model/MatchSettings` and `controller/MatchSetup`: bounded time controls and setup choices.
 - `controller/BirbController`: held movement keys and one flap per key press.
 - `controller/ChessController`: pickup/drop, selection, promotion, and SAN history.
 - `controller/GameSession`: input routing, both birds, fixed-step simulation,
@@ -84,7 +85,10 @@ can be overridden in `peer-config.js`. The npm dependency is for local tests onl
 - Only the active side may carry a piece. Dropping on the starting square
   cancels pickup; an illegal destination keeps the piece carried.
 - Promotion waits for Q/R/B/N before completing the move and switching turns.
-- Each side starts with five minutes. The clock uses monotonic real time,
+- The default is five minutes per side with no increment; configurable matches
+  support untimed play or up to sixty minutes and sixty seconds per move.
+  Add increments only after completed legal moves, including promotion choice.
+  The clock uses monotonic real time,
   including during promotion and focus loss. Charge time to the mover before
   switching sides; do not derive clock time from the capped physics delta.
 - Game over freezes play. R or the Play again button starts a new session;
@@ -92,6 +96,9 @@ can be overridden in `peer-config.js`. The npm dependency is for local tests onl
 - Flight School is untimed and available through the browser lobby or T in local
   play. Enter starts a normal match after completion; R repeats the lesson.
   M or the Sound control toggles device-local audio without changing game state.
+- Desktop play begins with match setup; S opens setup for a new local match.
+  Existing clocks keep running while setup is open. Online settings come from
+  the host and survive rematches; untimed replicas must not tick their clocks.
 - Online: creator is White and authoritative for both birds, chess, clocks,
   and results; guest is Black and sends intent only. Either key layout controls
   the local player's bird. Guest predicts movement and smooths host corrections.

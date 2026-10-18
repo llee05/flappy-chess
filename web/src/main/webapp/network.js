@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 2;
+  const PROTOCOL = 3;
   let startGame, receive, closed, pulse;
   let peer, connection, timer, connectTimeout, started = false, ended = false;
   const pending = [];
@@ -8,6 +8,7 @@
   const status = text => { byId('status').textContent = text; };
   const controls = disabled => {
     for (const id of ['play', 'tutorial', 'host', 'join']) byId(id).disabled = disabled;
+    byId('match-settings').disabled = disabled;
   };
   const roomFrom = value => {
     value = value.trim();

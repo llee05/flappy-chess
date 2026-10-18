@@ -4,6 +4,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.utils.JsonValue;
 import com.example.flappychess.model.Birb;
 import com.example.flappychess.model.ChessGameModel;
+import com.example.flappychess.model.MatchSettings;
 import com.github.bhlangonijr.chesslib.Side;
 import java.time.Duration;
 import java.util.HashSet;
@@ -30,7 +31,11 @@ public final class PeerMatch extends InputAdapter {
     private String error;
 
     public PeerMatch(boolean host, Consumer<String> send, LongSupplier time) {
-        this(host, send, time, () -> new GameSession(new ChessGameModel(), Duration.ofMinutes(5), time));
+        this(host, send, time, MatchSettings.DEFAULT);
+    }
+
+    public PeerMatch(boolean host, Consumer<String> send, LongSupplier time, MatchSettings settings) {
+        this(host, send, time, () -> new GameSession(new ChessGameModel(), settings, time));
     }
 
     PeerMatch(boolean host, Consumer<String> send, LongSupplier time, Supplier<GameSession> sessions) {

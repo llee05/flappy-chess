@@ -8,6 +8,8 @@ import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.math.Vector2;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
+import com.example.flappychess.controller.MatchSetup;
+import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.view.GameRenderer;
 
 public final class FlappyChessGame extends ApplicationAdapter {
@@ -19,28 +21,40 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private GameRenderer renderer;
     private int frames;
     private boolean soundHeld;
+    private MatchSettings settings;
+    private MatchSetup setup;
+    private boolean waitingToStart;
 
     public FlappyChessGame() { this(false); }
-    public FlappyChessGame(boolean smokeTest) { this(smokeTest, () -> Gdx.app.exit()); }
+    public FlappyChessGame(boolean smokeTest) {
+        this(smokeTest, () -> Gdx.app.exit());
+        waitingToStart = !smokeTest;
+    }
     public FlappyChessGame(boolean smokeTest, Runnable exitAction) {
         this(smokeTest, exitAction, false);
     }
 
     public FlappyChessGame(boolean smokeTest, Runnable exitAction, boolean startInSchool) {
+        this(smokeTest, exitAction, startInSchool, MatchSettings.DEFAULT);
+    }
+
+    public FlappyChessGame(boolean smokeTest, Runnable exitAction, boolean startInSchool, MatchSettings settings) {
         this.smokeTest = smokeTest;
         this.exitAction = exitAction;
         this.startInSchool = startInSchool;
+        this.settings = settings;
     }
 
     @Override public void create() {
         renderer = new GameRenderer();
         restart(startInSchool);
+        if (waitingToStart) setup = new MatchSetup(settings);
     }
 
     private void restart(boolean tutorial) {
         if (session != null) session.releaseInput();
         school = tutorial ? new FlightSchool() : null;
-        session = school == null ? new GameSession() : school.getSession();
+        session = school == null ? new GameSession(settings) : school.getSession();
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
                 if (key == Keys.M) {
@@ -49,6 +63,16 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     return true;
                 }
                 if (key == Keys.ESCAPE) { exitAction.run(); return true; }
+                if (setup != null) {
+                    if (key == Keys.LEFT) setup.changeTime(-1);
+                    if (key == Keys.RIGHT) setup.changeTime(1);
+                    if (key == Keys.DOWN) setup.changeIncrement(-1);
+                    if (key == Keys.UP) setup.changeIncrement(1);
+                    if (key == Keys.ENTER) startConfiguredMatch();
+                    if (key == Keys.S && !waitingToStart) setup = null;
+                    return true;
+                }
+                if (key == Keys.S) { openSetup(); return true; }
                 if (key == Keys.T) { restart(true); return true; }
                 if (school != null && school.isComplete()) {
                     if (key == Keys.ENTER) restart(false);
@@ -66,6 +90,15 @@ public final class FlappyChessGame extends ApplicationAdapter {
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
+                if (setup != null) {
+                    if (point.x >= 380 && point.x <= 820) {
+                        if (point.y >= 430 && point.y <= 480) setup.changeTime(1);
+                        if (point.y >= 354 && point.y <= 404) setup.changeIncrement(1);
+                    }
+                    if (point.x >= 450 && point.x <= 750 && point.y >= 260 && point.y <= 320) startConfiguredMatch();
+                    return true;
+                }
+                if (renderer.isSetupAt(point)) { openSetup(); return true; }
                 if ((session.isGameOver() || school != null && school.isComplete()) && point.x >= 450 && point.x <= 750
                         && point.y >= 260 && point.y <= 320) {
                     restart(false);
@@ -77,9 +110,11 @@ public final class FlappyChessGame extends ApplicationAdapter {
     }
 
     @Override public void render() {
-        if (school == null) session.update(Gdx.graphics.getDeltaTime());
-        else school.update(Gdx.graphics.getDeltaTime());
-        renderer.render(session, school);
+        if (!waitingToStart) {
+            if (school == null) session.update(Gdx.graphics.getDeltaTime());
+            else school.update(Gdx.graphics.getDeltaTime());
+        }
+        renderer.render(session, school, setup);
         if (smokeTest && ++frames == 30) {
             Gdx.app.log("SmokeTest", "Rendered 30 frames with board, birds, font, and HUD.");
             Gdx.app.exit();
@@ -88,6 +123,15 @@ public final class FlappyChessGame extends ApplicationAdapter {
 
     @Override public void resize(int width, int height) { renderer.resize(width, height); }
     public FlightSchool getFlightSchool() { return school; }
+    public GameSession getSession() { return session; }
+    public MatchSetup getMatchSetup() { return setup; }
+    private void openSetup() { session.releaseInput(); setup = new MatchSetup(settings); }
+    private void startConfiguredMatch() {
+        settings = setup.settings();
+        setup = null;
+        waitingToStart = false;
+        restart(false);
+    }
     public boolean isSoundEnabled() { return renderer.isSoundEnabled(); }
     public String feedbackMessage() { return renderer.feedbackMessage(); }
     @Override public void pause() { releaseInput(); }
