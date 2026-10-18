@@ -48,6 +48,7 @@ public final class GameRenderer implements Disposable {
     private final ShapeRenderer shapes = new ShapeRenderer();
     private final PixelFont font = new PixelFont();
     private final PixelSprites sprites = new PixelSprites();
+    private final ActionFeedback feedback = new ActionFeedback();
     // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
     private final FrameBuffer canvas = new FrameBuffer(Pixmap.Format.RGBA8888, 600, 400, false);
     private final TextureRegion canvasImage;
@@ -67,6 +68,12 @@ public final class GameRenderer implements Disposable {
 
     public void resize(int width, int height) { viewport.update(width, height, true); }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
+    public void toggleSound() { feedback.toggleSound(); }
+    public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
+    public String feedbackMessage() { return feedback.message(); }
+    public boolean isSoundToggleAt(Vector2 point) {
+        return point.x >= 16 && point.x <= 184 && point.y >= 658 && point.y <= 684;
+    }
 
     public void render(GameSession game) {
         render(game, null);
@@ -74,7 +81,9 @@ public final class GameRenderer implements Disposable {
 
     public void render(GameSession game, FlightSchool school) {
         this.school = school;
-        animationTime = (animationTime + Math.min(Gdx.graphics.getDeltaTime(), 0.1f)) % 1000;
+        float delta = Math.max(0, Math.min(Gdx.graphics.getDeltaTime(), 0.1f));
+        animationTime = (animationTime + delta) % 1000;
+        feedback.update(game, delta);
         shapes.setProjectionMatrix(viewport.getCamera().combined);
         batch.setProjectionMatrix(viewport.getCamera().combined);
         canvas.begin();
@@ -91,11 +100,18 @@ public final class GameRenderer implements Disposable {
         for (Square square : Square.values()) {
             if (square == Square.NONE || square == board.getHiddenPieceSquare()) continue;
             Piece piece = board.getBoard().getPiece(square);
-            if (piece != Piece.NONE) drawPiece(piece, squareX(square) + 50, squareY(square) + 50, 4);
+            if (piece != Piece.NONE) drawPiece(piece, squareX(square) + 50,
+                    squareY(square) + 50 + feedback.dropOffset(square), 4);
         }
         drawBird(game.getWhite(), Side.WHITE, game);
         drawBird(game.getBlack(), Side.BLACK, game);
         drawPanelText(game);
+        batch.end();
+        beginShapes();
+        feedback.drawShapes(shapes);
+        shapes.end();
+        batch.begin();
+        feedback.drawText(font, batch);
         batch.end();
         if (school != null && !school.isComplete()) lessonBanner();
         if (game.isGameOver() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
@@ -185,7 +201,7 @@ public final class GameRenderer implements Disposable {
         rect(120, 612, 42, 4, DARK_SHINE);
         rect(126, 606, 30, 6, DARK_EDGE);
         rect(20, 566, 156, 2, EDGE);
-        int rows = (game.getHistory().size() + 1) / 2;
+        int rows = school == null ? (game.getHistory().size() + 1) / 2 : 0;
         int firstRow = Math.max(0, rows - 15);
         for (int row = firstRow; row < rows; row++) {
             float y = 480 - (row - firstRow) * 22;
@@ -228,7 +244,7 @@ public final class GameRenderer implements Disposable {
     private void drawPanelText(GameSession game) {
         text("FLAPPY", 20, 760, 4, CREAM);
         text("CHESS", 20, 720, 4, CREAM);
-        text("SKY-HIGH DUELS", 16, 674, 2, MUTED);
+        text(feedback.isSoundEnabled() ? "M SOUND: ON" : "M SOUND: OFF", 16, 674, 2, MUTED);
         drawBirdSprite(Side.WHITE, 56, 630, 2, false, frame());
         drawBirdSprite(Side.BLACK, 140, 636, 2, true, (frame() + 1) % 3);
         centered(school != null ? "FLIGHT SCHOOL" : online ? "ONLINE / 5 MIN" : "LOCAL / 5 MIN", 100, 598, 2, MINT);
@@ -245,8 +261,10 @@ public final class GameRenderer implements Disposable {
             drawMoveLog(game);
         }
         if (!online) text("T FLIGHT SCHOOL", 16, 154, 2, MINT);
-        text("MAKE EVERY", 20, 114, 2, CREAM);
-        text("FLAP COUNT.", 20, 92, 2, GOLD);
+        if (feedback.message().isEmpty()) {
+            text("MAKE EVERY", 20, 114, 2, CREAM);
+            text("FLAP COUNT.", 20, 92, 2, GOLD);
+        }
         centered("ESC", 37, 42, 2, CREAM);
         text("EXIT GAME", 66, 42, 2, MUTED);
         drawClockText(game, Side.BLACK, 650);
@@ -331,7 +349,7 @@ public final class GameRenderer implements Disposable {
                 diamond(x, markerY, 2, accent(side));
             }
             if (side == game.getCarrier()) {
-                float pieceY = carriedY(y, side);
+                float pieceY = carriedY(y, side) + feedback.pickupOffset(side);
                 rect(x - 8, Math.min(y, pieceY), 2, Math.abs(y - pieceY), GOLD);
                 rect(x + 6, Math.min(y, pieceY), 2, Math.abs(y - pieceY), GOLD);
             }
@@ -343,7 +361,8 @@ public final class GameRenderer implements Disposable {
         drawBirdSprite(side, x, y, 4, bird.getVelocityX() < -0.1, game.isGameOver() ? 1 : frame());
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
-            if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x, carriedY(y, side), 2);
+            if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x,
+                    carriedY(y, side) + feedback.pickupOffset(side), 2);
         }
     }
 
@@ -478,6 +497,7 @@ public final class GameRenderer implements Disposable {
     }
 
     @Override public void dispose() {
+        feedback.dispose();
         canvas.dispose();
         sprites.dispose();
         font.dispose();

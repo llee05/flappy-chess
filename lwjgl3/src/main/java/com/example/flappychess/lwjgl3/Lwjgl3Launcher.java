@@ -15,8 +15,8 @@ public final class Lwjgl3Launcher {
         config.setWindowSizeLimits(600, 400, -1, -1);
         config.useVsync(true);
         config.setForegroundFPS(60);
-        // The original game has no sound assets; avoid requiring an audio device.
-        config.disableAudio(true);
+        // Rendering checks do not need an audio device. Normal play uses optional effects.
+        config.disableAudio(Arrays.asList(args).contains("--smoke-test"));
         config.setWindowListener(new Lwjgl3WindowAdapter() {
             @Override public void focusLost() { game.releaseInput(); }
         });

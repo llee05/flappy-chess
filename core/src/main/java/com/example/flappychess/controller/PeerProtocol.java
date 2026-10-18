@@ -13,7 +13,7 @@ import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 1;
+    static final int VERSION = 2;
     static final int MAX_MESSAGE = 65_536;
 
     static JsonValue packet(String type) {
@@ -88,6 +88,16 @@ final class PeerProtocol {
             history.addChild(entry);
         }
         value.addChild("history", history);
+        JsonValue feedback = new JsonValue(ValueType.array);
+        for (var event : state.feedback()) {
+            JsonValue entry = new JsonValue(ValueType.object);
+            put(entry, "sequence", event.sequence());
+            put(entry, "kind", event.kind().name());
+            put(entry, "side", event.side().name());
+            put(entry, "square", event.square().name());
+            feedback.addChild(entry);
+        }
+        value.addChild("feedback", feedback);
         JsonValue promotion = new JsonValue(ValueType.nullValue);
         if (state.promotion() != null) {
             promotion = new JsonValue(ValueType.object);
@@ -123,10 +133,23 @@ final class PeerProtocol {
         String carrier = nullable(value, "carrier", 5);
         String result = nullable(value, "result", 64), reason = nullable(value, "reason", 160);
         if ((result == null) != (reason == null)) throw new IllegalArgumentException("Incomplete result");
+        JsonValue feedback = value.require("feedback");
+        if (!feedback.isArray() || feedback.size > GameFeedback.LIMIT) throw new IllegalArgumentException("Invalid feedback");
+        List<GameFeedback.Event> events = new ArrayList<>();
+        int lastEvent = 0;
+        for (JsonValue event : feedback) {
+            int sequence = (int) number(event, "sequence", 1, Integer.MAX_VALUE);
+            if (sequence <= lastEvent) throw new IllegalArgumentException("Feedback order");
+            Square square = Square.valueOf(string(event, "square", 2));
+            if (square == Square.NONE) throw new IllegalArgumentException("Feedback square");
+            events.add(new GameFeedback.Event(sequence, GameFeedback.Kind.valueOf(string(event, "kind", 12)),
+                    Side.valueOf(string(event, "side", 5)), square));
+            lastEvent = sequence;
+        }
         return new SessionSnapshot(fen, motion(value.require("white")), motion(value.require("black")),
                 number(value, "whiteMillis", 0, 300_000), number(value, "blackMillis", 0, 300_000),
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),
-                squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason);
+                squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason, events);
     }
 
     private static JsonValue motion(Birb.Motion motion) {

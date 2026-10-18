@@ -9,6 +9,7 @@ import com.example.flappychess.view.ChessBoardView;
 import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
+import static com.example.flappychess.controller.GameFeedback.Kind.*;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +26,8 @@ public final class GameSession extends InputAdapter {
     private final ChessClock clock;
     private final LongSupplier nanoTime;
     private final boolean timed;
+    private final GameFeedback feedback = new GameFeedback();
+    private final Set<Side> warnedLowTime = new HashSet<>();
     private final List<ChessController.CompletedMove> history = new ArrayList<>();
     private final Set<Integer> pressed = new HashSet<>();
     private final Birb white = new Birb(425, 625, 50, 50);
@@ -74,11 +77,16 @@ public final class GameSession extends InputAdapter {
                 case Keys.N -> PieceType.KNIGHT;
                 default -> null;
             };
-            if (type != null) finishMove(chess.choosePromotion(type));
+            if (type != null) {
+                Square destination = chess.getPromotionRequest().to();
+                finishMove(chess.choosePromotion(type), destination);
+            }
             return true;
         }
         whiteControls.handleKeyPressed(key);
         blackControls.handleKeyPressed(key);
+        if (key == Keys.SPACE) feedback.emit(FLAP, Side.WHITE, birdSquare(white));
+        if (key == Keys.UP) feedback.emit(FLAP, Side.BLACK, birdSquare(black));
         if (key == Keys.E) toggleCarry(Side.WHITE, white);
         if (key == Keys.ENTER) toggleCarry(Side.BLACK, black);
         return true;
@@ -134,7 +142,7 @@ public final class GameSession extends InputAdapter {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
-                chess.getPromotionRequest(), carrier, history, result, reason);
+                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events());
     }
 
     public void restoreReplica(SessionSnapshot state) {
@@ -145,20 +153,35 @@ public final class GameSession extends InputAdapter {
         history.addAll(state.history());
         result = state.result();
         reason = state.reason();
+        feedback.restore(state.feedback());
     }
 
     private void toggleCarry(Side side, Birb bird) {
         if ((carrier != null && carrier != side) || chess.getSideToMove() != side) return;
-        Square square = ChessBoardView.squareForPoint(bird.getX() + 25, bird.getY() + 25);
+        Square square = birdSquare(bird);
+        Square from = boardView.getHiddenPieceSquare();
         String symbol = chess.toggleCarryAt(square);
         carrier = symbol == null ? null : side;
-        finishMove(chess.consumeCompletedMove());
+        var move = chess.consumeCompletedMove();
+        if (move != null) finishMove(move, square);
+        else if (from == Square.NONE) feedback.emit(carrier == null ? NO_PIECE : PICKUP, side, square);
+        else if (carrier == null) feedback.emit(CANCEL, side, square);
+        else if (!chess.hasPendingPromotion()) feedback.emit(ILLEGAL_DROP, side, square);
     }
 
-    private void finishMove(ChessController.CompletedMove move) {
+    private static Square birdSquare(Birb bird) {
+        return ChessBoardView.squareForPoint(bird.getX() + 25, bird.getY() + 25);
+    }
+
+    private void finishMove(ChessController.CompletedMove move, Square destination) {
         if (move == null) return;
         carrier = null;
         history.add(move);
+        feedback.emit(move.notation().contains("x") ? CAPTURE : DROP, move.side(), destination);
+        if (boardView.getBoard().isKingAttacked()) {
+            Side checked = chess.getSideToMove();
+            feedback.emit(CHECK, checked, boardView.getBoard().getKingSquare(checked));
+        }
         switch (chess.getGameStatus()) {
             case CHECKMATE -> end(sideName(chess.getWinner()) + " wins", "Checkmate");
             case STALEMATE -> end("Draw", "Stalemate");
@@ -173,6 +196,10 @@ public final class GameSession extends InputAdapter {
         // Input ticks before a move switches sides, charging the elapsed time correctly.
         clock.tick(nanoTime.getAsLong(), side);
         if (clock.isExpired(side)) end(sideName(side.flip()) + " wins", sideName(side) + " ran out of time");
+        else if (clock.getRemainingMillis(side) <= 30_000 && warnedLowTime.add(side)) {
+            Birb bird = side == Side.WHITE ? white : black;
+            feedback.emit(LOW_TIME, side, birdSquare(bird));
+        }
     }
 
     private void end(String title, String reason) {
@@ -184,6 +211,7 @@ public final class GameSession extends InputAdapter {
     public static String sideName(Side side) { return side == Side.WHITE ? "White" : "Black"; }
     public boolean isGameOver() { return result != null; }
     public boolean isTimed() { return timed; }
+    public GameFeedback getFeedback() { return feedback; }
     public String getResult() { return result; }
     public String getReason() { return reason; }
     public ChessBoardView getBoardView() { return boardView; }

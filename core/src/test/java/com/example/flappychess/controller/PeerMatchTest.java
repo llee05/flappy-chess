@@ -237,6 +237,41 @@ class PeerMatchTest {
         assertEquals(state, snapshot(snapshot(state)));
     }
 
+    @Test void guestReceivesInvalidDropFeedbackOnceEvenWhenInputsOrSnapshotsRepeat() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.host, Keys.E);
+        pair.press(pair.guest, Keys.E);
+        pair.host.getSession().getBlack().setY(425); // A pawn cannot drop onto occupied e4.
+        pair.guest.keyDown(Keys.E);
+        String repeatedInput = pair.toHost.peek();
+        pair.flush();
+        var events = pair.host.getSession().snapshot().feedback();
+        assertEquals(GameFeedback.Kind.ILLEGAL_DROP, events.get(events.size() - 1).kind());
+        assertEquals(events, pair.guest.getSession().snapshot().feedback());
+        pair.host.receive(repeatedInput);
+        pair.advance(4);
+        assertEquals(events, pair.guest.getSession().snapshot().feedback());
+        assertEquals(Side.BLACK, pair.guest.getSession().getCarrier());
+    }
+
+    @Test void feedbackProtocolRejectsUnboundedOrOutOfOrderEvents() {
+        for (boolean oversized : new boolean[] {false, true}) {
+            Pair pair = new Pair();
+            pair.host.keyDown(Keys.E);
+            JsonValue value = parse(pair.toGuest.peek());
+            JsonValue events = value.get("state").get("feedback");
+            if (oversized) {
+                for (int i = 0; i < GameFeedback.LIMIT; i++) {
+                    events.addChild(new JsonValue(JsonValue.ValueType.nullValue));
+                }
+            } else events.get(0).get("sequence").set(0L, "0");
+            pair.guest.receive(encode(value));
+            assertTrue(pair.guest.isDisconnected());
+        }
+    }
+
     @Test void invalidOrOversizedPacketsStopTheConnectionWithoutMutatingTheBoard() {
         for (String invalid : new String[] {"not json", "{}", "{\"version\":999,\"type\":\"ready\"}", "x".repeat(MAX_MESSAGE + 1)}) {
             Pair pair = new Pair();

@@ -16,6 +16,7 @@ final class PeerGame extends ApplicationAdapter {
     private PeerMatch match;
     private GameRenderer renderer;
     private boolean reportedDisconnect;
+    private boolean soundHeld;
 
     PeerGame(boolean host) { this.host = host; }
 
@@ -24,12 +25,23 @@ final class PeerGame extends ApplicationAdapter {
         match = new PeerMatch(host, PeerNetwork::send, System::nanoTime);
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
+                if (key == Keys.M) {
+                    if (!soundHeld) renderer.toggleSound();
+                    soundHeld = true;
+                    return true;
+                }
                 if (key != Keys.ESCAPE) return false;
                 WebLauncher.leaveGame();
                 return true;
             }
+            @Override public boolean keyUp(int key) {
+                if (key != Keys.M) return false;
+                soundHeld = false;
+                return true;
+            }
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
+                if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
                 if (match.getSession().isGameOver() && point.x >= 450 && point.x <= 750
                         && point.y >= 260 && point.y <= 320) {
                     match.requestRematch();
@@ -47,6 +59,7 @@ final class PeerGame extends ApplicationAdapter {
         match.open();
         match.update(Gdx.graphics.getDeltaTime());
         renderer.render(match.getSession());
+        WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
         PeerNetwork.status(match.status(), host, match.isStarted());
         GameSession session = match.getSession();
         var history = session.getHistory();
@@ -61,7 +74,10 @@ final class PeerGame extends ApplicationAdapter {
     }
 
     @Override public void resize(int width, int height) { if (renderer != null) renderer.resize(width, height); }
-    @Override public void pause() { if (match != null) match.releaseInput(); }
+    @Override public void pause() {
+        soundHeld = false;
+        if (match != null) match.releaseInput();
+    }
     @Override public void dispose() {
         if (match != null) match.releaseInput();
         if (renderer != null) renderer.dispose();

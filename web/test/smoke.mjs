@@ -3,7 +3,8 @@ import { withBrowser, sleep } from './browser.mjs';
 
 await withBrowser(async browser => {
   const { send, evaluate, key, press, screenshot, until } = await browser.page();
-  const birdX = () => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
+  const birdX = (releaseFocus = false) => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
+    ${releaseFocus ? "window.dispatchEvent(new Event('blur'));" : ''}
     const canvas = document.getElementById('canvas');
     const context = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
     context.drawImage(canvas, 0, 0);
@@ -22,14 +23,35 @@ await withBrowser(async browser => {
   await screenshot('welcome');
   await evaluate("document.getElementById('play').click()");
   await until(() => evaluate("document.body.dataset.game === 'ready'"), 'creating the game');
+  await evaluate("(() => { window.effectPlays = 0; for (const sound of Howler._howls) sound.on('play', () => window.effectPlays++); })()");
   // Exercise chesslib legal-target generation and a carried pawn in the browser.
   await press('KeyE', 'e', 69);
+  await until(() => evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'showing pickup feedback');
+  await until(() => evaluate('window.effectPlays > 0'), 'playing a sound effect');
   await press('Space', ' ', 32);
   await sleep(650);
   await press('Space', ' ', 32);
   await sleep(650);
   await press('KeyE', 'e', 69);
   await screenshot('gameplay');
+  await until(() => evaluate("Howler._howls.length === 7 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
+  assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Sound must unlock on keyboard input');
+  await key('keyDown', 'KeyM', 'm', 77);
+  await key('keyDown', 'KeyM', 'm', 77);
+  await key('keyUp', 'KeyM', 'm', 77);
+  await until(() => evaluate("document.body.dataset.sound === 'off'"), 'muting without repeated-key toggles');
+  const playedBeforeMute = await evaluate('window.effectPlays');
+  await press('Space', ' ', 32);
+  await sleep(150);
+  assert.equal(await evaluate('window.effectPlays'), playedBeforeMute, 'Muted actions must not play sounds');
+  const clickSound = async () => {
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 70, y: 132, button: 'left', clickCount: 1 });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 70, y: 132, button: 'left', clickCount: 1 });
+  };
+  await clickSound();
+  await until(() => evaluate("document.body.dataset.sound === 'on'"), 'unmuting with the Sound control');
+  await clickSound();
+  await until(() => evaluate("document.body.dataset.sound === 'off'"), 'muting with the Sound control');
   assert.deepEqual(await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]"), [1200, 800]);
   await evaluate("document.addEventListener('keydown', e => { window.arrowCaught = e.defaultPrevented; }, { once: true })");
   await press('ArrowUp', 'ArrowUp', 38);
@@ -38,12 +60,13 @@ await withBrowser(async browser => {
   assert.notEqual(initialX, null, 'Expected the gold bird on the rendered board');
   await key('keyDown', 'KeyD', 'd', 68);
   await sleep(300);
-  const movingX = await birdX();
+  const movingX = await birdX(true);
   assert(movingX > initialX + 25, 'A held movement key must move the bird');
-  await evaluate("window.dispatchEvent(new Event('blur'))");
   await sleep(1200);
   const releasedX = await birdX();
-  assert(releasedX > movingX + 35 && releasedX < movingX + 85, 'Focus loss must release movement and let the bird coast to rest');
+  await screenshot('focus-release');
+  assert(releasedX > movingX + 35 && releasedX < movingX + 85,
+    `Focus loss must release movement and let the bird coast to rest: moving=${movingX}, released=${releasedX}`);
   await press('KeyD', 'd', 68);
   for (const [name, width, height] of [['small', 600, 400], ['wide', 1600, 900]]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
@@ -56,12 +79,45 @@ await withBrowser(async browser => {
   await evaluate("document.getElementById('tutorial').click()");
   await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'starting Flight School');
   assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
+  assert.equal(await evaluate("document.body.dataset.sound"), 'off', 'Mute preference must survive returning to the lobby');
+  await press('KeyM', 'm', 77);
   assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /SPACE/);
   await press('Space', ' ', 32);
   await screenshot('flight-school');
   await press('KeyT', 't', 84);
   await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'restarting Flight School');
+  const stage = expected => until(() => evaluate(`document.getElementById('lesson-summary').dataset.stage === '${expected}'`), `lesson: ${expected}`);
+  // Fly using real keyboard input and the normal fixed-step physics. Align horizontally
+  // at the boundary, then use two separate flaps to reach and deliver each pawn.
+  await key('keyDown', 'KeyD', 'd', 68);
+  await sleep(1150);
+  await key('keyUp', 'KeyD', 'd', 68);
+  await sleep(800);
+  await press('Space', ' ', 32);
+  await stage('WHITE_PICKUP');
+  await press('KeyE', 'e', 69);
+  await stage('WHITE_DELIVER');
+  await press('Space', ' ', 32);
+  await sleep(620);
+  await press('KeyE', 'e', 69);
+  await stage('BLACK_FLY');
+  await screenshot('flight-school-black');
+  await key('keyDown', 'ArrowLeft', 'ArrowLeft', 37);
+  await sleep(1150);
+  await key('keyUp', 'ArrowLeft', 'ArrowLeft', 37);
+  await sleep(800);
+  await press('ArrowUp', 'ArrowUp', 38);
+  await stage('BLACK_PICKUP');
+  await press('Enter', 'Enter', 13);
+  await stage('BLACK_DELIVER');
+  await press('ArrowUp', 'ArrowUp', 38);
+  await sleep(620);
+  await press('Enter', 'Enter', 13);
+  await stage('COMPLETE');
+  await screenshot('flight-school-complete');
+  await press('Enter', 'Enter', 13);
+  await until(() => evaluate("document.body.dataset.mode === 'local'"), 'starting a match after Flight School');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'leaving Flight School');
+  await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
   console.log(`Browser smoke checks passed. Screenshots: ${browser.reports}`);
 });

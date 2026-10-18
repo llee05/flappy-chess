@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 1;
+  const PROTOCOL = 2;
   let startGame, receive, closed, pulse;
   let peer, connection, timer, connectTimeout, started = false, ended = false;
   const pending = [];

@@ -160,6 +160,15 @@ D5. The lesson highlights the pawn, shows each objective, and allows retries and
 cancelled pickups. After both deliveries, **Enter** or **Play local** starts a
 regular match; **R** repeats the lesson. **Esc** exits as usual.
 
+Pickups and deliveries have small pixel bursts and a brief piece animation;
+captures get a larger gold burst. Invalid drops flash the destination and explain
+that the piece is still carried, with legal targets left visible. Quiet sound
+effects accompany flaps, pickups, deliveries, captures, invalid actions, check,
+and the first 30-second warning for each player. Press **M** or click **Sound** in
+the upper-left panel to mute or unmute; this preference is saved on the device.
+Visual feedback remains available while muted. Online feedback comes from the
+host and each numbered event is presented once, including invalid guest drops.
+
 Both birds move continuously, with opposite gravity. Fly the active player's
 bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original
@@ -181,6 +190,8 @@ promotion and while the window is unfocused.
 - `core/src/main/java/com/example/flappychess/model`: tuned bird physics,
   chess rules, and clock models, with the package renamed.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
+- `core/.../controller/FlightSchool`: untimed, guided deliveries for both gravity directions.
+- `core/.../controller/GameFeedback`: bounded presentation events shared with online peers.
 - `core/.../controller/PeerMatch`: host/guest input ownership, snapshots,
   heartbeat, prediction, disconnects, and rematch agreement; no browser dependency.
 - `core/.../view`: board presentation state and libGDX drawing.
@@ -212,8 +223,9 @@ filtering inside the 1200x800 logical fit viewport, keeping the pixel grid
 consistent as the window resizes. Visual pixel snapping does not affect bird
 physics or the coordinates used for pickup/drop.
 The original JavaFX views, FXML placeholder, and JavaFX-specific view tests were
-replaced; this port has no JavaFX or FXGL dependency. Audio is disabled because
-the example contains no sound assets.
+replaced; this port has no JavaFX or FXGL dependency. Sound effects use small,
+original synthesized WAV assets. Regenerate them with
+`python3 tools/generate-sounds.py`; the game also runs without an audio device.
 
 Versions: Java 17, Gradle 9.1.0 (checksum-verified wrapper), libGDX 1.14.2,
 gdx-teavm 1.6.2, chesslib 1.3.6, JUnit 5.12.1. Dependencies resolve from Maven Central, with
@@ -236,3 +248,5 @@ Liberation Sans remains bundled under the SIL Open Font License;
 see `assets/fonts/Liberation-LICENSE.txt` for its copyright and license.
 PeerJS 1.5.5 is vendored under the MIT License; see
 `web/src/main/webapp/vendor/PeerJS-LICENSE.txt` and the adjacent provenance note.
+Sound effects are original synthesized tones with no third-party samples; see
+`assets/sounds/README.md` and `tools/generate-sounds.py`.

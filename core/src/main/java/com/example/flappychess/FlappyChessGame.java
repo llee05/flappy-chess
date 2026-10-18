@@ -18,6 +18,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private FlightSchool school;
     private GameRenderer renderer;
     private int frames;
+    private boolean soundHeld;
 
     public FlappyChessGame() { this(false); }
     public FlappyChessGame(boolean smokeTest) { this(smokeTest, () -> Gdx.app.exit()); }
@@ -42,6 +43,11 @@ public final class FlappyChessGame extends ApplicationAdapter {
         session = school == null ? new GameSession() : school.getSession();
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
+                if (key == Keys.M) {
+                    if (!soundHeld) renderer.toggleSound();
+                    soundHeld = true;
+                    return true;
+                }
                 if (key == Keys.ESCAPE) { exitAction.run(); return true; }
                 if (key == Keys.T) { restart(true); return true; }
                 if (school != null && school.isComplete()) {
@@ -52,8 +58,14 @@ public final class FlappyChessGame extends ApplicationAdapter {
                 if (key == Keys.R && session.isGameOver()) { restart(false); return true; }
                 return false;
             }
+            @Override public boolean keyUp(int key) {
+                if (key != Keys.M) return false;
+                soundHeld = false;
+                return true;
+            }
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
+                if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
                 if ((session.isGameOver() || school != null && school.isComplete()) && point.x >= 450 && point.x <= 750
                         && point.y >= 260 && point.y <= 320) {
                     restart(false);
@@ -76,7 +88,12 @@ public final class FlappyChessGame extends ApplicationAdapter {
 
     @Override public void resize(int width, int height) { renderer.resize(width, height); }
     public FlightSchool getFlightSchool() { return school; }
-    @Override public void pause() { session.releaseInput(); }
-    public void releaseInput() { if (session != null) session.releaseInput(); }
+    public boolean isSoundEnabled() { return renderer.isSoundEnabled(); }
+    public String feedbackMessage() { return renderer.feedbackMessage(); }
+    @Override public void pause() { releaseInput(); }
+    public void releaseInput() {
+        soundHeld = false;
+        if (session != null) session.releaseInput();
+    }
     @Override public void dispose() { if (renderer != null) renderer.dispose(); }
 }

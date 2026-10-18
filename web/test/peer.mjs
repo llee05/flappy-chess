@@ -31,12 +31,23 @@ await withBrowser(async browser => {
   // The white bird starts over e2 and can reach e3 with a single flap.
   await host.press('KeyE', 'e', 69);
   await guest.until(async () => (await summary(guest)).carrier === 'White', 'synchronizing pickup');
+  await guest.until(() => guest.evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'synchronizing pickup feedback');
+  // Drop at the back rank after falling: the pawn must stay carried on both peers.
+  await sleep(1000);
+  await host.press('KeyE', 'e', 69);
+  await guest.until(() => guest.evaluate("document.getElementById('action-feedback').textContent.startsWith('Illegal drop')"), 'synchronizing invalid-drop feedback');
+  assert.equal((await summary(guest)).carrier, 'White');
+  await guest.screenshot('online-illegal-drop');
+  await host.press('Space', ' ', 32);
+  await sleep(650);
   await host.press('Space', ' ', 32);
   await sleep(650);
   await host.press('KeyE', 'e', 69);
   await guest.until(async () => (await summary(guest)).lastMove === 'e3', 'synchronizing White move');
   assert.equal((await summary(host)).turn, 'Black');
   assert.equal((await summary(guest)).turn, 'Black');
+  await sleep(2000);
+  assert.equal(await guest.evaluate("document.getElementById('action-feedback').textContent"), '', 'Repeated snapshots must not replay expired feedback');
 
   // Black is now at the top boundary. Flap to the e7 pawn, pick it up,
   // then flap to e6. The guest may use either keyboard layout for its bird.

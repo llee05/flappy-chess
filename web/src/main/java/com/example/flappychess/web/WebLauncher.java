@@ -31,6 +31,7 @@ public final class WebLauncher {
                 var school = game.getFlightSchool();
                 describeLesson(school == null ? "" : school.getStage().name(),
                         school == null ? "" : school.title() + ". " + school.instruction());
+                describeFeedback(game.feedbackMessage(), game.isSoundEnabled());
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
@@ -76,6 +77,9 @@ public final class WebLauncher {
 
     @JSBody(params = {"stage", "text"}, script = "const summary = document.getElementById('lesson-summary'); summary.dataset.stage = stage; if (summary.textContent !== text) summary.textContent = text; document.body.dataset.mode = stage ? 'tutorial' : 'local';")
     private static native void describeLesson(String stage, String text);
+
+    @JSBody(params = {"text", "sound"}, script = "const summary = document.getElementById('action-feedback'); if (summary.textContent !== text) summary.textContent = text; document.body.dataset.sound = sound ? 'on' : 'off';")
+    static native void describeFeedback(String text, boolean sound);
 
     @JSBody(script = "window.FlappyNetwork.leave();")
     static native void leaveGame();
