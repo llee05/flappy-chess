@@ -1,0 +1,8 @@
+{
+  "name": "flappy-chess-browser-tests",
+  "private": true,
+  "description": "Local signaling server for real WebRTC integration tests; not required to build or host the game.",
+  "devDependencies": {
+    "peer": "1.0.2"
+  }
+}

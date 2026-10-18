@@ -44,3 +44,10 @@ tasks.register('browserTest', Exec) {
     dependsOn 'dist'
     commandLine 'node', file('test/smoke.mjs').absolutePath
 }
+
+tasks.register('peerTest', Exec) {
+    group = 'verification'
+    description = 'Check two real WebRTC players (requires npm ci in web, Node 22+ and Chromium).'
+    dependsOn 'dist'
+    commandLine 'node', file('test/peer.mjs').absolutePath
+}

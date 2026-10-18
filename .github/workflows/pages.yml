@@ -37,6 +37,12 @@ jobs:
         run: ./gradlew :web:browserTest
         env:
           CHROME_BIN: google-chrome
+      - name: Install local signaling for multiplayer checks
+        run: npm ci --prefix web --ignore-scripts --no-audit --no-fund
+      - name: Test WebRTC multiplayer in two browsers
+        run: ./gradlew :web:peerTest
+        env:
+          CHROME_BIN: google-chrome
       - name: Upload browser distribution
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
