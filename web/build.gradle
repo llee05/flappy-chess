@@ -1,0 +1,46 @@
+dependencies {
+    implementation project(':core')
+    implementation "com.github.xpenatan.gdx-teavm:backend-web:$gdxTeaVMVersion"
+}
+
+def webOutput = layout.buildDirectory.dir('dist')
+
+tasks.register('dist', JavaExec) {
+    group = 'distribution'
+    description = 'Compile the Java game to a static browser application.'
+    dependsOn classes
+    mainClass = 'com.example.flappychess.web.BuildWeb'
+    classpath = sourceSets.main.runtimeClasspath
+    workingDir = rootProject.projectDir
+    maxHeapSize = '1G'
+    args rootProject.file('assets').absolutePath, webOutput.get().asFile.absolutePath
+    inputs.files(sourceSets.main.runtimeClasspath)
+    inputs.dir(rootProject.file('assets'))
+    inputs.dir('src/main/webapp')
+    outputs.dir(webOutput)
+    doFirst { delete webOutput }
+    doLast {
+        copy {
+            from 'src/main/webapp'
+            into webOutput
+        }
+    }
+}
+
+tasks.named('assemble') { dependsOn 'dist' }
+
+tasks.register('run', JavaExec) {
+    group = 'application'
+    description = 'Build and serve the browser game at http://localhost:8080.'
+    dependsOn 'dist'
+    mainClass = 'com.example.flappychess.web.ServeWeb'
+    classpath = sourceSets.main.runtimeClasspath
+    args webOutput.get().asFile.absolutePath, providers.gradleProperty('webPort').getOrElse('8080')
+}
+
+tasks.register('browserTest', Exec) {
+    group = 'verification'
+    description = 'Check the compiled game in headless Chromium (requires Node 22+ and Chromium).'
+    dependsOn 'dist'
+    commandLine 'node', file('test/smoke.mjs').absolutePath
+}

@@ -1,2 +1,2 @@
 rootProject.name = 'flappy-chess'
-include 'core', 'lwjgl3'
+include 'core', 'lwjgl3', 'web'

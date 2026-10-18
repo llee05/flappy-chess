@@ -11,12 +11,17 @@ import com.example.flappychess.view.GameRenderer;
 
 public final class FlappyChessGame extends ApplicationAdapter {
     private final boolean smokeTest;
+    private final Runnable exitAction;
     private GameSession session;
     private GameRenderer renderer;
     private int frames;
 
     public FlappyChessGame() { this(false); }
-    public FlappyChessGame(boolean smokeTest) { this.smokeTest = smokeTest; }
+    public FlappyChessGame(boolean smokeTest) { this(smokeTest, () -> Gdx.app.exit()); }
+    public FlappyChessGame(boolean smokeTest, Runnable exitAction) {
+        this.smokeTest = smokeTest;
+        this.exitAction = exitAction;
+    }
 
     @Override public void create() {
         renderer = new GameRenderer();
@@ -27,7 +32,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
         session = new GameSession();
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
-                if (key == Keys.ESCAPE) { Gdx.app.exit(); return true; }
+                if (key == Keys.ESCAPE) { exitAction.run(); return true; }
                 if (key == Keys.R && session.isGameOver()) { restart(); return true; }
                 return false;
             }
