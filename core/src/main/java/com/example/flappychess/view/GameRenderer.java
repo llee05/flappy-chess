@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.glutils.FrameBuffer;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.utils.Disposable;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -51,6 +52,7 @@ public final class GameRenderer implements Disposable {
     private static final Color SHADOW = new Color(0.08f, 0.12f, 0.18f, 0.22f);
     private static final Color VEIL = new Color(0.06f, 0.08f, 0.15f, 0.86f);
     private final FitViewport viewport = new FitViewport(1200, 800);
+    private final Matrix4 rasterProjection = new Matrix4().setToOrtho2D(0, 0, 1200, 800);
     private final SpriteBatch batch = new SpriteBatch();
     private final ShapeRenderer shapes = new ShapeRenderer();
     private final PixelFont font = new PixelFont();
@@ -64,6 +66,7 @@ public final class GameRenderer implements Disposable {
     private float animationTime;
     private FlightSchool school;
     private ChessBoardView displayBoard;
+    private boolean boardOnly;
 
     public GameRenderer() { this(false); }
 
@@ -75,7 +78,18 @@ public final class GameRenderer implements Disposable {
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
     }
 
-    public void resize(int width, int height) { viewport.update(width, height, true); }
+    public void resize(int width, int height) {
+        viewport.update(width, height, true);
+        viewport.getCamera().position.set(600, 400, 0);
+        viewport.getCamera().update();
+    }
+    /** Browser touch layouts present clocks and actions outside the board. */
+    public void setBoardOnly(boolean boardOnly) {
+        if (this.boardOnly == boardOnly) return;
+        this.boardOnly = boardOnly;
+        viewport.setWorldSize(boardOnly ? 800 : 1200, 800);
+        resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
     public void toggleSound() { feedback.toggleSound(); }
     public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
@@ -148,8 +162,8 @@ public final class GameRenderer implements Disposable {
         float delta = Math.max(0, Math.min(Gdx.graphics.getDeltaTime(), 0.1f));
         animationTime = (animationTime + delta) % 1000;
         feedback.update(game, delta);
-        shapes.setProjectionMatrix(viewport.getCamera().combined);
-        batch.setProjectionMatrix(viewport.getCamera().combined);
+        shapes.setProjectionMatrix(rasterProjection);
+        batch.setProjectionMatrix(rasterProjection);
         canvas.begin();
         ScreenUtils.clear(PANEL);
         beginShapes();
@@ -179,13 +193,16 @@ public final class GameRenderer implements Disposable {
         batch.begin();
         feedback.drawText(font, batch);
         batch.end();
-        if (school != null && !school.isComplete()) lessonBanner();
-        if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
-        if (setup != null) setupOverlay(setup);
+        if (!boardOnly) {
+            if (school != null && !school.isComplete()) lessonBanner();
+            if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
+            if (setup != null) setupOverlay(setup);
+        }
         canvas.end();
 
         ScreenUtils.clear(INK);
         viewport.apply();
+        batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
         batch.setColor(Color.WHITE);
         batch.draw(canvasImage, 0, 0, 1200, 800);

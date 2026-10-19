@@ -2,17 +2,97 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FLAP FLAP">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Fly, pick up, and deliver your next chess move. Play on touch screens or keyboards, against the computer or with a friend.">
   <meta name="theme-color" content="#20283c">
   <title>Flappy Chess</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <canvas id="canvas" tabindex="0" aria-label="Flappy Chess game board. White: A and D to move, Space to flap, E to carry. Black: arrow keys to move and flap, Enter to carry."></canvas>
+  <div id="game-shell">
+    <header id="mobile-hud" class="mobile-only">
+      <nav class="game-toolbar" aria-label="Game actions">
+        <button id="mobile-leave" type="button">Lobby</button>
+        <button id="mobile-sound" type="button" data-key="M" aria-pressed="true">Sound on</button>
+        <button id="mobile-menu" type="button" aria-expanded="false" aria-controls="mobile-details">More</button>
+      </nav>
+      <div class="mobile-clocks" aria-label="Chess clocks">
+        <div id="white-clock" class="clock white"><span id="white-label">White</span><strong id="white-time">5:00</strong></div>
+        <div id="black-clock" class="clock black"><span id="black-label">Black</span><strong id="black-time">5:00</strong></div>
+      </div>
+      <p id="mobile-turn" role="status" aria-live="polite">White to move</p>
+      <p id="mobile-feedback" aria-live="polite"></p>
+      <section id="mobile-details" hidden aria-label="Match details and actions">
+        <p id="mobile-score"></p>
+        <p id="mobile-moves"></p>
+        <p id="mobile-captures"></p>
+        <div class="action-grid">
+          <button type="button" data-key="P">Export PGN</button>
+          <button type="button" data-key="S" class="local-action">New match</button>
+          <button type="button" data-key="T" class="local-action">Flight School</button>
+        </div>
+        <p>Clocks keep running while this menu is open or the page is in the background.</p>
+      </section>
+    </header>
+    <div id="board-stage">
+      <canvas id="canvas" tabindex="0" aria-label="Flappy Chess game board. Use the touch controls, or A/D, Space and E for player one; arrow keys and Enter for player two."></canvas>
+      <section id="mobile-dialog" class="mobile-only" hidden role="region" aria-labelledby="mobile-dialog-title">
+        <h2 id="mobile-dialog-title"></h2>
+        <p id="mobile-dialog-note"></p>
+        <div id="mobile-promotion" class="action-grid" hidden>
+          <button type="button" data-key="Q">Queen</button><button type="button" data-key="R">Rook</button>
+          <button type="button" data-key="B">Bishop</button><button type="button" data-key="N">Knight</button>
+        </div>
+        <div id="mobile-result" class="action-grid" hidden>
+          <button type="button" data-key="R">Play again</button><button type="button" data-key="X">Swap colors</button>
+          <button type="button" data-key="V">Review</button><button type="button" data-key="P">Export PGN</button>
+        </div>
+        <div id="mobile-complete" class="action-grid" hidden>
+          <button type="button" data-key="ENTER">Play local</button><button type="button" data-key="R">Repeat lesson</button>
+        </div>
+        <div id="mobile-setup" class="action-grid" hidden>
+          <button id="setup-opponent" type="button" data-key="C">Opponent</button>
+          <button id="setup-color" type="button" data-key="W">Your color</button>
+          <button id="setup-time" type="button" data-key="RIGHT">Time</button>
+          <button id="setup-increment" type="button" data-key="UP">Bonus</button>
+          <button id="setup-chess" type="button" data-key="E">Chess skill</button>
+          <button id="setup-flight" type="button" data-key="F">Flying skill</button>
+          <button type="button" data-key="ENTER">Start match</button><button type="button" data-key="S">Back</button>
+        </div>
+      </section>
+    </div>
+    <footer id="touch-controls" class="mobile-only" aria-label="Touch flight controls">
+      <p id="touch-hint">Hold to steer. Tap once per flap. Pick up, then deliver.</p>
+      <section class="touch-pad" id="touch-first" aria-labelledby="touch-first-label">
+        <strong id="touch-first-label">Player 1 · White ↓</strong>
+        <div class="pad-buttons">
+          <button type="button" data-hold="A" aria-label="Player 1 move left">◀</button>
+          <button type="button" data-hold="D" aria-label="Player 1 move right">▶</button>
+          <button type="button" data-hold="SPACE" class="flap">Flap ↑</button>
+          <button type="button" data-hold="E" class="carry">Pick / drop</button>
+        </div>
+      </section>
+      <section class="touch-pad" id="touch-second" aria-labelledby="touch-second-label">
+        <strong id="touch-second-label">Player 2 · Black ↑</strong>
+        <div class="pad-buttons">
+          <button type="button" data-hold="LEFT" aria-label="Player 2 move left">◀</button>
+          <button type="button" data-hold="RIGHT" aria-label="Player 2 move right">▶</button>
+          <button type="button" data-hold="UP" class="flap">Flap ↓</button>
+          <button type="button" data-hold="ENTER" class="carry">Pick / drop</button>
+        </div>
+      </section>
+      <div id="mobile-review" class="action-grid" hidden aria-label="Review moves">
+        <button type="button" data-key="HOME">First</button><button type="button" data-key="LEFT">Previous</button>
+        <button type="button" data-key="RIGHT">Next</button><button type="button" data-key="END">Last</button>
+        <button type="button" data-key="V">Result</button><button type="button" data-key="P">Export PGN</button>
+      </div>
+    </footer>
+  </div>
   <main id="welcome">
     <article>
       <h1>FLAPPY<br>CHESS</h1>
+      <p class="tagline">Take flight. Make your move.</p>
+      <p class="touch-intro">Touch controls included. Try Flight School to learn both gravity directions.</p>
       <button id="tutorial" type="button" disabled>FLIGHT SCHOOL</button>
       <fieldset id="match-settings">
         <legend>Match settings · local play or room creator</legend>
@@ -63,7 +143,7 @@
         <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
         <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
       </div>
-      <p class="note">Flight School is always untimed. T restarts the lesson during local play. S opens a new match setup.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Keyboard required. Esc leaves the game.</p>
+      <p class="note">Flight School is always untimed. Solo, local and online play support touch controls or a keyboard.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Esc or Lobby leaves the game.</p>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
   </main>
@@ -97,6 +177,7 @@
   <script src="./settings.js"></script>
   <script src="./peer-config.js"></script>
   <script src="./network.js"></script>
+  <script src="./mobile.js"></script>
   <script src="./game.js" onload="main()"></script>
 </body>
 </html>

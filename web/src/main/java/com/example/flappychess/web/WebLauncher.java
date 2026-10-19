@@ -37,11 +37,14 @@ public final class WebLauncher {
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
+                MobileControls.install(game::releaseInput);
                 catchGameKeys();
                 describeTimeControl(game.getSession().getSettings().label());
                 ready(tutorial);
             }
             @Override public void render() {
+                MobileControls.resizeCanvas();
+                game.setBoardOnly(MobileControls.isMobile());
                 game.render();
                 var school = game.getFlightSchool();
                 describeLesson(school == null ? "" : school.getStage().name(),
@@ -52,16 +55,17 @@ public final class WebLauncher {
                 describeHistory(game.getSession(), game.getReview());
                 describeSeries(game.getSession());
                 describeSolo(game.getSession());
+                MobileControls.present(game.getSession(), school, game.getMatchSetup(), "");
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
             @Override public void resume() { game.resume(); }
             @Override public void dispose() { game.dispose(); }
-        }, false);
+        });
     }
 
     private static void startPeer(boolean host) {
-        launch(new PeerGame(host, host ? selectedSettings() : MatchSettings.DEFAULT), true);
+        launch(new PeerGame(host, host ? selectedSettings() : MatchSettings.DEFAULT));
     }
 
     static MatchSettings selectedSettings() { return MatchSettings.minutes(selectedMinutes(), selectedIncrement()); }
@@ -132,22 +136,27 @@ public final class WebLauncher {
             if (move.captured() == Piece.NONE) continue;
             if (move.side() == Side.WHITE) whiteCaptures++; else blackCaptures++;
         }
+        StringBuilder notation = new StringBuilder();
+        for (int i = Math.max(0, (ply + 1) / 2 - 10) * 2; i < ply; i++) {
+            if (i % 2 == 0) notation.append(i / 2 + 1).append(". ");
+            notation.append(moves.get(i).notation()).append(' ');
+        }
         historySummary(game.isGameOver(), review.isActive(), ply, moves.size(), whiteCaptures, blackCaptures,
-                last == null ? "" : last.coordinate(),
+                last == null ? "" : last.coordinate(), notation.toString().trim(),
                 review.isActive() ? review.getView().getBoard().getFen() : game.getBoardView().getBoard().getFen());
     }
 
-    @JSBody(params = {"ended", "review", "ply", "count", "whiteCaptures", "blackCaptures", "last", "fen"}, script = "const summary = document.getElementById('history-summary'); summary.dataset.ended = String(ended); summary.dataset.review = String(review); summary.dataset.ply = String(ply); summary.dataset.moves = String(count); summary.dataset.whiteCaptured = String(whiteCaptures); summary.dataset.blackCaptured = String(blackCaptures); summary.dataset.last = last; summary.dataset.fen = fen; const text = review ? 'Reviewing position ' + ply + ' of ' + count + '. White captured ' + whiteCaptures + ' pieces; Black captured ' + blackCaptures + '. Left and Right step through moves; Home and End jump; V returns to the result; P exports PGN.' : ended ? 'Game finished. V reviews the moves, P exports PGN, R plays again.' : ''; if (summary.textContent !== text) summary.textContent = text;")
-    private static native void historySummary(boolean ended, boolean review, int ply, int count, int whiteCaptures, int blackCaptures, String last, String fen);
+    @JSBody(params = {"ended", "review", "ply", "count", "whiteCaptures", "blackCaptures", "last", "notation", "fen"}, script = "const summary = document.getElementById('history-summary'); summary.dataset.ended = String(ended); summary.dataset.review = String(review); summary.dataset.ply = String(ply); summary.dataset.moves = String(count); summary.dataset.whiteCaptured = String(whiteCaptures); summary.dataset.blackCaptured = String(blackCaptures); summary.dataset.last = last; summary.dataset.notation = notation; summary.dataset.fen = fen; const text = review ? 'Reviewing position ' + ply + ' of ' + count + '. White captured ' + whiteCaptures + ' pieces; Black captured ' + blackCaptures + '. Left and Right step through moves; Home and End jump; V returns to the result; P exports PGN.' : ended ? 'Game finished. V reviews the moves, P exports PGN, R plays again.' : ''; if (summary.textContent !== text) summary.textContent = text;")
+    private static native void historySummary(boolean ended, boolean review, int ply, int count, int whiteCaptures, int blackCaptures, String last, String notation, String fen);
 
-    private static void launch(ApplicationAdapter game, boolean online) {
+    private static void launch(ApplicationAdapter game) {
         WebApplicationConfiguration config = new WebApplicationConfiguration("canvas");
-        config.width = 0;
-        config.height = 0;
+        // Size from the canvas element so phone HUD and touch pads have their own space.
+        config.width = MobileControls.width();
+        config.height = MobileControls.height();
         config.useGL30 = false;
         config.antialiasing = false;
         config.storagePrefix = "flappy-chess";
-        config.padVertical = online ? 48 : 0;
         // The backend's default provider retains a room hash, breaking script/asset URLs.
         config.baseUrlProvider = WebLauncher::assetBaseUrl;
         new WebApplication(game, config);

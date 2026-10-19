@@ -63,10 +63,13 @@ final class PeerGame extends ApplicationAdapter {
             }
         }, match));
         WebLauncher.catchGameKeys();
+        MobileControls.install(match::releaseInput);
         PeerNetwork.bind(match::receive, match::disconnect, match::pulse);
     }
 
     @Override public void render() {
+        MobileControls.resizeCanvas();
+        renderer.setBoardOnly(MobileControls.isMobile());
         // The backend delays initial rendering; start the handshake once the board can be shown.
         match.open();
         match.update(Gdx.graphics.getDeltaTime());
@@ -76,6 +79,7 @@ final class PeerGame extends ApplicationAdapter {
         WebLauncher.describeHistory(match.getSession(), renderer.getReview());
         PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
         WebLauncher.describeSeries(match.getSession());
+        MobileControls.present(match.getSession(), null, null, match.getOwnSide().name());
         GameSession session = match.getSession();
         var history = session.getHistory();
         PeerNetwork.describe(GameSession.sideName(session.getChess().getSideToMove()),
