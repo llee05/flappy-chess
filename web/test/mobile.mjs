@@ -15,7 +15,12 @@ export async function checkMobile(browser) {
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, 'Lobby must fit a phone');
   await screenshot('mobile-lobby');
   await evaluate("document.getElementById('match-minutes').value = '1'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('play').click()");
-  await until(() => evaluate("document.body.dataset.game === 'ready' && document.getElementById('white-time').textContent === '1:00'"), 'starting mobile local play');
+  // The active clock may already have ticked by the first rendered frame on a
+  // slower browser. Readiness comes from the game and HUD, not an exact second.
+  await until(() => evaluate("document.body.dataset.game === 'ready' && document.getElementById('white-clock').classList.contains('active')"), 'starting mobile local play');
+  assert.equal(await evaluate('document.body.dataset.timeControl'), '1+0');
+  assert.match(await evaluate("document.getElementById('white-time').textContent"), /^(1:00|0:[0-5]\d)$/);
+  assert.equal(await evaluate("document.getElementById('black-time').textContent"), '1:00', 'The waiting player must retain their full minute');
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
   const bird = (white = true) => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
     const canvas = document.getElementById('canvas');
