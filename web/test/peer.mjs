@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
 import { readFile, rm, rename } from 'node:fs/promises';
 import { resolve } from 'node:path';
+import { touchControls } from './touch.mjs';
 
 await withBrowser(async browser => {
   const host = await browser.page();
   const guest = await browser.page();
+  await guest.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
+  await guest.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  const touch = touchControls(guest);
   const summary = page => page.evaluate(`({...document.getElementById('match-summary').dataset})`);
   const open = async (page, url) => {
     await page.send('Page.navigate', { url });
@@ -54,14 +58,16 @@ await withBrowser(async browser => {
   assert.equal(await guest.evaluate("document.getElementById('action-feedback').textContent"), '', 'Repeated snapshots must not replay expired feedback');
 
   // Black is now at the top boundary. Flap to the e7 pawn, pick it up,
-  // then flap to e6. The guest may use either keyboard layout for its bird.
-  await guest.press('Space', ' ', 32);
+  // then flap to e6 using the phone guest's single touch pad.
+  assert.equal(await guest.evaluate("document.getElementById('touch-second').hidden"), true);
+  assert.equal(await guest.evaluate("document.getElementById('touch-first').dataset.side"), 'BLACK');
+  await touch.tap('[data-hold="SPACE"]');
   await sleep(650);
-  await guest.press('KeyE', 'e', 69);
+  await touch.tap('[data-hold="E"]');
   await host.until(async () => (await summary(host)).carrier === 'Black', 'synchronizing guest pickup');
-  await guest.press('ArrowUp', 'ArrowUp', 38);
+  await touch.tap('[data-hold="SPACE"]');
   await sleep(650);
-  await guest.press('Enter', 'Enter', 13);
+  await touch.tap('[data-hold="E"]');
   await host.until(async () => (await summary(host)).lastMove === 'e6', 'validating guest move on host');
   await guest.until(async () => (await summary(guest)).lastMove === 'e6', 'synchronizing Black move');
   assert.equal((await summary(guest)).moves, '2');
@@ -114,7 +120,8 @@ await withBrowser(async browser => {
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
     assert.equal(await page.evaluate("document.getElementById('series-summary').dataset.secondPoints"), '1');
   }
-  await guest.press('KeyE', 'e', 69);
+  assert.equal(await guest.evaluate("document.getElementById('touch-first').dataset.side"), 'WHITE');
+  await touch.tap('[data-hold="E"]');
   await advance(100);
   await sleep(200);
   await advance(100);

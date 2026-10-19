@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
 import { checkHistory } from './history.mjs';
 import { checkSolo } from './solo.mjs';
+import { checkMobile } from './mobile.mjs';
 
 await withBrowser(async browser => {
   const { send, evaluate, key, press, screenshot, until } = await browser.page();
@@ -75,7 +76,7 @@ await withBrowser(async browser => {
   await press('KeyD', 'd', 68);
   for (const [name, width, height] of [['small', 600, 400], ['wide', 1600, 900]]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
-    await until(async () => (await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]")).join() === [width, height].join(), 'resizing the canvas');
+    await until(() => evaluate("(() => { const canvas = document.getElementById('canvas'), rect = canvas.getBoundingClientRect(); return canvas.width === Math.round(rect.width) && canvas.height === Math.round(rect.height); })()"), 'resizing the canvas to its responsive layout');
     await screenshot(name);
   }
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0, 'Expected no WebGL error');
@@ -142,3 +143,5 @@ await withBrowser(async browser => {
   await checkSolo(browser);
   console.log(`Browser smoke checks passed. Screenshots: ${browser.reports}`);
 });
+
+await withBrowser(checkMobile);

@@ -73,6 +73,10 @@ Escape can return to the browser start screen. Pages deployment is configured in
 and reliable WebRTC data channel; `PeerNetwork` bridges it to `PeerGame`.
 PeerJS is pinned and vendored with its license; public signaling/ICE defaults
 can be overridden in `peer-config.js`. The npm dependency is for local tests only.
+`mobile.js` owns responsive touch UI and pointer lifetimes; `MobileControls`
+bridges intent through the current input processor and sizes the canvas from its
+DOM bounds. Touch layouts crop the renderer to the board without changing model
+coordinates; clocks, setup, promotion, review, and rematches use native HTML controls.
 
 ## Gameplay and timing invariants
 
@@ -146,6 +150,9 @@ and Chromium are available. It verifies project-site asset paths, keyboard
 input, focus release, resizing, WebGL errors, and returning to the start screen.
 Keep browser URLs relative so the game works below a GitHub Pages repository
 path. Preserve clock accounting across browser focus and visibility changes.
+Mobile checks cover phone portrait/landscape and tablets using real Chromium
+touch events. Preserve multi-touch steering/flapping, single-press flaps, touch
+cancellation/focus release, player ownership after swaps, and safe-area spacing.
 For networking changes, also run `:web:peerTest`; keep its signaling local and
 exercise actual WebRTC rather than replacing the data channel with a stub.
 

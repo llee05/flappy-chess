@@ -39,9 +39,36 @@ validated desktop target; browser play is validated in Chromium.
 
 ## Browser and online play
 
-The browser version supports solo play, local play on one keyboard and online two-player
-rooms over WebRTC. Players need a keyboard and a WebGL-capable browser, with no
-Java installation. The desktop launcher supports solo and local play.
+The browser version supports solo play, local play on one device and online two-player
+rooms over WebRTC. Players need a touch screen or keyboard and a WebGL-capable
+browser, with no Java installation. The desktop launcher supports solo and local play.
+
+### Mobile play
+
+Open the same browser game on a phone or tablet. Touch devices and narrow windows
+automatically show a square board with readable clocks and controls outside it.
+Portrait puts the controls below the board; landscape puts them beside it.
+The layout respects display cutouts and the browser's changing toolbar height.
+
+Hold **◀ / ▶** to steer, tap **Flap** once per flap, and tap **Pick / drop** to
+carry a piece or deliver it to a legal destination. You can steer and flap with
+two fingers at once. White flaps up; Black flaps down. Solo and online games use
+one pad for your bird, including when colors swap. Local games and Flight School
+show a pad for each player. Flight School teaches the same physics with touch
+instructions on small screens.
+
+The toolbar provides **Lobby**, **Sound**, and **More**. More shows the latest
+moves, capture counts, series score, PGN export, and local match setup or Flight
+School. Promotion, results, rematches, setup, and postgame review all have touch
+buttons. Leaving through Lobby ends the current match or connection. Clocks keep
+running while menus are open or the page is unfocused. Interrupted touches,
+screen rotation, and focus loss release held controls; they do not pause clocks.
+
+Chromium phone and tablet emulation is covered by the browser checks below.
+Gameplay feel and browser-specific behavior should also be assessed on physical
+Android and iOS devices before a mobile release.
+
+### Online rooms
 
 1. Open the game and choose **Create online room**.
 2. Choose **Copy room link** and send the link to your friend. Keep the page open.
@@ -94,8 +121,12 @@ CHROME_BIN=google-chrome ./gradlew :web:browserTest
 The local-play smoke check uses Chromium's DevTools protocol without npm
 dependencies. It loads the game under `/flappy-chess/`, exercises pickup/drop,
 keyboard input, coasting after focus loss, resizing, WebGL, and returning to the
-start screen. The peer check uses a local signaling server and real WebRTC data
-channels between browser pages, exercises moves from both players, rejects a
+start screen. Mobile checks use real touch events at phone, landscape, and tablet
+sizes to verify simultaneous steering/flapping, single-press flaps, cancelled
+touches, focus release, legal delivery, setup, results, review, and color swaps.
+The peer check uses a local signaling server and real WebRTC data
+channels between a desktop host and a touch-controlled phone guest, exercises
+moves from both players, rejects a
 third player, and verifies disconnect and missing-room feedback. It does not
 contact public signaling or TURN services. Screenshots are saved under
 `web/build/reports/browser/`. Regular `build` runs all JVM tests and compiles the
