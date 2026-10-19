@@ -6,7 +6,6 @@ import com.example.flappychess.model.Birb;
 import com.example.flappychess.model.ChessGameModel;
 import com.example.flappychess.model.MatchSettings;
 import com.github.bhlangonijr.chesslib.Side;
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -17,7 +16,7 @@ import static com.example.flappychess.controller.PeerProtocol.*;
 /** One trusted host, one guest; transport and OpenGL remain outside the match logic. */
 public final class PeerMatch extends InputAdapter {
     private final boolean host;
-    private final Side ownSide;
+    private final MatchSeries series = new MatchSeries(MatchSeries.Players.ONLINE);
     private final Consumer<String> send;
     private final LongSupplier time;
     private final Supplier<GameSession> sessions;
@@ -26,6 +25,7 @@ public final class PeerMatch extends InputAdapter {
     private GameSession session;
     private SessionSnapshot latest;
     private boolean opened, remoteReady, started, disconnected, ownRematch, remoteRematch;
+    private boolean ownSwap, remoteSwap;
     private int epoch, inputSequence, acknowledgedInput, stateSequence, receivedState;
     private long lastHeard, lastPing, lastSnapshot;
     private String error;
@@ -40,11 +40,11 @@ public final class PeerMatch extends InputAdapter {
 
     PeerMatch(boolean host, Consumer<String> send, LongSupplier time, Supplier<GameSession> sessions) {
         this.host = host;
-        ownSide = host ? Side.WHITE : Side.BLACK;
         this.send = send;
         this.time = time;
         this.sessions = sessions;
         session = sessions.get();
+        series.observe(session);
     }
 
     public void open() {
@@ -72,7 +72,8 @@ public final class PeerMatch extends InputAdapter {
                 case "rematch" -> {
                     if (started && number(value, "epoch", 1, Integer.MAX_VALUE) == epoch && session.isGameOver()) {
                         remoteRematch = true;
-                        if (host && ownRematch) startMatch();
+                        remoteSwap = bool(value, "swap");
+                        if (host && ownRematch && ownSwap == remoteSwap) startMatch();
                         else if (host) sendState();
                     }
                 }
@@ -85,9 +86,12 @@ public final class PeerMatch extends InputAdapter {
 
     private void startMatch() {
         clearLocalInput();
+        if (started) series.nextRound(session, ownSwap);
         session = sessions.get();
+        series.observe(session);
         started = true;
         ownRematch = remoteRematch = false;
+        ownSwap = remoteSwap = false;
         epoch++;
         inputSequence = acknowledgedInput = stateSequence = receivedState = 0;
         sendState();
@@ -97,11 +101,12 @@ public final class PeerMatch extends InputAdapter {
         if (number(value, "epoch", 1, Integer.MAX_VALUE) != epoch) return;
         int sequence = (int) number(value, "sequence", 1, Integer.MAX_VALUE);
         if (sequence <= acknowledgedInput) return;
-        if (string(value, "type", 16).equals("release")) session.releaseInput(Side.BLACK);
+        Side remoteSide = getOwnSide().flip();
+        if (string(value, "type", 16).equals("release")) session.releaseInput(remoteSide);
         else {
             GameAction action = GameAction.valueOf(string(value, "action", 12));
             // A guest never supplies its side, coordinates, board, clock, or outcome.
-            session.command(Side.BLACK, action, bool(value, "down"));
+            session.command(remoteSide, action, bool(value, "down"));
         }
         acknowledgedInput = sequence;
         sendState();
@@ -115,9 +120,15 @@ public final class PeerMatch extends InputAdapter {
             throw new IllegalArgumentException("Unrequested rematch");
         }
         SessionSnapshot state = snapshot(value.require("state"));
+        if (state.series().players() != MatchSeries.Players.ONLINE || state.series().round() != nextEpoch) {
+            throw new IllegalArgumentException("Invalid series round");
+        }
         int ack = (int) number(value, "ack", 0, Integer.MAX_VALUE);
         boolean newMatch = epoch != nextEpoch;
         if (newMatch) {
+            if (epoch > 0 && state.series().firstWhite() != (series.state().firstWhite() != ownSwap)) {
+                throw new IllegalArgumentException("Unagreed color swap");
+            }
             clearLocalInput();
             inputSequence = 0;
             ownRematch = remoteRematch = false;
@@ -125,15 +136,18 @@ public final class PeerMatch extends InputAdapter {
             session.getWhite().restore(state.white());
             session.getBlack().restore(state.black());
         } else if (ack >= inputSequence || state.result() != null) {
-            Birb own = session.getBlack();
-            double distance = Math.hypot(own.getX() - state.black().x(), own.getY() - state.black().y());
-            own.reconcile(state.black(), distance > 100 || state.result() != null ? 1 : 0.25);
+            Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
+            Birb.Motion motion = getOwnSide() == Side.WHITE ? state.white() : state.black();
+            double distance = Math.hypot(own.getX() - motion.x(), own.getY() - motion.y());
+            own.reconcile(motion, distance > 100 || state.result() != null ? 1 : 0.25);
         }
         epoch = nextEpoch;
         receivedState = sequence;
         latest = state;
+        series.restore(state.series());
         session.restoreReplica(state);
         remoteRematch = bool(value, "hostRematch");
+        remoteSwap = bool(value, "hostSwap");
         started = true;
         if (session.isGameOver()) clearLocalInput();
     }
@@ -142,8 +156,12 @@ public final class PeerMatch extends InputAdapter {
         if (!started || disconnected) return;
         if (host) session.update(delta);
         else {
-            session.updateReplica(delta, ownSide);
-            if (latest != null) session.getWhite().reconcile(latest.white(), 1 - Math.exp(-16 * Math.max(0, delta)));
+            session.updateReplica(delta, getOwnSide());
+            if (latest != null) {
+                Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
+                other.reconcile(getOwnSide() == Side.WHITE ? latest.black() : latest.white(),
+                        1 - Math.exp(-16 * Math.max(0, delta)));
+            }
         }
         pulse();
     }
@@ -167,18 +185,25 @@ public final class PeerMatch extends InputAdapter {
     }
 
     private void sendState() {
+        series.observe(session);
         JsonValue value = packet("state");
         put(value, "epoch", epoch);
         put(value, "sequence", ++stateSequence);
         put(value, "ack", acknowledgedInput);
         put(value, "hostRematch", ownRematch);
         put(value, "guestRematch", remoteRematch);
+        put(value, "hostSwap", ownSwap);
+        put(value, "guestSwap", remoteSwap);
         value.addChild("state", snapshot(session.snapshot()));
         send.accept(encode(value));
         lastSnapshot = time.getAsLong();
     }
 
     @Override public boolean keyDown(int key) {
+        if (key == com.badlogic.gdx.Input.Keys.X && started && !disconnected && session.isGameOver()) {
+            if (keys.add(key)) requestRematch(true);
+            return true;
+        }
         GameAction action = GameAction.forKey(key);
         if (action == null || !started || disconnected) return false;
         if (!keys.add(key)) return true;
@@ -202,10 +227,10 @@ public final class PeerMatch extends InputAdapter {
 
     private void input(GameAction action, boolean down) {
         if (host) {
-            session.command(ownSide, action, down);
+            session.command(getOwnSide(), action, down);
             sendState();
         } else {
-            session.predict(ownSide, action, down);
+            session.predict(getOwnSide(), action, down);
             JsonValue value = sequenced("input");
             put(value, "action", action.name());
             put(value, "down", down);
@@ -230,16 +255,20 @@ public final class PeerMatch extends InputAdapter {
     private void clearLocalInput() {
         keys.clear();
         held.clear();
-        session.releaseInput(ownSide);
+        session.releaseInput(getOwnSide());
     }
 
-    public void requestRematch() {
-        if (!started || disconnected || !session.isGameOver() || ownRematch) return;
+    public void requestRematch() { requestRematch(false); }
+
+    public void requestRematch(boolean swap) {
+        if (!started || disconnected || !session.isGameOver() || ownRematch && ownSwap == swap) return;
         ownRematch = true;
-        if (host && remoteRematch) startMatch();
+        ownSwap = swap;
+        if (host && remoteRematch && ownSwap == remoteSwap) startMatch();
         else {
             JsonValue value = packet("rematch");
             put(value, "epoch", epoch);
+            put(value, "swap", swap);
             send.accept(encode(value));
             if (host) sendState();
         }
@@ -256,13 +285,15 @@ public final class PeerMatch extends InputAdapter {
     public String status() {
         if (disconnected) return error;
         if (!started) return "Waiting for the other player...";
-        if (ownRematch) return "Rematch requested. Waiting for the other player...";
-        if (remoteRematch) return "Your opponent wants a rematch. Press R to accept.";
-        return "You are " + GameSession.sideName(ownSide) + (host ? " (host)" : "") + ". A/D or arrows, Space/Up, E/Enter.";
+        if (ownRematch && remoteRematch && ownSwap != remoteSwap) return "Rematch choices differ. R keeps colors; X swaps. Choose the same option.";
+        if (ownRematch) return (ownSwap ? "Swap requested." : "Rematch requested.") + " Waiting for the other player...";
+        if (remoteRematch) return "Your opponent wants a rematch" + (remoteSwap ? " with colors swapped. Press X to accept." : ". Press R to accept.");
+        return "You are " + (host ? "P1 / creator / " : "P2 / guest / ") + GameSession.sideName(getOwnSide())
+                + ". A/D or arrows, Space/Up, E/Enter.";
     }
 
     public GameSession getSession() { return session; }
-    public Side getOwnSide() { return ownSide; }
+    public Side getOwnSide() { return series.state().sideFor(host); }
     public boolean isStarted() { return started; }
     public boolean isDisconnected() { return disconnected; }
 }

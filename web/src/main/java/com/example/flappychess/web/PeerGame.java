@@ -54,6 +54,7 @@ final class PeerGame extends ApplicationAdapter {
                     return true;
                 }
                 if (renderer.historyClick(match.getSession(), point)) return true;
+                if (renderer.isSwapAt(match.getSession(), point)) { match.requestRematch(true); return true; }
                 if (match.getSession().isGameOver() && renderer.isPlayAgainAt(point)) {
                     match.requestRematch();
                     return true;
@@ -73,7 +74,8 @@ final class PeerGame extends ApplicationAdapter {
         WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
         WebLauncher.describeTimeControl(match.getSession().getSettings().label());
         WebLauncher.describeHistory(match.getSession(), renderer.getReview());
-        PeerNetwork.status(match.status(), host, match.isStarted());
+        PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
+        WebLauncher.describeSeries(match.getSession());
         GameSession session = match.getSession();
         var history = session.getHistory();
         PeerNetwork.describe(GameSession.sideName(session.getChess().getSideToMove()),

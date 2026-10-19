@@ -28,6 +28,7 @@ public final class GameSession extends InputAdapter {
     private final ChessClock clock;
     private final LongSupplier nanoTime;
     private MatchSettings settings;
+    private MatchSeries.State series = new MatchSeries.State(1, 0, 0, true, MatchSeries.Players.LOCAL);
     private final GameFeedback feedback = new GameFeedback();
     private final Set<Side> warnedLowTime = new HashSet<>();
     private final List<ChessController.CompletedMove> history = new ArrayList<>();
@@ -151,7 +152,7 @@ public final class GameSession extends InputAdapter {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
-                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen());
+                chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen(), series);
     }
 
     public void restoreReplica(SessionSnapshot state) {
@@ -164,6 +165,7 @@ public final class GameSession extends InputAdapter {
         reason = state.reason();
         feedback.restore(state.feedback());
         settings = state.settings();
+        series = state.series();
     }
 
     private void toggleCarry(Side side, Birb bird) {
@@ -223,6 +225,8 @@ public final class GameSession extends InputAdapter {
     public boolean isGameOver() { return result != null; }
     public boolean isTimed() { return settings.timed(); }
     public MatchSettings getSettings() { return settings; }
+    public MatchSeries.State getSeries() { return series; }
+    void setSeries(MatchSeries.State series) { this.series = series; }
     public GameFeedback getFeedback() { return feedback; }
     public String getResult() { return result; }
     public String getReason() { return reason; }

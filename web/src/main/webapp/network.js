@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 4;
+  const PROTOCOL = 5;
   let startGame, receive, closed, pulse;
   let peer, connection, timer, connectTimeout, started = false, ended = false;
   const pending = [];
@@ -163,9 +163,10 @@
       try { connection.send(text); }
       catch { fail('The peer connection closed. Return to the lobby to play again.'); }
     },
-    renderStatus(text, host, playing) {
+    renderStatus(text, host, playing, side) {
       if (ended) return;
-      byId('player-role').textContent = host ? 'WHITE · HOST' : 'BLACK · GUEST';
+      byId('player-role').textContent = (host ? 'P1 · HOST · ' : 'P2 · GUEST · ') + side;
+      document.body.dataset.side = side;
       if (byId('network-status').textContent !== text) byId('network-status').textContent = text;
       if (playing) {
         byId('welcome').hidden = true;

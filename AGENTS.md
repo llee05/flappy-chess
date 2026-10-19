@@ -105,11 +105,14 @@ can be overridden in `peer-config.js`. The npm dependency is for local tests onl
   piece, including en passant. Last-move highlights persist through the next turn.
   V opens postgame review; arrows and Home/End navigate without mutating the
   session, clocks, or result. P exports PGN; browser download interop stays in web.
-- Online: creator is White and authoritative for both birds, chess, clocks,
-  and results; guest is Black and sends intent only. Either key layout controls
+- Series scores belong to players (one point for a win, half for a draw).
+  R keeps colors; X swaps them. Local layouts follow player identities.
+- Online: creator starts White and is authoritative for both birds, chess, clocks,
+  and results; guest starts Black and sends intent only. Either key layout controls
   the local player's bird. Guest predicts movement and smooths host corrections.
   Start clocks after both peers are ready; release only the local player's input
-  on focus loss. Both players must request a rematch. Each round has a new epoch;
+  on focus loss. Both players must agree on keeping or swapping colors for a rematch.
+  Ownership and guest prediction follow the chosen colors. Each round has a new epoch;
   stale snapshots and repeated inputs cannot rewind the game or repeat a flap.
   Disconnection freezes the match; reconnecting or migrating a match is unsupported.
 

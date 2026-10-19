@@ -13,7 +13,7 @@ await withBrowser(async browser => {
   };
   const failure = page => page.evaluate("document.getElementById('connection-failure').hidden === false");
   await open(host, browser.url);
-  await host.evaluate("document.getElementById('match-minutes').value = '10'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
+  await host.evaluate("document.getElementById('match-minutes').value = '1'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
   await host.evaluate("document.getElementById('host').click()");
   await host.until(() => host.evaluate("!!document.getElementById('invite-link').value"), 'creating a room');
   const invite = await host.evaluate("document.getElementById('invite-link').value");
@@ -29,7 +29,7 @@ await withBrowser(async browser => {
     }, `starting ${side}`);
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
     assert.equal(await page.evaluate('document.body.dataset.connection'), 'open');
-    assert.equal(await page.evaluate('document.body.dataset.timeControl'), '10+5', 'Both peers must use the creator\'s time control');
+    assert.equal(await page.evaluate('document.body.dataset.timeControl'), '1+5', 'Both peers must use the creator\'s time control');
   }
   // Both pages must display the host's pickup and legal pawn move.
   // The white bird starts over e2 and can reach e3 with a single flap.
@@ -74,7 +74,7 @@ await withBrowser(async browser => {
   await guest.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: browser.reports });
   await guest.press('KeyP', 'p', 80);
   await guest.until(async () => { try { return (await readFile(download, 'utf8')).includes('1. e3 e6 *'); } catch { return false; } }, 'exporting the synchronized game from the guest');
-  assert.match(await readFile(download, 'utf8'), /\[TimeControl "600\+5"\]/);
+  assert.match(await readFile(download, 'utf8'), /\[TimeControl "60\+5"\]/);
   await rename(download, resolve(browser.reports, 'online-match.pgn'));
   for (const page of [host, guest]) {
     assert.equal(await page.evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
@@ -89,15 +89,53 @@ await withBrowser(async browser => {
   assert.equal(await failure(host), false);
   assert.equal(await failure(guest), false);
 
+  // Advance both real browser clocks together, leaving time for WebRTC heartbeats.
+  const advance = async budget => {
+    const starts = await Promise.all([host, guest].map(page => page.evaluate('performance.now()')));
+    await Promise.all([host, guest].map(page => page.send('Emulation.setVirtualTimePolicy',
+      { policy: 'advance', budget, maxVirtualTimeTaskStarvationCount: 1000 })));
+    await Promise.all([host, guest].map((page, i) => page.until(async () =>
+      await page.evaluate('performance.now()') >= starts[i] + budget - 1, 'advancing browser clock', 60000)));
+  };
+  for (let i = 0; i < 9; i++) {
+    await advance(9000);
+    await sleep(350);
+  }
+  await guest.until(() => guest.evaluate("document.getElementById('history-summary').dataset.ended === 'true'"), 'synchronizing timeout');
+  await host.press('KeyX', 'x', 88);
+  await advance(100);
+  await sleep(200);
+  await guest.press('KeyX', 'x', 88);
+  await advance(100);
+  await sleep(200);
+  await advance(100);
+  for (const [page, side] of [[host, 'BLACK'], [guest, 'WHITE']]) {
+    await page.until(() => page.evaluate("document.getElementById('series-summary').dataset.round === '2'"), 'agreeing a swap over WebRTC');
+    assert.equal(await page.evaluate('document.body.dataset.side'), side);
+    assert.equal(await page.evaluate("document.getElementById('series-summary').dataset.secondPoints"), '1');
+  }
+  await guest.press('KeyE', 'e', 69);
+  await advance(100);
+  await sleep(200);
+  await advance(100);
+  assert.equal((await summary(host)).carrier, 'White', 'Guest owns White after swapping');
+  await guest.screenshot('online-swapped');
+
+  const pumpUntil = (page, expression, message) => page.until(async () => {
+    await page.send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: 100 });
+    await sleep(50);
+    return page.evaluate(expression);
+  }, message);
+
   await guest.evaluate("document.getElementById('leave-room').click()");
-  await guest.until(() => guest.evaluate("!location.hash && document.getElementById('host')?.disabled === false"), 'returning guest to lobby');
+  await pumpUntil(guest, "!location.hash && document.getElementById('host')?.disabled === false", 'returning guest to lobby');
   await host.until(() => failure(host), 'notifying host of disconnect');
   await host.screenshot('online-disconnected');
   await host.evaluate("document.getElementById('return-lobby').click()");
-  await host.until(() => host.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning host to lobby');
+  await pumpUntil(host, "!document.body.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
 
   await guest.evaluate("document.getElementById('room').value = 'flappychess-' + '0'.repeat(32); document.getElementById('join').click()");
-  await guest.until(() => failure(guest), 'reporting a nonexistent room');
+  await pumpUntil(guest, "document.getElementById('connection-failure').hidden === false", 'reporting a nonexistent room');
   assert.match(await guest.evaluate("document.getElementById('failure-message').textContent"), /Room not found/);
   console.log(`WebRTC peer checks passed. Screenshots: ${browser.reports}`);
 }, { signaling: true });

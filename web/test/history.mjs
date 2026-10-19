@@ -113,5 +113,13 @@ export async function checkHistory(browser) {
   await frame();
   await until(async () => (await history()).review === 'false', 'returning to the result');
   assert.equal((await history()).ended, 'true');
+  await press('KeyX', 'x', 88);
+  await frame();
+  await until(() => evaluate("document.getElementById('series-summary').dataset.round === '2'"), 'starting a color-swap rematch');
+  assert.equal(await evaluate("document.getElementById('series-summary').dataset.firstWhite"), 'false');
+  assert.equal(await evaluate("document.getElementById('series-summary').dataset.firstPoints"), '1');
+  assert.equal((await history()).moves, '0');
+  assert.equal((await history()).ended, 'false');
+  await screenshot('series-swapped');
   console.log('Browser history checks passed: capture, timeout, review, and PGN download.');
 }

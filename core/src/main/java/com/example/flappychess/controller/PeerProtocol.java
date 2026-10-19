@@ -17,7 +17,7 @@ import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 4;
+    static final int VERSION = 5;
     static final int MAX_MESSAGE = 262_144;
 
     static JsonValue packet(String type) {
@@ -79,6 +79,13 @@ final class PeerProtocol {
         put(value, "blackMillis", state.blackMillis());
         put(value, "initialMillis", state.settings().initialMillis());
         put(value, "incrementMillis", state.settings().incrementMillis());
+        JsonValue series = new JsonValue(ValueType.object);
+        put(series, "round", state.series().round());
+        put(series, "firstPoints", state.series().firstHalfPoints());
+        put(series, "secondPoints", state.series().secondHalfPoints());
+        put(series, "firstWhite", state.series().firstWhite());
+        put(series, "players", state.series().players().name());
+        value.addChild("series", series);
         put(value, "selected", state.selected().name());
         put(value, "hidden", state.hidden().name());
         put(value, "carrier", state.carrier() == null ? null : state.carrier().name());
@@ -176,13 +183,17 @@ final class PeerProtocol {
                     Side.valueOf(string(event, "side", 5)), square));
             lastEvent = sequence;
         }
+        JsonValue series = value.require("series");
+        MatchSeries.State seriesState = new MatchSeries.State((int) number(series, "round", 1, 1_000_000),
+                (int) number(series, "firstPoints", 0, 2_000_000), (int) number(series, "secondPoints", 0, 2_000_000),
+                bool(series, "firstWhite"), MatchSeries.Players.valueOf(string(series, "players", 6)));
         return new SessionSnapshot(fen, motion(value.require("white")), motion(value.require("black")),
                 number(value, "whiteMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 number(value, "blackMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),
                 squares, request, carrier == null ? null : Side.valueOf(carrier), history, result, reason, events,
                 new MatchSettings(number(value, "initialMillis", 0, MatchSettings.MAX_INITIAL_MILLIS),
-                        number(value, "incrementMillis", 0, MatchSettings.MAX_INCREMENT_MILLIS)), initialFen);
+                        number(value, "incrementMillis", 0, MatchSettings.MAX_INCREMENT_MILLIS)), initialFen, seriesState);
     }
 
     private static JsonValue motion(Birb.Motion motion) {

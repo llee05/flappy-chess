@@ -41,6 +41,7 @@ public final class WebLauncher {
                 describeTimeControl(game.getSession().getSettings().label());
                 describeSetup(game.getMatchSetup() == null ? "" : game.getMatchSetup().settings().label());
                 describeHistory(game.getSession(), game.getReview());
+                describeSeries(game.getSession());
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
@@ -68,6 +69,16 @@ public final class WebLauncher {
     private static native void describeSetup(String label);
 
     static String exportPgn(String pgn) { downloadPgn(pgn); return "PGN downloaded."; }
+
+    static void describeSeries(GameSession game) {
+        var series = game.getSeries();
+        seriesSummary(series.round(), series.firstHalfPoints(), series.secondHalfPoints(), series.firstWhite(),
+                "Round " + series.round() + ". " + series.score() + ". " + series.nameFor(Side.WHITE)
+                        + " is White; " + series.nameFor(Side.BLACK) + " is Black. After the result, R keeps colors; X swaps colors.");
+    }
+
+    @JSBody(params = {"round", "first", "second", "firstWhite", "text"}, script = "const el = document.getElementById('series-summary'); el.dataset.round = String(round); el.dataset.firstPoints = String(first / 2); el.dataset.secondPoints = String(second / 2); el.dataset.firstWhite = String(firstWhite); if (el.textContent !== text) el.textContent = text;")
+    private static native void seriesSummary(int round, int first, int second, boolean firstWhite, String text);
 
     @JSBody(params = "pgn", script = "const url = URL.createObjectURL(new Blob([pgn], {type: 'application/x-chess-pgn;charset=utf-8'})); const link = document.createElement('a'); link.href = url; link.download = 'flappy-chess.pgn'; document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);")
     private static native void downloadPgn(String pgn);

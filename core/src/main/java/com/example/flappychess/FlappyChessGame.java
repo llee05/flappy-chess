@@ -9,6 +9,7 @@ import com.badlogic.gdx.math.Vector2;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.controller.MatchSetup;
+import com.example.flappychess.controller.LocalMatch;
 import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.model.MatchSettings;
 import java.util.function.Function;
@@ -19,6 +20,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private final Runnable exitAction;
     private final boolean startInSchool;
     private GameSession session;
+    private LocalMatch match;
     private FlightSchool school;
     private GameRenderer renderer;
     private int frames;
@@ -63,7 +65,18 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private void restart(boolean tutorial) {
         if (session != null) session.releaseInput();
         school = tutorial ? new FlightSchool() : null;
-        session = school == null ? new GameSession(settings) : school.getSession();
+        match = tutorial ? null : new LocalMatch(settings);
+        session = tutorial ? school.getSession() : match.getSession();
+        installInput();
+    }
+
+    private void rematch(boolean swap) {
+        match.nextRound(swap);
+        session = match.getSession();
+        installInput();
+    }
+
+    private void installInput() {
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
                 if (key == Keys.M) {
@@ -90,7 +103,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     else if (key == Keys.R) restart(true);
                     return true;
                 }
-                if (key == Keys.R && session.isGameOver()) { restart(false); return true; }
+                if ((key == Keys.R || key == Keys.X) && session.isGameOver()) { rematch(key == Keys.X); return true; }
                 return false;
             }
             @Override public boolean keyUp(int key) {
@@ -115,18 +128,19 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     return true;
                 }
                 if (school == null && renderer.historyClick(session, point)) return true;
+                if (school == null && renderer.isSwapAt(session, point)) { rematch(true); return true; }
                 if ((session.isGameOver() || school != null && school.isComplete()) && renderer.isPlayAgainAt(point)) {
-                    restart(false);
+                    if (school != null) restart(false); else rematch(false);
                     return true;
                 }
                 return false;
             }
-        }, school == null ? session : school));
+        }, school == null ? match : school));
     }
 
     @Override public void render() {
         if (!waitingToStart) {
-            if (school == null) session.update(Gdx.graphics.getDeltaTime());
+            if (school == null) match.update(Gdx.graphics.getDeltaTime());
             else school.update(Gdx.graphics.getDeltaTime());
         }
         renderer.render(session, school, setup);
@@ -140,7 +154,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     public FlightSchool getFlightSchool() { return school; }
     public GameSession getSession() { return session; }
     public MatchSetup getMatchSetup() { return setup; }
-    private void openSetup() { session.releaseInput(); setup = new MatchSetup(settings); }
+    private void openSetup() { releaseInput(); setup = new MatchSetup(settings); }
     private void startConfiguredMatch() {
         settings = setup.settings();
         setup = null;
@@ -159,7 +173,8 @@ public final class FlappyChessGame extends ApplicationAdapter {
     @Override public void pause() { releaseInput(); }
     public void releaseInput() {
         soundHeld = false;
-        if (session != null) session.releaseInput();
+        if (match != null) match.releaseInput();
+        else if (session != null) session.releaseInput();
     }
     @Override public void dispose() { if (renderer != null) renderer.dispose(); }
 }

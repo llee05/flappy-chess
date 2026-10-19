@@ -105,7 +105,11 @@ public final class GameRenderer implements Disposable {
                 ? inside(point, 1016, 210, 168, 30) : inside(point, 608, 348, 208, 48));
     }
     public boolean isPlayAgainAt(Vector2 point) {
-        return review.isActive() ? inside(point, 1016, 174, 168, 30) : inside(point, 450, 260, 300, 60);
+        return review.isActive() ? inside(point, 1016, 174, 84, 30)
+                : school != null ? inside(point, 450, 260, 300, 60) : inside(point, 384, 260, 208, 60);
+    }
+    public boolean isSwapAt(GameSession game, Vector2 point) {
+        return game.isGameOver() && (review.isActive() ? inside(point, 1100, 174, 84, 30) : inside(point, 608, 260, 208, 60));
     }
     public boolean historyClick(GameSession game, Vector2 point) {
         review.bind(game);
@@ -312,9 +316,9 @@ public final class GameRenderer implements Disposable {
         text("FLAPPY", 20, 760, 4, CREAM);
         text("CHESS", 20, 720, 4, CREAM);
         text(feedback.isSoundEnabled() ? "M SOUND: ON" : "M SOUND: OFF", 16, 674, 2, MUTED);
-        centered(school != null ? "FLIGHT SCHOOL" : online ? "ONLINE" : "LOCAL PLAY", 100, 642, 2, GOLD);
-        centered(game.getSettings().label(), 100, 620, 2, MINT);
-        centered(school != null ? "T RESTART" : online ? "P EXPORT PGN" : "S SETUP T FLY", 100, 596, 2, MUTED);
+        centered(school != null ? "FLIGHT SCHOOL" : "ROUND " + game.getSeries().round(), 100, 642, 2, GOLD);
+        centered(school != null ? "UNTIMED" : game.getSeries().score(), 100, 620, 2, MINT);
+        centered(school != null ? "T RESTART" : (online ? "ONLINE " : "S SETUP ") + game.getSettings().label(), 100, 596, 2, MUTED);
         if (school != null) {
             text("YOUR LESSON", 20, 550, 2, CREAM);
             text("NO CLOCK.\nNO RUSH.", 16, 508, 2, MINT);
@@ -346,17 +350,18 @@ public final class GameRenderer implements Disposable {
         }
         centered(status, 1100, 584, 2, CREAM);
         if (review.isActive()) { drawReviewControls(); return; }
-        text("WHITE", 1020, 534, 2, GOLD);
+        boolean firstWhite = school != null || game.getSeries().firstWhite();
+        text(game.getSeries().shortNameFor(Side.WHITE) + " WHITE", 1020, 534, 2, GOLD);
         text("FALLS DOWN", 1020, 508, 2, MUTED);
-        control("A / D", "MOVE", 462);
-        control("SPACE", "FLAP", 428);
-        control("E", "CARRY", 394);
+        control(firstWhite ? "A / D" : "< / >", "MOVE", 462);
+        control(firstWhite ? "SPACE" : "UP", "FLAP", 428);
+        control(firstWhite ? "E" : "ENTER", "CARRY", 394);
         text("PICK UP / DROP", 1020, 376, 2, MUTED);
-        text("BLACK", 1020, 328, 2, BLUE);
+        text(game.getSeries().shortNameFor(Side.BLACK) + " BLACK", 1020, 328, 2, BLUE);
         text("FALLS UP", 1020, 302, 2, MUTED);
-        control("< / >", "MOVE", 260);
-        control("UP", "FLAP", 226);
-        control("ENTER", "CARRY", 192);
+        control(firstWhite ? "< / >" : "A / D", "MOVE", 260);
+        control(firstWhite ? "UP" : "SPACE", "FLAP", 226);
+        control(firstWhite ? "ENTER" : "E", "CARRY", 192);
         text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
     }
 
@@ -427,7 +432,8 @@ public final class GameRenderer implements Disposable {
         text("END LAST", 1020, 306, 2, CREAM);
         text("V RESULT", 1020, 268, 2, GOLD);
         text("P EXPORT PGN", 1020, 230, 2, MINT);
-        text("R PLAY AGAIN", 1020, 194, 2, MINT);
+        text("R AGAIN", 1020, 194, 2, MINT);
+        text("X SWAP", 1108, 194, 2, MINT);
     }
 
     private void journalMove(String notation, float x, float y) {
@@ -443,7 +449,7 @@ public final class GameRenderer implements Disposable {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         drawBirdSprite(side, 1038, y + 106, 2, false, active ? frame() : 1);
-        text(GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
+        text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
         if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
         else text("UNTIMED", 1032, y + 82, 2, CREAM);
         text(game.isGameOver() ? "FINISHED" : active ? "> YOUR MOVE" : "  WAITING", 1032, y + 40, 2, active ? MINT : MUTED);
@@ -509,8 +515,11 @@ public final class GameRenderer implements Disposable {
         star(830, 548, 4, GOLD);
         rect(564, 554, 72, 4, GOLD);
         if (ended) {
-            stepped(450, 260, 300, 60, hover ? CREAM : MINT, INK);
-            rect(458, 312, 284, 4, hover ? Color.WHITE : CREAM);
+            if (complete) stepped(450, 260, 300, 60, hover ? CREAM : MINT, INK);
+            else {
+                stepped(384, 260, 208, 60, MINT, INK);
+                stepped(608, 260, 208, 60, BLUE, INK);
+            }
             if (!complete) {
                 stepped(384, 348, 208, 48, CARD, EDGE);
                 stepped(608, 348, 208, 48, CARD, EDGE);
@@ -520,7 +529,7 @@ public final class GameRenderer implements Disposable {
         }
         shapes.end();
         batch.begin();
-        centered(complete ? "FLIGHT SCHOOL COMPLETE" : ended ? "END OF THE FLIGHT" : "LEVEL UP", 600, 528, 2, GOLD);
+        centered(complete ? "FLIGHT SCHOOL COMPLETE" : ended ? "ROUND " + game.getSeries().round() + " COMPLETE" : "LEVEL UP", 600, 528, 2, GOLD);
         centered(complete ? "READY TO PLAY!" : ended ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
         centered(complete ? "Both birds mastered. R to practice again." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
         if (ended) {
@@ -531,7 +540,11 @@ public final class GameRenderer implements Disposable {
                 centered("REVIEW [V]", 488, 378, 2, CREAM);
                 centered("PGN [P]", 712, 378, 2, CREAM);
             }
-            centered(complete ? "PLAY LOCAL [ENTER]" : "PLAY AGAIN  [R]", 600, 298, 2, INK);
+            if (complete) centered("PLAY LOCAL [ENTER]", 600, 298, 2, INK);
+            else {
+                centered("AGAIN [R]", 488, 298, 2, INK);
+                centered("SWAP [X]", 712, 298, 2, INK);
+            }
         } else {
             PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
             String[] labels = {"[Q]", "[R]", "[B]", "[N]"};

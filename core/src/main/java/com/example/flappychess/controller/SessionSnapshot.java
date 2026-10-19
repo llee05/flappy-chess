@@ -11,7 +11,7 @@ public record SessionSnapshot(String fen, Birb.Motion white, Birb.Motion black,
         long whiteMillis, long blackMillis, Square selected, Square hidden,
         List<Square> targets, ChessController.PromotionRequest promotion, Side carrier,
         List<ChessController.CompletedMove> history, String result, String reason,
-        List<GameFeedback.Event> feedback, MatchSettings settings, String initialFen) {
+        List<GameFeedback.Event> feedback, MatchSettings settings, String initialFen, MatchSeries.State series) {
     public SessionSnapshot {
         targets = List.copyOf(targets);
         history = List.copyOf(history);

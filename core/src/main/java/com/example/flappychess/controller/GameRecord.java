@@ -13,12 +13,14 @@ import java.util.List;
 public final class GameRecord {
     private final String initialFen, result;
     private final MatchSettings settings;
+    private final MatchSeries.State series;
     private final List<CompletedMove> moves;
     private final List<String> positions = new ArrayList<>();
 
     public GameRecord(GameSession game) {
         initialFen = game.getChess().getInitialFen();
         settings = game.getSettings();
+        series = game.getSeries();
         moves = List.copyOf(game.getHistory());
         result = game.getResult() == null ? "*" : game.getResult().equals("White wins") ? "1-0"
                 : game.getResult().equals("Black wins") ? "0-1" : "1/2-1/2";
@@ -48,9 +50,9 @@ public final class GameRecord {
         tag(text, "Event", "Flappy Chess");
         tag(text, "Site", "?");
         tag(text, "Date", "????.??.??");
-        tag(text, "Round", "?");
-        tag(text, "White", "White");
-        tag(text, "Black", "Black");
+        tag(text, "Round", Integer.toString(series.round()));
+        tag(text, "White", series.nameFor(Side.WHITE));
+        tag(text, "Black", series.nameFor(Side.BLACK));
         tag(text, "Result", result);
         tag(text, "TimeControl", settings.pgnTimeControl());
         if (!initialFen.equals(new Board().getFen())) {

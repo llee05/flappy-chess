@@ -46,13 +46,18 @@ Java installation. The desktop launcher continues to support local play.
 1. Open the game and choose **Create online room**.
 2. Choose **Copy room link** and send the link to your friend. Keep the page open.
 3. Your friend opens the link and chooses **Join friend**. The creator plays
-   White and the guest plays Black; the clock starts when both boards are ready.
+   White and the guest plays Black in round one; the clock starts when both boards are ready.
 
 Online, either keyboard layout controls your own bird: A/D or Left/Right,
 Space or Up, and E or Enter. Your opponent controls their own bird. Chess moves,
 legal targets, carried pieces, promotion, clocks, and results synchronize from
-the host. After game over, both players must press **R** or **Play again** to
-start a rematch. **Leave** or Escape ends the connection; disconnection freezes
+the host. After game over, both players choose **R / Again** to keep colors or
+**X / Swap** to exchange colors. Both must choose the same option to start the
+next round. Scores follow players: one point for a win, half a point for a draw.
+Local series use the same choices; Player 1 keeps A/D, Space, E even when Black,
+and Player 2 keeps the arrow keys and Enter. **S** starts a new series through
+match setup. PGN exports include the round and current player colors.
+**Leave** or Escape ends the connection; disconnection freezes
 the match and offers a return to the lobby. There is no match recovery or host
 migration. Keep the host's game visible for continuous physics; clocks continue
 when the tab is hidden, but browsers can suspend background pages.

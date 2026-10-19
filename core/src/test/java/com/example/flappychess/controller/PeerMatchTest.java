@@ -216,6 +216,34 @@ class PeerMatchTest {
         assertEquals(0, pair.host.getSession().getBlack().getVelocityX());
     }
 
+    @Test void swappingNeedsMatchingVotesAndChangesAuthorityAndPrediction() {
+        Pair pair = new Pair(new MatchSettings(1000, 0));
+        pair.advance(61);
+        pair.host.requestRematch(true);
+        pair.guest.requestRematch(false);
+        pair.flush();
+        assertTrue(pair.host.getSession().isGameOver());
+        pair.guest.requestRematch(true);
+        pair.flush();
+        assertFalse(pair.guest.isDisconnected());
+        assertEquals(Side.BLACK, pair.host.getOwnSide());
+        assertEquals(Side.WHITE, pair.guest.getOwnSide());
+        assertEquals(2, pair.guest.getSession().getSeries().secondHalfPoints());
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.update(1f / 60);
+        assertTrue(pair.guest.getSession().getWhite().getVelocityY() < 0);
+        pair.guest.keyUp(Keys.SPACE);
+        pair.flush();
+        pair.host.getSession().getWhite().setY(625);
+        pair.press(pair.guest, Keys.E);
+        assertEquals(Side.WHITE, pair.host.getSession().getCarrier());
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.guest, Keys.E);
+        assertEquals("e4", pair.host.getSession().getHistory().get(0).notation());
+        pair.press(pair.host, Keys.E);
+        assertEquals(Side.BLACK, pair.guest.getSession().getCarrier());
+    }
+
     @Test void staleSnapshotsAndDuplicateInputsCannotRewindTheMatch() {
         Pair pair = new Pair();
         pair.host.keyDown(Keys.D);
@@ -310,7 +338,7 @@ class PeerMatchTest {
         }
         SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(), state.whiteMillis(), state.blackMillis(),
                 state.selected(), state.hidden(), state.targets(), state.promotion(), state.carrier(), moves, state.result(), state.reason(),
-                state.feedback(), state.settings(), state.initialFen());
+                state.feedback(), state.settings(), state.initialFen(), state.series());
         JsonValue packet = packet("state");
         packet.addChild("state", snapshot(full));
         String text = encode(packet);
