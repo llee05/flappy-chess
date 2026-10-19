@@ -39,9 +39,9 @@ validated desktop target; browser play is validated in Chromium.
 
 ## Browser and online play
 
-The browser version supports local play on one keyboard and online two-player
+The browser version supports solo play, local play on one keyboard and online two-player
 rooms over WebRTC. Players need a keyboard and a WebGL-capable browser, with no
-Java installation. The desktop launcher continues to support local play.
+Java installation. The desktop launcher supports solo and local play.
 
 1. Open the game and choose **Create online room**.
 2. Choose **Copy room link** and send the link to your friend. Keep the page open.
@@ -166,9 +166,21 @@ keep it. The browser remembers your last choice. Flight School stays untimed.
 
 The desktop opens a **New match** setup screen. Left/Right change the time,
 Up/Down change the bonus, and Enter starts play; you can also click each choice
-and **Start**. During local play, **S** or the setup card opens this screen for a
+and **Start**. **C** switches between a local friend and the computer; **W** picks
+your color, **E** cycles chess skill, and **F** cycles flying skill. These choices
+are also clickable. During local play, **S** or the setup card opens this screen for a
 new match. Opening setup during a game releases movement keys and keeps the
 current match's clock running until you start a new match or press S to return.
+
+For solo play in the browser, choose your color, chess skill and flying skill,
+then **Play computer**. Both keyboard layouts control your bird. The computer
+must fly to a piece, pick it up and deliver it through the same physics and
+legal-move checks as a human. Easy chess chooses random legal moves; Medium
+evaluates one move ahead; Hard searches up to three plies with a bounded node
+budget. Flying skill changes reaction speed and flap spacing, while gravity,
+acceleration and speed remain identical. Thinking and flying both use clock
+time. Rematches keep the difficulty settings, and **X** swaps your color with
+the computer while preserving the series score.
 
 Choose **Flight School** in the browser, or press **T** during local desktop or
 browser play, for an untimed lesson. Fly to White's E2 pawn, pick it up, and
@@ -211,14 +223,17 @@ bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original
 square cancels the pickup; an illegal destination keeps the piece carried.
 
-| Action | White | Black |
+In local play, layouts stay with players after color swaps. In solo and online
+play, either layout controls your own bird.
+
+| Action | Player 1 (starts White) | Player 2 (starts Black) |
 | --- | --- | --- |
 | Move left/right | A / D | Left / Right |
 | Flap against gravity | Space | Up |
 | Pick up / drop | E | Enter |
 
 Promotion: **Q** queen, **R** rook, **B** bishop, **N** knight.
-After a game ends, press **R** or click **Play again**. **Esc** exits.
+After a game ends, **R / Again** keeps colors and **X / Swap** swaps them. **Esc** exits.
 Timed matches charge the active player's clock during promotion and while the
 window is unfocused. The bonus is added only when a legal move is complete,
 including the promotion choice. Invalid drops and cancelled pickups add no time.
@@ -230,6 +245,9 @@ including the promotion choice. Invalid drops and cancelled pickups add no time.
 - `core/.../controller`: adapted input and chess controllers plus `GameSession`.
 - `core/.../controller/FlightSchool`: untimed, guided deliveries for both gravity directions.
 - `model/MatchSettings` and `controller/MatchSetup`: bounded time controls and local setup choices.
+- `controller/MatchSeries` and `LocalMatch`: player identities, scores, color swaps and local input ownership.
+- `model/SoloSettings`, `controller/ChessSearch`, `BirdPilot` and `AiOpponent`:
+  independent chess/flight levels, incremental search and normal-input AI delivery.
 - `core/.../controller/GameFeedback`: bounded presentation events shared with online peers.
 - `core/.../controller/GameRecord` and `PostgameReview`: exact moves, PGN export,
   and a separate board for postgame navigation.

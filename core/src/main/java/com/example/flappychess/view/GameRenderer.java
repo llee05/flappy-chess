@@ -284,7 +284,9 @@ public final class GameRenderer implements Disposable {
             for (int y : new int[] {400, 362, 324, 286, 248, 210, 174}) stepped(1016, y, 168, 30, CARD, EDGE);
         } else {
             rect(1020, 340, 160, 2, EDGE);
-            for (int y : new int[] {462, 428, 394, 260, 226, 192}) drawKey(1020, y, 68);
+            int[] keys = game.getSoloSettings() == null ? new int[] {462, 428, 394, 260, 226, 192}
+                    : new int[] {462, 428, 394};
+            for (int y : keys) drawKey(1020, y, 68);
         }
     }
 
@@ -350,6 +352,22 @@ public final class GameRenderer implements Disposable {
         }
         centered(status, 1100, 584, 2, CREAM);
         if (review.isActive()) { drawReviewControls(); return; }
+        if (game.getSoloSettings() != null) {
+            var solo = game.getSoloSettings();
+            Side human = game.getSeries().sideFor(true);
+            text("YOU " + human.name(), 1020, 534, 2, accent(human));
+            text(human == Side.WHITE ? "FALLS DOWN" : "FALLS UP", 1020, 508, 2, MUTED);
+            control("A / D", "MOVE", 462);
+            control("SPACE", "FLAP", 428);
+            control("E", "CARRY", 394);
+            text("EITHER LAYOUT", 1020, 376, 2, MUTED);
+            text("AI " + human.flip().name(), 1020, 328, 2, accent(human.flip()));
+            text("CHESS " + solo.chess().name(), 1020, 294, 2, CREAM);
+            text("FLIGHT " + solo.flight().name(), 1020, 260, 2, CREAM);
+            text(game.getAiPhase(), 1020, 226, 2, MINT);
+            text("S MATCH SETUP", 1020, 192, 2, MUTED);
+            return;
+        }
         boolean firstWhite = school != null || game.getSeries().firstWhite();
         text(game.getSeries().shortNameFor(Side.WHITE) + " WHITE", 1020, 534, 2, GOLD);
         text("FALLS DOWN", 1020, 508, 2, MUTED);
@@ -452,7 +470,9 @@ public final class GameRenderer implements Disposable {
         text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
         if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
         else text("UNTIMED", 1032, y + 82, 2, CREAM);
-        text(game.isGameOver() ? "FINISHED" : active ? "> YOUR MOVE" : "  WAITING", 1032, y + 40, 2, active ? MINT : MUTED);
+        boolean computer = game.getSoloSettings() != null && side == game.getSeries().sideFor(false);
+        text(game.isGameOver() ? "FINISHED" : active ? computer ? "> AI MOVE" : "> YOUR MOVE" : "  WAITING",
+                1032, y + 40, 2, active ? MINT : MUTED);
     }
 
     private void drawBirdMarkers(GameSession game) {
@@ -572,20 +592,28 @@ public final class GameRenderer implements Disposable {
     private void setupOverlay(MatchSetup setup) {
         beginShapes();
         rect(0, 0, 1200, 800, VEIL);
-        stepped(292, 206, 616, 388, PANEL, EDGE);
+        stepped(292, 146, 616, 510, PANEL, EDGE);
+        stepped(380, 500, 216, 44, CARD, EDGE);
+        stepped(604, 500, 216, 44, CARD, EDGE);
         stepped(380, 430, 440, 50, CARD, EDGE);
         stepped(380, 354, 440, 50, CARD, EDGE);
         stepped(450, 260, 300, 60, MINT, INK);
+        stepped(380, 196, 216, 40, CARD, EDGE);
+        stepped(604, 196, 216, 40, CARD, EDGE);
         shapes.end();
         batch.begin();
-        centered("NEW MATCH", 600, 558, 4, CREAM);
-        centered("Choose time per side and bonus for each move.", 600, 510, 2, MUTED);
+        centered("NEW MATCH", 600, 622, 4, CREAM);
+        centered("Opponent [C] / solo color [W]", 600, 570, 2, MUTED);
+        centered(setup.opponentLabel(), 488, 530, 2, GOLD);
+        centered(setup.colorLabel(), 712, 530, 2, BLUE);
         centered(setup.timeLabel(), 600, 464, 2, GOLD);
         centered("LEFT / RIGHT OR CLICK", 600, 424, 2, MUTED);
         centered(setup.incrementLabel(), 600, 388, 2, BLUE);
         centered("UP / DOWN OR CLICK", 600, 348, 2, MUTED);
         centered("START [ENTER]", 600, 298, 2, INK);
-        centered("S CLOSE SETUP    ESC EXIT", 600, 240, 2, MUTED);
+        centered("CHESS " + setup.chessLabel(), 488, 224, 2, CREAM);
+        centered("FLIGHT " + setup.flightLabel(), 712, 224, 2, CREAM);
+        centered("AI CHESS [E] / FLIGHT [F]    S CLOSE", 600, 184, 2, MUTED);
         batch.end();
     }
 

@@ -35,6 +35,15 @@
         <p id="time-control-note">Five minutes per side. No bonus.</p>
       </fieldset>
       <button id="play" type="button" disabled>LOCAL PLAY</button>
+      <fieldset id="solo-settings">
+        <legend>Solo opponent · same flight physics</legend>
+        <div class="setting-controls">
+          <label>Your color<select id="solo-side"><option value="WHITE">White · falls down</option><option value="BLACK">Black · falls up</option></select></label>
+          <label>Chess skill<select id="solo-chess"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
+          <label>Flying skill<select id="solo-flight"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
+        </div>
+        <button id="solo" type="button" disabled>PLAY COMPUTER</button>
+      </fieldset>
       <button id="host" type="button" disabled>CREATE ONLINE ROOM</button>
       <form id="join-form">
         <label for="room">Join a friend's room</label>
@@ -54,7 +63,7 @@
         <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
         <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
       </div>
-      <p class="note">Flight School is always untimed. T restarts the lesson during local play. S opens a new match setup.<br>Online: room creator chooses the clock and plays White; guest plays Black. Either control layout flies your own bird.<br>M toggles sound effects. Keyboard required. Esc leaves the game.</p>
+      <p class="note">Flight School is always untimed. T restarts the lesson during local play. S opens a new match setup.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Keyboard required. Esc leaves the game.</p>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
   </main>
@@ -69,6 +78,7 @@
   <output id="setup-summary" class="sr-only" aria-live="polite"></output>
   <output id="history-summary" class="sr-only" aria-live="polite"></output>
   <output id="series-summary" class="sr-only" aria-live="polite"></output>
+  <output id="solo-summary" class="sr-only" aria-live="polite"></output>
   <section id="connection-failure" hidden role="alertdialog" aria-labelledby="failure-title" aria-describedby="failure-message">
     <article>
       <h2 id="failure-title">CONNECTION ENDED</h2>

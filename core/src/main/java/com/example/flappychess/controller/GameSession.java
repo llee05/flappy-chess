@@ -6,6 +6,7 @@ import com.example.flappychess.model.Birb;
 import com.example.flappychess.model.ChessClock;
 import com.example.flappychess.model.ChessGameModel;
 import com.example.flappychess.model.MatchSettings;
+import com.example.flappychess.model.SoloSettings;
 import com.example.flappychess.view.ChessBoardView;
 import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Piece;
@@ -29,6 +30,8 @@ public final class GameSession extends InputAdapter {
     private final LongSupplier nanoTime;
     private MatchSettings settings;
     private MatchSeries.State series = new MatchSeries.State(1, 0, 0, true, MatchSeries.Players.LOCAL);
+    private SoloSettings solo;
+    private String aiPhase = "WAITING";
     private final GameFeedback feedback = new GameFeedback();
     private final Set<Side> warnedLowTime = new HashSet<>();
     private final List<ChessController.CompletedMove> history = new ArrayList<>();
@@ -64,11 +67,17 @@ public final class GameSession extends InputAdapter {
     }
 
     public void update(float delta) {
+        update(delta, null);
+    }
+
+    void update(float delta, Runnable beforeStep) {
         tickClock();
         if (isGameOver()) return;
         // Bound catch-up after a suspended window; the chess clock still uses real time.
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
+            if (beforeStep != null) beforeStep.run();
+            if (isGameOver()) { accumulator = 0; return; }
             whiteControls.update();
             blackControls.update();
             accumulator -= STEP;
@@ -226,6 +235,10 @@ public final class GameSession extends InputAdapter {
     public boolean isTimed() { return settings.timed(); }
     public MatchSettings getSettings() { return settings; }
     public MatchSeries.State getSeries() { return series; }
+    public SoloSettings getSoloSettings() { return solo; }
+    void setSoloSettings(SoloSettings solo) { this.solo = solo; }
+    public String getAiPhase() { return aiPhase; }
+    void setAiPhase(String phase) { aiPhase = phase; }
     void setSeries(MatchSeries.State series) { this.series = series; }
     public GameFeedback getFeedback() { return feedback; }
     public String getResult() { return result; }

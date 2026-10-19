@@ -12,6 +12,7 @@ import com.example.flappychess.controller.MatchSetup;
 import com.example.flappychess.controller.LocalMatch;
 import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.model.MatchSettings;
+import com.example.flappychess.model.SoloSettings;
 import java.util.function.Function;
 import com.example.flappychess.view.GameRenderer;
 
@@ -26,6 +27,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private int frames;
     private boolean soundHeld;
     private MatchSettings settings;
+    private SoloSettings solo;
     private MatchSetup setup;
     private boolean waitingToStart;
     private final Function<String, String> pgnExporter;
@@ -56,16 +58,22 @@ public final class FlappyChessGame extends ApplicationAdapter {
         this.pgnExporter = pgnExporter;
     }
 
+    public FlappyChessGame(boolean smokeTest, Runnable exitAction, MatchSettings settings,
+            SoloSettings solo, Function<String, String> pgnExporter) {
+        this(smokeTest, exitAction, false, settings, pgnExporter);
+        this.solo = solo;
+    }
+
     @Override public void create() {
         renderer = new GameRenderer();
         restart(startInSchool);
-        if (waitingToStart) setup = new MatchSetup(settings);
+        if (waitingToStart) setup = new MatchSetup(settings, solo);
     }
 
     private void restart(boolean tutorial) {
         if (session != null) session.releaseInput();
         school = tutorial ? new FlightSchool() : null;
-        match = tutorial ? null : new LocalMatch(settings);
+        match = tutorial ? null : new LocalMatch(settings, solo);
         session = tutorial ? school.getSession() : match.getSession();
         installInput();
     }
@@ -90,6 +98,10 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     if (key == Keys.RIGHT) setup.changeTime(1);
                     if (key == Keys.DOWN) setup.changeIncrement(-1);
                     if (key == Keys.UP) setup.changeIncrement(1);
+                    if (key == Keys.C) setup.toggleOpponent();
+                    if (key == Keys.W) setup.changeColor();
+                    if (key == Keys.E) setup.changeChess();
+                    if (key == Keys.F) setup.changeFlight();
                     if (key == Keys.ENTER) startConfiguredMatch();
                     if (key == Keys.S && !waitingToStart) setup = null;
                     return true;
@@ -115,6 +127,14 @@ public final class FlappyChessGame extends ApplicationAdapter {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
                 if (setup != null) {
+                    if (point.y >= 500 && point.y <= 544) {
+                        if (point.x >= 380 && point.x < 600) setup.toggleOpponent();
+                        if (point.x >= 600 && point.x <= 820) setup.changeColor();
+                    }
+                    if (point.y >= 196 && point.y <= 236) {
+                        if (point.x >= 380 && point.x < 600) setup.changeChess();
+                        if (point.x >= 600 && point.x <= 820) setup.changeFlight();
+                    }
                     if (point.x >= 380 && point.x <= 820) {
                         if (point.y >= 430 && point.y <= 480) setup.changeTime(1);
                         if (point.y >= 354 && point.y <= 404) setup.changeIncrement(1);
@@ -154,9 +174,10 @@ public final class FlappyChessGame extends ApplicationAdapter {
     public FlightSchool getFlightSchool() { return school; }
     public GameSession getSession() { return session; }
     public MatchSetup getMatchSetup() { return setup; }
-    private void openSetup() { releaseInput(); setup = new MatchSetup(settings); }
+    private void openSetup() { releaseInput(); setup = new MatchSetup(settings, solo); }
     private void startConfiguredMatch() {
         settings = setup.settings();
+        solo = setup.soloSettings();
         setup = null;
         waitingToStart = false;
         restart(false);

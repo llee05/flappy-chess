@@ -40,6 +40,12 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
 - `controller/ChessController`: pickup/drop, selection, promotion, and SAN history.
 - `controller/GameSession`: input routing, both birds, fixed-step simulation,
   real-time clocks, completed moves, and game-over state.
+- `controller/LocalMatch` and `MatchSeries`: local/solo input ownership, player
+  identities, scores and color-swap rematches.
+- `controller/AiOpponent`, `ChessSearch` and `BirdPilot`: bounded incremental
+  chess search on an independent board and physical delivery through normal
+  input, stepped at the session's fixed physics rate. `model/SoloSettings`
+  separates chess skill from flight reaction speed; physics stays identical.
 - `controller/FlightSchool`: untimed, six-step pawn-delivery lesson using the
   regular session's input and physics, with both gravity directions.
 - `controller/GameFeedback`: bounded, numbered presentation events for local
@@ -107,6 +113,10 @@ can be overridden in `peer-config.js`. The npm dependency is for local tests onl
   session, clocks, or result. P exports PGN; browser download interop stays in web.
 - Series scores belong to players (one point for a win, half for a draw).
   R keeps colors; X swaps them. Local layouts follow player identities.
+- Solo: either layout controls the human, including after color swaps. AI
+  commands go through `GameSession.command`; never teleport a live AI bird or
+  apply a chess move directly. Focus loss releases only human input. Search and
+  flight consume normal clock time; both freeze when the game ends.
 - Online: creator starts White and is authoritative for both birds, chess, clocks,
   and results; guest starts Black and sends intent only. Either key layout controls
   the local player's bird. Guest predicts movement and smooths host corrections.

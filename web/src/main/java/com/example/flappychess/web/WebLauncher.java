@@ -5,7 +5,9 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input.Keys;
 import com.example.flappychess.FlappyChessGame;
 import com.example.flappychess.model.MatchSettings;
+import com.example.flappychess.model.SoloSettings;
 import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.controller.MatchSetup;
 import com.example.flappychess.controller.PostgameReview;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
@@ -18,13 +20,20 @@ public final class WebLauncher {
     public static void main(String[] args) {
         Window.current().getDocument().getElementById("play").addEventListener("click", event -> start(false));
         Window.current().getDocument().getElementById("tutorial").addEventListener("click", event -> start(true));
+        Window.current().getDocument().getElementById("solo").addEventListener("click", event -> start(false, true));
         PeerNetwork.install(WebLauncher::startPeer);
         enablePlay();
     }
 
     private static void start(boolean tutorial) {
+        start(tutorial, false);
+    }
+
+    private static void start(boolean tutorial, boolean solo) {
         showLoading();
-        FlappyChessGame game = new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings(), WebLauncher::exportPgn);
+        FlappyChessGame game = solo
+                ? new FlappyChessGame(false, WebLauncher::leaveGame, selectedSettings(), selectedSolo(), WebLauncher::exportPgn)
+                : new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings(), WebLauncher::exportPgn);
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
@@ -39,9 +48,10 @@ public final class WebLauncher {
                         school == null ? "" : school.title() + ". " + school.instruction());
                 describeFeedback(game.feedbackMessage(), game.isSoundEnabled());
                 describeTimeControl(game.getSession().getSettings().label());
-                describeSetup(game.getMatchSetup() == null ? "" : game.getMatchSetup().settings().label());
+                describeSetup(game.getMatchSetup());
                 describeHistory(game.getSession(), game.getReview());
                 describeSeries(game.getSession());
+                describeSolo(game.getSession());
             }
             @Override public void resize(int width, int height) { game.resize(width, height); }
             @Override public void pause() { game.pause(); }
@@ -56,6 +66,24 @@ public final class WebLauncher {
 
     static MatchSettings selectedSettings() { return MatchSettings.minutes(selectedMinutes(), selectedIncrement()); }
 
+    private static SoloSettings selectedSolo() {
+        return new SoloSettings(Side.valueOf(soloChoice("side")), SoloSettings.Level.valueOf(soloChoice("chess")),
+                SoloSettings.Level.valueOf(soloChoice("flight")));
+    }
+
+    @JSBody(params = "name", script = "return window.FlappySettings.solo()[name];")
+    private static native String soloChoice(String name);
+
+    private static void describeSolo(GameSession game) {
+        var solo = game.getSoloSettings();
+        soloSummary(solo != null, solo == null ? "" : game.getSeries().sideFor(false).name(),
+                solo == null ? "" : solo.chess().name(), solo == null ? "" : solo.flight().name(), game.getAiPhase(),
+                game.getCarrier() == null ? "" : game.getCarrier().name());
+    }
+
+    @JSBody(params = {"enabled", "side", "chess", "flight", "phase", "carrier"}, script = "const el = document.getElementById('solo-summary'); el.dataset.side = side; el.dataset.chess = chess; el.dataset.flight = flight; el.dataset.phase = phase; el.dataset.carrier = carrier; if (enabled) document.body.dataset.mode = 'solo'; const text = enabled ? 'Computer plays ' + side + '. Chess ' + chess + ', flying ' + flight + '. ' + phase + '. Either keyboard layout controls your bird.' : ''; if (el.textContent !== text) el.textContent = text;")
+    private static native void soloSummary(boolean enabled, String side, String chess, String flight, String phase, String carrier);
+
     @JSBody(script = "return window.FlappySettings.read().minutes;")
     private static native int selectedMinutes();
 
@@ -65,8 +93,15 @@ public final class WebLauncher {
     @JSBody(params = "label", script = "document.body.dataset.timeControl = label;")
     static native void describeTimeControl(String label);
 
-    @JSBody(params = "label", script = "document.body.dataset.setup = label; const summary = document.getElementById('setup-summary'); const text = label ? 'New match setup: ' + label + '. Left and Right change time; Up and Down change bonus; Enter starts a new match. Existing match clocks keep running.' : ''; if (summary.textContent !== text) summary.textContent = text;")
-    private static native void describeSetup(String label);
+    private static void describeSetup(MatchSetup setup) {
+        setupSummary(setup == null ? "" : setup.settings().label(), setup == null ? "" :
+                "New match setup: " + setup.settings().label() + ". Opponent " + setup.opponentLabel()
+                        + ", solo color " + setup.colorLabel() + ", chess " + setup.chessLabel() + ", flying " + setup.flightLabel()
+                        + ". C changes opponent; W changes solo color; E changes chess; F changes flying. Left and Right change time; Up and Down change bonus; Enter starts a new match. Existing match clocks keep running.");
+    }
+
+    @JSBody(params = {"label", "text"}, script = "document.body.dataset.setup = label; const summary = document.getElementById('setup-summary'); if (summary.textContent !== text) summary.textContent = text;")
+    private static native void setupSummary(String label, String text);
 
     static String exportPgn(String pgn) { downloadPgn(pgn); return "PGN downloaded."; }
 
@@ -74,7 +109,11 @@ public final class WebLauncher {
         var series = game.getSeries();
         seriesSummary(series.round(), series.firstHalfPoints(), series.secondHalfPoints(), series.firstWhite(),
                 "Round " + series.round() + ". " + series.score() + ". " + series.nameFor(Side.WHITE)
-                        + " is White; " + series.nameFor(Side.BLACK) + " is Black. After the result, R keeps colors; X swaps colors.");
+                        + " is White; " + series.nameFor(Side.BLACK) + " is Black. "
+                        + (series.players() == com.example.flappychess.controller.MatchSeries.Players.LOCAL
+                        ? "Player 1 uses A/D, Space, E; Player 2 uses Left/Right, Up, Enter. "
+                        : "Either keyboard layout controls your own bird. ")
+                        + "After the result, R keeps colors; X swaps colors.");
     }
 
     @JSBody(params = {"round", "first", "second", "firstWhite", "text"}, script = "const el = document.getElementById('series-summary'); el.dataset.round = String(round); el.dataset.firstPoints = String(first / 2); el.dataset.secondPoints = String(second / 2); el.dataset.firstWhite = String(firstWhite); if (el.textContent !== text) el.textContent = text;")
@@ -123,10 +162,10 @@ public final class WebLauncher {
     @JSBody(script = "return new URL('.', document.baseURI).href;")
     private static native String assetBaseUrl();
 
-    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('status').textContent = 'Try Flight School, or play with a friend.';")
+    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('solo').disabled = false; document.getElementById('status').textContent = 'Try Flight School, the computer, or a friend.';")
     private static native void enablePlay();
 
-    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
+    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('solo').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
     private static native void showLoading();
 
     @JSBody(params = "tutorial", script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready'; document.body.dataset.mode = tutorial ? 'tutorial' : 'local';")

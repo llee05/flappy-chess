@@ -23,5 +23,17 @@
   minutes.addEventListener('change', update);
   increment.addEventListener('change', update);
   update();
-  window.FlappySettings = { read };
+  const soloFields = ['side', 'chess', 'flight'];
+  const solo = () => Object.fromEntries(soloFields.map(name => [name, document.getElementById('solo-' + name).value]));
+  try {
+    const saved = JSON.parse(localStorage.getItem('flappy-chess-solo'));
+    for (const name of soloFields) {
+      const field = document.getElementById('solo-' + name);
+      if (saved && [...field.options].some(option => option.value === saved[name])) field.value = saved[name];
+    }
+  } catch { /* Preferences are optional. */ }
+  for (const name of soloFields) document.getElementById('solo-' + name).addEventListener('change', () => {
+    try { localStorage.setItem('flappy-chess-solo', JSON.stringify(solo())); } catch { /* Optional storage. */ }
+  });
+  window.FlappySettings = { read, solo };
 })();
