@@ -89,63 +89,101 @@
     </footer>
   </div>
   <main id="welcome">
-    <article>
-      <h1>FLAPPY<br>CHESS</h1>
-      <p class="tagline">Take flight. Make your move.</p>
-      <p class="touch-intro">Touch controls included. Try Flight School to learn both gravity directions.</p>
-      <button id="tutorial" type="button" disabled>FLIGHT SCHOOL</button>
-      <fieldset id="match-settings">
-        <legend>Match settings · local play or room creator</legend>
-        <div class="setting-controls">
-          <label>Time per side
-            <select id="match-minutes">
-              <option value="0">Untimed practice</option><option value="1">1 minute</option>
-              <option value="5" selected>5 minutes</option><option value="10">10 minutes</option>
-              <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option>
-            </select>
-          </label>
-          <label>Bonus per move
-            <select id="match-increment">
-              <option value="0">None</option><option value="2">2 seconds</option><option value="5">5 seconds</option>
-              <option value="10">10 seconds</option><option value="15">15 seconds</option>
-              <option value="30">30 seconds</option><option value="60">60 seconds</option>
-            </select>
-          </label>
+    <header class="lobby-header">
+      <a class="lobby-brand" href="#welcome" aria-label="Flappy Chess lobby">
+        <img src="./art/crowned-bird.png" alt="" width="68" height="46">
+        <span>FLAPPY <strong>CHESS</strong></span>
+      </a>
+      <nav class="lobby-toolbar" aria-label="Lobby controls">
+        <span class="lobby-current" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+          Lobby
+        </span>
+        <button id="lobby-sound" type="button" data-key="M" aria-label="Toggle sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.2-.7a5 5 0 0 1 0 7.4l1.4 1.5a7 7 0 0 0 0-10.4l-1.4 1.5zm-2.1 2.1a2 2 0 0 1 0 3.2l1.3 1.5a4 4 0 0 0 0-6.2l-1.3 1.5z"/></svg>
+        </button>
+        <button id="lobby-menu" type="button" aria-expanded="false" aria-controls="lobby-details" aria-label="Show match settings">•••</button>
+      </nav>
+    </header>
+
+    <article class="lobby-page">
+      <section class="lobby-hero" aria-labelledby="lobby-title">
+        <div class="title-lockup">
+          <img src="./art/crowned-bird.png" alt="A crowned white bird in flight" width="230" height="155">
+          <h1 id="lobby-title"><span>FLAPPY</span><strong>CHESS</strong></h1>
+          <div class="checkered-divider" aria-hidden="true"><span></span></div>
+          <p class="tagline">Take flight. Make your move.</p>
         </div>
-        <p id="time-control-note">Five minutes per side. No bonus.</p>
-      </fieldset>
-      <button id="play" type="button" disabled>LOCAL PLAY</button>
-      <fieldset id="solo-settings">
-        <legend>Solo opponent · same flight physics</legend>
-        <div class="setting-controls">
-          <label>Your color<select id="solo-side"><option value="WHITE">White · falls down</option><option value="BLACK">Black · falls up</option></select></label>
-          <label>Chess skill<select id="solo-chess"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
-          <label>Flying skill<select id="solo-flight"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
+        <div class="preview-frame">
+          <img src="./art/game-preview.png" alt="Crowned birds flying beside a chessboard between green and grey pipes" width="960" height="540">
         </div>
-        <button id="solo" type="button" disabled>PLAY COMPUTER</button>
-      </fieldset>
-      <button id="host" type="button" disabled>CREATE ONLINE ROOM</button>
-      <form id="join-form">
-        <label for="room">Join a friend's room</label>
-        <div class="join-controls">
-          <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Paste room link or code" maxlength="2048">
-          <button id="join" type="submit" disabled>JOIN</button>
-        </div>
-      </form>
-      <section id="share-room" hidden>
+      </section>
+
+      <section class="lobby-actions" aria-label="Choose a game mode">
+        <button id="tutorial" class="mode-button school" type="button" disabled>FLIGHT SCHOOL</button>
+        <button id="play" class="mode-button local" type="button" disabled>LOCAL PLAY</button>
+        <button id="solo" class="mode-button computer" type="button" disabled>PLAY COMPUTER</button>
+        <button id="host" class="mode-button online" type="button" disabled>CREATE ONLINE ROOM</button>
+        <form id="join-form" class="join-card">
+          <label for="room">Room code or invite link</label>
+          <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Paste code or link" maxlength="2048">
+          <button id="join" class="mode-button join" type="submit" disabled>JOIN ROOM</button>
+        </form>
+      </section>
+
+      <section id="share-room" class="share-card" hidden>
         <label for="invite-link">Your room link · You play White</label>
-        <input id="invite-link" type="text" readonly aria-label="Invite link">
-        <button id="copy-room" type="button">COPY ROOM LINK</button>
-        <button id="cancel-room" type="button">CANCEL ROOM</button>
+        <div class="share-controls">
+          <input id="invite-link" type="text" readonly aria-label="Invite link">
+          <button id="copy-room" type="button">COPY ROOM LINK</button>
+          <button id="cancel-room" type="button">CANCEL ROOM</button>
+        </div>
       </section>
       <p id="status" role="status" aria-live="polite">Loading the game...</p>
-      <div class="controls">
-        <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
-        <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
-      </div>
-      <p class="note">Flight School is always untimed. Solo, local and online play support touch controls or a keyboard.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Esc or Lobby leaves the game.</p>
+
+      <section id="lobby-details" class="lobby-details" aria-label="Match settings and controls">
+        <div class="settings-column">
+          <fieldset id="match-settings">
+            <legend>Match settings · local play or room creator</legend>
+            <div class="setting-controls">
+              <label>Time per side
+                <select id="match-minutes">
+                  <option value="0">Untimed practice</option><option value="1">1 minute</option>
+                  <option value="5" selected>5 minutes</option><option value="10">10 minutes</option>
+                  <option value="15">15 minutes</option><option value="30">30 minutes</option><option value="60">60 minutes</option>
+                </select>
+              </label>
+              <label>Bonus per move
+                <select id="match-increment">
+                  <option value="0">None</option><option value="2">2 seconds</option><option value="5">5 seconds</option>
+                  <option value="10">10 seconds</option><option value="15">15 seconds</option>
+                  <option value="30">30 seconds</option><option value="60">60 seconds</option>
+                </select>
+              </label>
+            </div>
+            <p id="time-control-note">Five minutes per side. No bonus.</p>
+          </fieldset>
+          <fieldset id="solo-settings">
+            <legend>Solo opponent · same flight physics</legend>
+            <div class="setting-controls solo-controls">
+              <label>Your color<select id="solo-side"><option value="WHITE">White · falls down</option><option value="BLACK">Black · falls up</option></select></label>
+              <label>Chess skill<select id="solo-chess"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
+              <label>Flying skill<select id="solo-flight"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
+            </div>
+          </fieldset>
+        </div>
+        <div class="notes-column">
+          <p class="touch-intro">Touch controls included. Try Flight School to learn both gravity directions.</p>
+          <div class="controls">
+            <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
+            <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
+          </div>
+          <p class="note">Flight School is always untimed. Solo, local and online play support touch controls or a keyboard.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Esc or Lobby leaves the game.</p>
+        </div>
+      </section>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
+    <div class="lobby-landscape" aria-hidden="true"></div>
   </main>
   <aside id="network-bar" hidden aria-label="Online match">
     <strong id="player-role"></strong>
@@ -172,6 +210,12 @@
       document.getElementById('play').disabled = true;
       document.getElementById('tutorial').disabled = true;
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
+    });
+    document.getElementById('lobby-menu').addEventListener('click', event => {
+      const welcome = document.getElementById('welcome');
+      const open = welcome.classList.toggle('menu-open');
+      event.currentTarget.setAttribute('aria-expanded', String(open));
+      if (open) document.getElementById('lobby-details').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   </script>
   <script src="./settings.js"></script>
