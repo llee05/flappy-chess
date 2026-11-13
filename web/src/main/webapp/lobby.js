@@ -64,8 +64,8 @@
   const board = byId('preview-board');
   const files = 'abcdefgh';
   const initial = {
-    a8: '♜', b8: '♞', c8: '♝', d8: '♛', e8: '♚', f8: '♝', g8: '♞', h8: '♜',
-    a7: '♟', b7: '♟', c7: '♟', d7: '♟', e7: '♟', f7: '♟', g7: '♟', h7: '♟',
+    a8: '♖', b8: '♘', c8: '♗', d8: '♕', e8: '♔', f8: '♗', g8: '♘', h8: '♖',
+    a7: '♙', b7: '♙', c7: '♙', d7: '♙', e7: '♙', f7: '♙', g7: '♙', h7: '♙',
     a2: '♙', b2: '♙', c2: '♙', d2: '♙', e2: '♙', f2: '♙', g2: '♙', h2: '♙',
     a1: '♖', b1: '♘', c1: '♗', d1: '♕', e1: '♔', f1: '♗', g1: '♘', h1: '♖'
   };
@@ -84,16 +84,16 @@
   const whiteBird = byId('preview-white');
   const blackBird = byId('preview-black');
   const sky = board.parentElement;
-  const pieceAt = (name, piece) => {
+  const pieceAt = (name, piece, black = false) => {
     const cell = cells.get(name);
     cell.textContent = piece || '';
-    cell.classList.toggle('black-piece', !!piece && '♜♞♝♛♚♟'.includes(piece));
+    cell.classList.toggle('black-piece', !!piece && black);
   };
   const placeBird = (bird, name) => {
     const file = files.indexOf(name[0]);
     const fromTop = 8 - Number(name[1]);
-    bird.style.setProperty('--bird-x', `${20 + (file + .5) * 7.5}%`);
-    bird.style.setProperty('--bird-y', `${7 + (fromTop + .5) * 12}%`);
+    bird.style.setProperty('--bird-x', `${23.75 + (file + .5) * 6.5625}%`);
+    bird.style.setProperty('--bird-y', `${6 + (fromTop + .5) * 10.5}%`);
   };
   const carry = (bird, piece) => {
     bird.classList.toggle('carrying', !!piece);
@@ -102,7 +102,7 @@
   const clearMarks = () => cells.forEach(cell => cell.classList.remove('selected', 'target', 'last'));
   const mark = (name, className) => cells.get(name).classList.add(className);
   const reset = () => {
-    cells.forEach((cell, name) => pieceAt(name, initial[name]));
+    cells.forEach((cell, name) => pieceAt(name, initial[name], Number(name[1]) >= 7));
     clearMarks();
     carry(whiteBird, '');
     carry(blackBird, '');
@@ -115,7 +115,7 @@
     pieceAt('e2', '');
     pieceAt('e7', '');
     pieceAt('e4', '♙');
-    pieceAt('e5', '♟');
+    pieceAt('e5', '♙', true);
     mark('e2', 'last');
     mark('e4', 'last');
     mark('e7', 'last');
@@ -153,12 +153,12 @@
       mark('e7', 'selected');
       mark('e6', 'target');
       mark('e5', 'target');
-      carry(blackBird, '♟');
+      carry(blackBird, '♙');
     },
     () => placeBird(blackBird, 'e5'),
     () => {
       carry(blackBird, '');
-      pieceAt('e5', '♟');
+      pieceAt('e5', '♙', true);
       clearMarks();
       mark('e7', 'last');
       mark('e5', 'last');

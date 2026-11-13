@@ -141,7 +141,7 @@ await withBrowser(async browser => {
   await host.until(() => failure(host), 'notifying host of disconnect');
   await host.screenshot('online-disconnected');
   await host.evaluate("document.getElementById('return-lobby').click()");
-  await pumpUntil(host, "!document.body.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
+  await pumpUntil(host, "document.body && !document.body.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
 
   await guest.evaluate("document.getElementById('join-open').click(); document.getElementById('room').value = 'flappychess-' + '0'.repeat(32); document.getElementById('join-form').requestSubmit()");
   await pumpUntil(guest, "document.getElementById('connection-failure').hidden === false", 'reporting a nonexistent room');

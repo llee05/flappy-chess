@@ -606,12 +606,15 @@ body[data-room-state="waiting"] .lobby-details { display: none; }
 .preview-board {
   position: absolute;
   z-index: 4;
-  top: 7%;
+  top: 6%;
   left: 50%;
   display: grid;
   grid-template-columns: repeat(8, 1fr);
-  width: 60%;
+  grid-template-rows: repeat(8, minmax(0, 1fr));
+  width: auto;
+  height: 84%;
   aspect-ratio: 1;
+  overflow: hidden;
   transform: translateX(-50%);
   border: 5px solid #673f28;
   outline: 3px solid #f0c56a;
@@ -623,6 +626,7 @@ body[data-room-state="waiting"] .lobby-details { display: none; }
   display: grid;
   place-items: center;
   min-width: 0;
+  min-height: 0;
   color: #fff8df;
   background: #f6e2a6;
   font: 700 clamp(17px, 2.5vw, 34px)/1 Georgia, serif;
