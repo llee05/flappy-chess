@@ -121,6 +121,10 @@
     initial.set(file + '2', { type: 'pawn', side: 'white' });
     initial.set(file + '1', { type: backRank[index], side: 'white' });
   });
+  initial.delete('d2');
+  initial.delete('d7');
+  initial.set('d4', { type: 'pawn', side: 'white' });
+  initial.set('d5', { type: 'pawn', side: 'black' });
   const cells = new Map();
   for (let rank = 8; rank >= 1; rank--) {
     for (let file = 0; file < 8; file++) {
@@ -161,8 +165,8 @@
     clearMarks();
     carry(whiteBird, '');
     carry(blackBird, '');
-    placeBird(whiteBird, 'e2');
-    placeBird(blackBird, 'e7');
+    placeBird(whiteBird, 'b1');
+    placeBird(blackBird, 'g8');
   };
   window.addEventListener('resize', () => requestAnimationFrame(() => {
     sky.classList.add('resetting');
@@ -173,16 +177,16 @@
 
   reset();
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    pieceAt('e2', '');
-    pieceAt('e7', '');
-    pieceAt('e4', 'pawn');
-    pieceAt('e5', 'pawn', 'black');
-    mark('e2', 'last');
-    mark('e4', 'last');
-    mark('e7', 'last');
-    mark('e5', 'last');
-    placeBird(whiteBird, 'e4');
-    placeBird(blackBird, 'e5');
+    pieceAt('b1', '');
+    pieceAt('g8', '');
+    pieceAt('c3', 'knight');
+    pieceAt('f6', 'knight', 'black');
+    mark('b1', 'last');
+    mark('c3', 'last');
+    mark('g8', 'last');
+    mark('f6', 'last');
+    placeBird(whiteBird, 'c3');
+    placeBird(blackBird, 'f6');
     return;
   }
 
@@ -194,35 +198,35 @@
     },
     () => {
       clearMarks();
-      pieceAt('e2', '');
-      mark('e2', 'selected');
-      mark('e3', 'target');
-      mark('e4', 'target');
-      carry(whiteBird, 'pawn');
+      pieceAt('b1', '');
+      mark('b1', 'selected');
+      mark('a3', 'target');
+      mark('c3', 'target');
+      carry(whiteBird, 'knight');
     },
-    () => placeBird(whiteBird, 'e4'),
+    () => placeBird(whiteBird, 'c3'),
     () => {
       carry(whiteBird, '');
-      pieceAt('e4', 'pawn');
+      pieceAt('c3', 'knight');
       clearMarks();
-      mark('e2', 'last');
-      mark('e4', 'last');
+      mark('b1', 'last');
+      mark('c3', 'last');
     },
     () => {
-      pieceAt('e7', '');
+      pieceAt('g8', '');
       clearMarks();
-      mark('e7', 'selected');
-      mark('e6', 'target');
-      mark('e5', 'target');
-      carry(blackBird, 'pawn', 'black');
+      mark('g8', 'selected');
+      mark('f6', 'target');
+      mark('h6', 'target');
+      carry(blackBird, 'knight', 'black');
     },
-    () => placeBird(blackBird, 'e5'),
+    () => placeBird(blackBird, 'f6'),
     () => {
       carry(blackBird, '');
-      pieceAt('e5', 'pawn', 'black');
+      pieceAt('f6', 'knight', 'black');
       clearMarks();
-      mark('e7', 'last');
-      mark('e5', 'last');
+      mark('g8', 'last');
+      mark('f6', 'last');
     },
     () => {},
     () => {}

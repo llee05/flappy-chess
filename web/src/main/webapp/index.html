@@ -108,34 +108,49 @@
 
     <article class="lobby-page">
       <section class="lobby-menu-shell" aria-labelledby="lobby-title">
-        <div class="menu-panel">
-          <div class="title-lockup">
-            <img class="title-bird" src="./art/crowned-bird.png" alt="" width="230" height="155">
-            <h1 id="lobby-title" class="sr-only">Flappy Chess</h1>
-            <img class="title-wordmark" src="./art/title-wordmark.png" alt="Flappy Chess" width="420" height="176">
+        <div class="page-clouds" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="lobby-hero-row">
+          <div class="menu-panel">
+            <div class="title-lockup">
+              <h1 id="lobby-title" class="sr-only">Flappy Chess</h1>
+              <img class="title-emblem" src="./art/hero-emblem-reference.png" alt="Flappy Chess" width="768" height="512">
+            </div>
           </div>
-          <section class="lobby-actions" aria-label="Choose a game mode">
-            <button id="tutorial" class="mode-button school" type="button" disabled><span class="mode-icon" aria-hidden="true">♙</span><span>Flight School</span></button>
-            <button id="play" class="mode-button local" type="button" disabled><span class="mode-icon" aria-hidden="true">♖</span><span>Local Play</span></button>
-            <button id="solo" class="mode-button computer" type="button" disabled><span class="mode-icon" aria-hidden="true">♘</span><span>Play Computer</span></button>
-            <button id="host" class="mode-button online" type="button" disabled><span class="mode-icon" aria-hidden="true">♔</span><span>Create Online Room</span></button>
-            <button id="join-open" class="mode-button join" type="button" disabled><span class="mode-icon" aria-hidden="true">➜</span><span>Join Room</span></button>
-          </section>
-          <p id="status" role="status" aria-live="polite">Loading the game...</p>
+
+          <figure class="preview-frame" aria-label="A looping demonstration of White flying to the b1 knight, carrying it to c3, then Black carrying the g8 knight to f6.">
+            <div class="preview-sky" aria-hidden="true">
+              <span class="preview-cloud cloud-one"></span>
+              <span class="preview-cloud cloud-two"></span>
+              <span class="preview-hills"></span>
+              <span class="preview-pipe pipe-left pipe-top"></span>
+              <span class="preview-pipe pipe-left pipe-bottom"></span>
+              <span class="preview-pipe pipe-right pipe-top pipe-grey"></span>
+              <span class="preview-pipe pipe-right pipe-bottom pipe-grey"></span>
+              <div id="preview-board" class="preview-board"></div>
+              <div id="preview-white" class="preview-bird white-bird"><img src="./art/crowned-bird.png" alt=""><span class="carried-piece"></span></div>
+              <div id="preview-black" class="preview-bird black-bird"><img src="./art/crowned-bird.png" alt=""><span class="carried-piece"></span></div>
+            </div>
+          </figure>
         </div>
 
-        <figure class="preview-frame" aria-label="A looping demonstration of White flying to the e2 pawn, carrying it to e4, then Black carrying the e7 pawn to e5.">
-          <div class="preview-sky" aria-hidden="true">
-            <span class="preview-cloud cloud-one"></span>
-            <span class="preview-cloud cloud-two"></span>
-            <span class="preview-pipe pipe-left"></span>
-            <span class="preview-pipe pipe-right"></span>
-            <div id="preview-board" class="preview-board"></div>
-            <div id="preview-white" class="preview-bird white-bird"><img src="./art/crowned-bird.png" alt=""><span class="carried-piece"></span></div>
-            <div id="preview-black" class="preview-bird black-bird"><img src="./art/crowned-bird.png" alt=""><span class="carried-piece"></span></div>
-            <div class="preview-ground"></div>
-          </div>
-        </figure>
+        <section class="lobby-actions" aria-label="Choose a game mode">
+          <button id="tutorial" class="mode-button school" type="button" disabled>
+            <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 25h8l12-12h14l-8 8h9l-8 7h7l-10 8H15zM8 30l-4 5h15l5-5z"/></svg><span class="mode-label">Flight<br>School</span>
+          </button>
+          <button id="play" class="mode-button local" type="button" disabled>
+            <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M17 23a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm17 2a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM3 42v-6c0-7 6-11 14-11s14 4 14 11v6Zm25 0v-6c0-4-1-7-4-10 3-1 6-1 10-1 7 0 11 4 11 11v6Z"/></svg><span class="mode-label">Local<br>Play</span>
+          </button>
+          <button id="solo" class="mode-button computer" type="button" disabled>
+            <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M5 7h38v29H28v4h9v4H11v-4h9v-4H5zm5 5v19h28V12zm11 5h6v4h4v6h-4v3h-6v-3h-4v-6h4z"/></svg><span class="mode-label">Play<br>Computer</span>
+          </button>
+          <button id="host" class="mode-button online" type="button" disabled>
+            <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 3a21 21 0 1 0 0 42 21 21 0 0 0 0-42Zm13 12h-7c-1-3-2-5-3-7 4 1 8 3 10 7ZM24 8c2 2 3 4 4 7h-8c1-3 2-5 4-7ZM11 31a17 17 0 0 1 0-14h7a37 37 0 0 0 0 14Zm3 3h5c1 3 2 5 3 7-3-1-6-3-8-7Zm5-3a32 32 0 0 1 0-14h10a32 32 0 0 1 0 14Zm5 10c-2-2-3-4-4-7h8c-1 3-2 5-4 7Zm3-1c1-2 2-4 3-6h7c-3 3-6 5-10 6Zm4-9a37 37 0 0 0 0-14h7a17 17 0 0 1 0 14Z"/></svg><span class="mode-label">Create<br>Online Room</span>
+          </button>
+          <button id="join-open" class="mode-button join" type="button" disabled>
+            <svg class="mode-icon" viewBox="0 0 48 48" aria-hidden="true"><path d="M24 21a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM9 23a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm30 0a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM11 42v-6c0-8 5-13 13-13s13 5 13 13v6Zm-9 0v-6c0-7 4-11 10-11 2 0 3 0 5 1-5 3-8 8-8 15v1Zm37 0v-1c0-7-3-12-8-15 2-1 3-1 5-1 6 0 10 4 10 11v6Z"/></svg><span class="mode-label">Join<br>Room</span>
+          </button>
+        </section>
+        <p id="status" role="status" aria-live="polite">Loading the game...</p>
       </section>
 
       <section id="share-room" class="share-card" hidden>
