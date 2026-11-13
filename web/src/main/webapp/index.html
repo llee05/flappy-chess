@@ -95,8 +95,13 @@
         <span>FLAPPY <strong>CHESS</strong></span>
       </a>
       <nav class="lobby-toolbar" aria-label="Lobby controls">
-        <span class="lobby-current" aria-current="page">♟&nbsp; Lobby</span>
-        <button id="lobby-sound" type="button" data-key="M" aria-label="Toggle sound">♪</button>
+        <span class="lobby-current" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+          Lobby
+        </span>
+        <button id="lobby-sound" type="button" data-key="M" aria-label="Toggle sound">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.2-.7a5 5 0 0 1 0 7.4l1.4 1.5a7 7 0 0 0 0-10.4l-1.4 1.5zm-2.1 2.1a2 2 0 0 1 0 3.2l1.3 1.5a4 4 0 0 0 0-6.2l-1.3 1.5z"/></svg>
+        </button>
         <button id="lobby-menu" type="button" aria-expanded="false" aria-controls="lobby-details" aria-label="Show match settings">•••</button>
       </nav>
     </header>
@@ -106,6 +111,7 @@
         <div class="title-lockup">
           <img src="./art/crowned-bird.png" alt="A crowned white bird in flight" width="230" height="155">
           <h1 id="lobby-title"><span>FLAPPY</span><strong>CHESS</strong></h1>
+          <div class="checkered-divider" aria-hidden="true"><span></span></div>
           <p class="tagline">Take flight. Make your move.</p>
         </div>
         <div class="preview-frame">

@@ -1,4 +1,11 @@
 :root { color-scheme: dark; font-family: ui-monospace, monospace; color: #f1dfb3; background: #20283c; }
+@font-face {
+  font-family: 'Lobby Block';
+  src: url('./assets/fonts/LiberationSans-Bold.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+}
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; }
 #game-shell { position: fixed; inset: 0; }
@@ -149,12 +156,7 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   display: block;
   padding: 0;
   color: var(--ink);
-  background:
-    linear-gradient(135deg, transparent 75%, #d7f4ff 75%) 4% 105px / 42px 24px no-repeat,
-    linear-gradient(225deg, transparent 75%, #d7f4ff 75%) calc(4% + 42px) 105px / 42px 24px no-repeat,
-    linear-gradient(135deg, transparent 75%, #d7f4ff 75%) 91% 145px / 58px 32px no-repeat,
-    linear-gradient(225deg, transparent 75%, #d7f4ff 75%) calc(91% + 58px) 145px / 58px 32px no-repeat,
-    linear-gradient(180deg, #38aaf0 0, var(--sky-light) 72%, #d9f6ff 100%);
+  background: linear-gradient(180deg, #38aaf0 0, var(--sky-light) 72%, #d9f6ff 100%);
   image-rendering: pixelated;
 }
 #welcome[hidden] { display: none; }
@@ -203,27 +205,28 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   background: #30345f;
   font-size: 18px;
 }
-.lobby-current { min-width: 136px; background: #7661d5; font-weight: 900; }
+.lobby-current { min-width: 136px; grid-auto-flow: column; gap: 8px; background: #7661d5; font-weight: 900; }
+.lobby-current svg, #welcome .lobby-toolbar button svg { width: 24px; height: 24px; fill: currentColor; }
 #welcome .lobby-toolbar button:hover { background: #4b5188; }
 #welcome .lobby-toolbar button:active { transform: translateY(3px); box-shadow: none; }
 .lobby-page {
   width: min(100%, 1480px);
   margin: 0 auto;
-  padding: clamp(30px, 5vh, 60px) clamp(18px, 5vw, 72px) 26px;
+  padding: clamp(24px, 3.5vh, 38px) clamp(18px, 5vw, 72px) 0;
   border: 0;
   box-shadow: none;
   background: transparent;
 }
 .lobby-hero {
   display: grid;
-  grid-template-columns: minmax(300px, .78fr) minmax(480px, 1.35fr);
+  grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.18fr);
   align-items: center;
   gap: clamp(32px, 5vw, 76px);
 }
 .title-lockup { text-align: center; }
 .title-lockup > img {
   display: block;
-  width: min(48%, 230px);
+  width: min(43%, 190px);
   height: auto;
   margin: 0 auto -14px;
   filter: drop-shadow(6px 7px 0 #111943);
@@ -232,18 +235,34 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 #welcome h1 {
   margin: 0;
   transform: rotate(-1deg);
-  font-family: Impact, Haettenschweiler, 'Arial Black', sans-serif;
-  font-size: clamp(58px, 7.7vw, 108px);
-  line-height: .77;
-  letter-spacing: -.055em;
+  font-family: 'Lobby Block', 'Arial Black', sans-serif;
+  font-size: clamp(54px, 6.6vw, 92px);
+  font-weight: 900;
+  line-height: .74;
+  letter-spacing: -.075em;
   text-align: center;
-  text-shadow: 0 5px 0 #fff, 7px 11px 0 #121943;
+  text-shadow: 0 5px 0 #fff, 5px 5px 0 #111943, 9px 10px 0 #111943;
 }
 #welcome h1 span, #welcome h1 strong { display: block; }
-#welcome h1 span { color: #fff; -webkit-text-stroke: 3px #111943; }
-#welcome h1 strong { margin-top: 18px; color: #ffd43b; -webkit-text-stroke: 3px #111943; }
+#welcome h1 span { color: #fff; -webkit-text-stroke: 5px #111943; paint-order: stroke fill; }
+#welcome h1 strong { margin-top: 18px; color: #ffd43b; -webkit-text-stroke: 5px #111943; paint-order: stroke fill; }
+.checkered-divider {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: min(78%, 300px);
+  margin: 28px auto 0;
+}
+.checkered-divider::before, .checkered-divider::after { content: ''; height: 3px; flex: 1; background: #172358; }
+.checkered-divider span {
+  width: 64px;
+  height: 24px;
+  flex: 0 0 64px;
+  border: 2px solid #172358;
+  background: conic-gradient(#172358 25%, #91d4f7 0 50%, #172358 0 75%, #91d4f7 0) 0 0 / 20px 20px;
+}
 #welcome .tagline {
-  margin: 28px 0 0;
+  margin: 12px 0 0;
   color: #24356c;
   font-size: 13px;
   font-weight: 900;
@@ -257,6 +276,8 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   background: #eef8ff;
   box-shadow: inset 0 0 0 4px #9fc9f1, 8px 9px 0 #1a2755;
   clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
+  width: min(100%, 680px);
+  justify-self: end;
 }
 .preview-frame img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; image-rendering: pixelated; }
 .lobby-actions {
@@ -264,7 +285,7 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   grid-template-columns: repeat(5, minmax(0, 1fr));
   align-items: end;
   gap: clamp(10px, 1.4vw, 20px);
-  margin-top: clamp(36px, 5vh, 56px);
+  margin-top: clamp(20px, 2.6vh, 28px);
 }
 #welcome .mode-button {
   min-height: 78px;
@@ -275,8 +296,9 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   box-shadow: 0 7px 0 var(--edge, #9f7620), inset 0 3px 0 #ffffff82;
   color: var(--ink);
   background: var(--face, #ffc44e);
-  font: 1000 clamp(15px, 1.35vw, 21px)/1.12 Arial, sans-serif;
-  letter-spacing: -.02em;
+  font: 900 clamp(15px, 1.28vw, 20px)/1.06 'Lobby Block', 'Arial Black', sans-serif;
+  letter-spacing: .01em;
+  word-spacing: .08em;
 }
 #welcome .mode-button.school { --face: #ffc54f; --edge: #bd792b; }
 #welcome .mode-button.local { --face: #c9b6f4; --edge: #8069b4; }
@@ -304,7 +326,7 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 .join-card input { height: 34px; padding: 6px 9px; font-size: 12px; }
 #welcome #status {
   min-height: 24px;
-  margin: 22px auto 4px;
+  margin: 12px auto 0;
   color: #183466;
   font-weight: 900;
   text-align: center;
@@ -340,9 +362,9 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 #welcome .note, #welcome .touch-intro { color: #dce9ff; font-size: 12px; }
 .lobby-landscape {
   width: 100%;
-  height: clamp(150px, 23vw, 270px);
-  margin-top: -6px;
-  background: url('./art/lobby-landscape.png') center bottom / cover no-repeat;
+  height: clamp(175px, 15vw, 215px);
+  margin-top: 0;
+  background: url('./art/lobby-landscape.png') center bottom / 100% 100% no-repeat;
   image-rendering: pixelated;
 }
 body[data-room-state="waiting"] .lobby-actions,
