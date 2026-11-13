@@ -159,8 +159,8 @@ window.FLAPPY_PEER_OPTIONS = {
 These values are public browser configuration. For production TURN credentials,
 use a service that issues short-lived tokens rather than embedding a private
 permanent secret. HTTPS is required on deployed sites; localhost HTTP is suitable
-for development. A localhost invite works on the same machine; use the deployed
-Pages URL when inviting someone elsewhere.
+for development. A localhost invite works on the same machine; share the
+deployed address, https://flappychess.meme, when inviting someone elsewhere.
 
 ## Publish on GitHub Pages
 
@@ -172,11 +172,15 @@ Pushes to `main` also publish the browser distribution after the tests pass.
 3. Push these commits to `main`, or run **Build and publish browser game** from
    the repository's **Actions** tab after the workflow has been pushed.
 
-The deployment job reports the published URL. The game uses relative asset
-URLs so it works at a project-site path such as `/flappy-chess/`. The workflow
-publishes static files and requires no application server or extra secrets.
-GitHub Pages serves both local and online modes. PeerJS handles signaling and
-WebRTC handles match traffic separately from static hosting.
+The game publishes at <https://flappychess.meme>; the deployment job reports
+the URL too. The custom domain is set in the repository under **Settings →
+Pages**, with Cloudflare DNS-only records pointing the domain at GitHub Pages;
+old `https://llee05.github.io/flappy-chess/` links, including `#room=` invite
+links, redirect there. The build uses relative asset URLs so it works both at
+a project-site path such as `/flappy-chess/` and at the domain root. The
+workflow publishes static files and requires no application server or extra
+secrets. GitHub Pages serves both local and online modes. PeerJS handles
+signaling and WebRTC handles match traffic separately from static hosting.
 
 If a push replaces the game with the README, check **Settings → Pages → Build
 and deployment → Source** and select **GitHub Actions**. **Deploy from a branch**
