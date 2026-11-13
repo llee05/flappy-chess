@@ -5,9 +5,12 @@
   let peer, connection, timer, connectTimeout, started = false, ended = false;
   const pending = [];
   const byId = id => document.getElementById(id);
-  const status = text => { byId('status').textContent = text; };
+  const status = text => {
+    byId('status').textContent = text;
+    if (!byId('join-modal').hidden) byId('join-status').textContent = text;
+  };
   const controls = disabled => {
-    for (const id of ['play', 'tutorial', 'host', 'join']) byId(id).disabled = disabled;
+    for (const id of ['play', 'tutorial', 'host', 'join', 'join-open']) byId(id).disabled = disabled;
     byId('match-settings').disabled = disabled;
   };
   const roomFrom = value => {
@@ -128,17 +131,20 @@
       startGame = start;
       byId('host').disabled = false;
       byId('join').disabled = false;
+      byId('join-open').disabled = false;
       byId('host').addEventListener('click', () => connect(true));
       byId('join-form').addEventListener('submit', event => {
         event.preventDefault();
         const room = roomFrom(byId('room').value);
         if (!/^flappychess-[a-f0-9]{32}$/.test(room)) { status('Paste a Flappy Chess room link or room code.'); return; }
+        window.FlappyLobby.closeJoinModal();
         connect(false, room);
       });
       const invited = new URLSearchParams(location.hash.slice(1)).get('room');
       if (invited) {
         byId('room').value = invited;
         byId('join').textContent = 'JOIN FRIEND';
+        window.FlappyLobby.openJoinModal();
       }
       byId('copy-room').addEventListener('click', async () => {
         const input = byId('invite-link');

@@ -24,7 +24,9 @@ await withBrowser(async browser => {
   assert.match(invite, /#room=flappychess-[a-f0-9]{32}$/);
   await host.screenshot('online-room');
   await open(guest, invite);
-  await guest.evaluate("document.getElementById('join').click()");
+  assert.equal(await guest.evaluate("!document.getElementById('join-modal').hidden && document.activeElement.id === 'room'"), true,
+    'An invite link opens the join dialog and focuses its room field');
+  await guest.evaluate("document.getElementById('join-form').requestSubmit()");
   for (const [page, side] of [[host, 'WHITE'], [guest, 'BLACK']]) {
     await page.until(async () => {
       assert.equal(await failure(page), false,
@@ -89,7 +91,7 @@ await withBrowser(async browser => {
   // A third connection receives a clear rejection without replacing either player.
   const third = await browser.page();
   await open(third, invite);
-  await third.evaluate("document.getElementById('join').click()");
+  await third.evaluate("document.getElementById('join-form').requestSubmit()");
   await third.until(() => failure(third), 'rejecting a third player');
   assert.match(await third.evaluate("document.getElementById('failure-message').textContent"), /already has two players/);
   assert.equal(await failure(host), false);
@@ -141,7 +143,7 @@ await withBrowser(async browser => {
   await host.evaluate("document.getElementById('return-lobby').click()");
   await pumpUntil(host, "!document.body.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
 
-  await guest.evaluate("document.getElementById('room').value = 'flappychess-' + '0'.repeat(32); document.getElementById('join').click()");
+  await guest.evaluate("document.getElementById('join-open').click(); document.getElementById('room').value = 'flappychess-' + '0'.repeat(32); document.getElementById('join-form').requestSubmit()");
   await pumpUntil(guest, "document.getElementById('connection-failure').hidden === false", 'reporting a nonexistent room');
   assert.match(await guest.evaluate("document.getElementById('failure-message').textContent"), /Room not found/);
   console.log(`WebRTC peer checks passed. Screenshots: ${browser.reports}`);

@@ -171,7 +171,7 @@ public final class WebLauncher {
     @JSBody(script = "return new URL('.', document.baseURI).href;")
     private static native String assetBaseUrl();
 
-    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('solo').disabled = false; document.getElementById('status').textContent = 'Try Flight School, the computer, or a friend.';")
+    @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('solo').disabled = false; document.getElementById('status').textContent = '';")
     private static native void enablePlay();
 
     @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('solo').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")

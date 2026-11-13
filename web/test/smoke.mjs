@@ -23,6 +23,11 @@ await withBrowser(async browser => {
   }))`);
   await send('Page.navigate', { url: browser.url });
   await until(() => evaluate("document.getElementById('play')?.disabled === false"), 'loading the compiled game');
+  await evaluate("document.getElementById('join-open').click()");
+  await until(() => evaluate("!document.getElementById('join-modal').hidden && document.activeElement.id === 'room'"), 'opening the join-room dialog');
+  await press('Escape', 'Escape', 27);
+  assert.equal(await evaluate("document.getElementById('join-modal').hidden && document.activeElement.id === 'join-open'"), true,
+    'Escape closes the join-room dialog and restores focus');
   await screenshot('welcome');
   assert.deepEqual(await evaluate("window.FlappySettings.read()"), { minutes: 5, increment: 0 });
   await evaluate("document.getElementById('match-minutes').value = '10'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
