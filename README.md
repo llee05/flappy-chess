@@ -39,9 +39,10 @@ validated desktop target; browser play is validated in Chromium.
 
 ## Browser and online play
 
-The browser version supports solo play, local play on one device and online two-player
-rooms over WebRTC. Players need a touch screen or keyboard and a WebGL-capable
-browser, with no Java installation. The desktop launcher supports solo and local play.
+The browser version supports solo play, local play on one device, online random
+matchmaking, and invite-link rooms over WebRTC. Players need a touch screen or
+keyboard and a WebGL-capable browser, with no Java installation. The desktop
+launcher supports solo and local play.
 
 ### Mobile play
 
@@ -68,7 +69,18 @@ Chromium phone and tablet emulation is covered by the browser checks below.
 Gameplay feel and browser-specific behavior should also be assessed on physical
 Android and iOS devices before a mobile release.
 
-### Online rooms
+### Online matchmaking and rooms
+
+To play a random opponent online:
+
+1. Open the game and choose **Find random match**.
+2. Wait in the matchmaking queue while the game claims or joins an open signaling
+   slot, or choose **Cancel search** to return to the lobby.
+3. When another player searches, the waiting player starts as White (host) and
+   the arriving player starts as Black (guest) with a standard five-minute clock
+   and no increment; the clock starts when both boards are ready.
+
+To play a friend with a private invite link:
 
 1. Open the game and choose **Create online room**.
 2. Choose **Copy room link** and send the link to your friend. Keep the page open.
@@ -125,9 +137,10 @@ start screen. Mobile checks use real touch events at phone, landscape, and table
 sizes to verify simultaneous steering/flapping, single-press flaps, cancelled
 touches, focus release, legal delivery, setup, results, review, and color swaps.
 The peer check uses a local signaling server and real WebRTC data
-channels between a desktop host and a touch-controlled phone guest, exercises
-moves from both players, rejects a
-third player, and verifies disconnect and missing-room feedback. It does not
+channels between a desktop host and a touch-controlled phone guest, verifies
+random matchmaking (pairing two players while a third continues searching, plus
+cancelling a search), exercises moves from both players, rejects a
+third player from an active invite room, and verifies disconnect and missing-room feedback. It does not
 contact public signaling or TURN services. Screenshots are saved under
 `web/build/reports/browser/`. Regular `build` runs all JVM tests and compiles the
 browser distribution; browser checks are separate tasks and both run in CI.
@@ -196,8 +209,9 @@ finish before visiting the updated game.
 Choose a time per side and a bonus per completed move in the browser lobby.
 Choices range from one to sixty minutes, with increments up to sixty seconds,
 or **Untimed practice** with no clock. The default is five minutes with no bonus.
-The online room creator chooses the time control for both players, and rematches
-keep it. The browser remembers your last choice. Flight School stays untimed.
+The online room creator chooses the time control for both players, while random
+matchmaking uses the five-minute default, and rematches
+keep the match's time control. The browser remembers your last choice. Flight School stays untimed.
 
 The desktop opens a **New match** setup screen. Left/Right change the time,
 Up/Down change the bonus, and Enter starts play; you can also click each choice

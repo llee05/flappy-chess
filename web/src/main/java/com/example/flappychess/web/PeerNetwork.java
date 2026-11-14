@@ -6,7 +6,7 @@ import org.teavm.jso.JSObject;
 
 /** The only bridge between the portable match controller and browser WebRTC. */
 final class PeerNetwork {
-    @JSFunctor interface Start extends JSObject { void run(boolean host); }
+    @JSFunctor interface Start extends JSObject { void run(boolean host, boolean quickMatch); }
     @JSFunctor interface Message extends JSObject { void run(String text); }
     @JSFunctor interface Tick extends JSObject { void run(); }
 
