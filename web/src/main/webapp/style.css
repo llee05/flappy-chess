@@ -6,6 +6,13 @@
   font-weight: 700;
   font-display: swap;
 }
+@font-face {
+  font-family: 'Lobby Chess';
+  src: url('./assets/fonts/NotoSansSymbols2-Regular.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
 * { box-sizing: border-box; }
 body { margin: 0; overflow: hidden; }
 #game-shell { position: fixed; inset: 0; }
@@ -385,10 +392,118 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 .lobby-landscape {
   display: none;
 }
+#welcome > .lobby-foreground {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  bottom: -80px;
+  width: min(40vw, 760px);
+  aspect-ratio: 3 / 2;
+  pointer-events: none;
+  transform: translateX(-50%);
+  transition: opacity .2s linear;
+}
+.lobby-table-art,
+.lobby-board-scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.lobby-table-art {
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.lobby-piece {
+  position: absolute;
+  z-index: 2;
+  left: var(--x);
+  top: var(--y);
+  font: 400 clamp(12px, 1.25vw, 23px)/1 'Lobby Chess', sans-serif;
+  transform: translate(-50%, -58%) scale(calc(.76 + var(--depth) * .28));
+  transform-origin: 50% 90%;
+}
+.lobby-piece.black {
+  color: #575a83;
+  text-shadow: -1px -1px 0 #201d38, 1px -1px 0 #201d38, -1px 1px 0 #201d38, 1px 1px 0 #201d38, 0 2px 0 #29213f;
+}
+.lobby-piece.white {
+  color: #fff0bf;
+  text-shadow: -1px -1px 0 #7f4e58, 1px -1px 0 #7f4e58, -1px 1px 0 #7f4e58, 1px 1px 0 #7f4e58, 0 2px 0 #5b3348;
+}
+.delivery-pawn { animation: home-pawn-delivery 7.6s steps(1, end) infinite; }
+.lobby-target {
+  position: absolute;
+  z-index: 1;
+  left: 50.15%;
+  top: 30.7%;
+  width: 7.1%;
+  height: 4.8%;
+  border: max(1px, .16vw) solid #ffe26f;
+  background: #ffcf4a42;
+  box-shadow: 0 0 5px #fff3a6, 0 0 13px #ffb936;
+  transform: skewX(-2deg);
+  animation: lobby-target-glow 3.8s steps(2, end) infinite;
+}
+.pawn-carry-bird {
+  position: absolute;
+  z-index: 4;
+  left: 49%;
+  top: 11.5%;
+  width: 24%;
+  height: auto;
+  image-rendering: pixelated;
+  transform-origin: 80% 55%;
+  animation: pawn-delivery 7.6s steps(7, end) infinite;
+}
+#welcome.menu-open .lobby-foreground,
+body[data-room-state="waiting"] .lobby-foreground,
+body[data-room-state="searching"] .lobby-foreground { opacity: 0; }
+@keyframes pawn-delivery {
+  0%, 8% { opacity: 0; transform: translate(0, 38%) rotate(-3deg) scale(.78); }
+  14% { opacity: 1; }
+  48%, 68% { opacity: 1; transform: translate(0, 0) rotate(3deg) scale(1); }
+  79% { opacity: 1; transform: translate(-12%, -8%) rotate(-2deg) scale(.96); }
+  90%, 100% { opacity: 0; transform: translate(-60%, -52%) rotate(-8deg) scale(.75); }
+}
+@keyframes lobby-target-glow {
+  0%, 100% { filter: brightness(.9); opacity: .75; }
+  50% { filter: brightness(1.35); opacity: 1; }
+}
+@keyframes home-pawn-delivery {
+  0%, 8%, 100% { opacity: 1; }
+  14%, 90% { opacity: 0; }
+}
 body[data-room-state="waiting"] .lobby-actions,
 body[data-room-state="waiting"] .lobby-details,
 body[data-room-state="searching"] .lobby-actions,
 body[data-room-state="searching"] .lobby-details { display: none; }
+
+@media (min-width: 1500px) and (min-height: 850px) {
+  #welcome .lobby-secondary {
+    position: fixed;
+    z-index: 3;
+    bottom: 146px;
+    left: 28px;
+    width: 510px;
+    margin: 0;
+  }
+  #welcome .join-card {
+    position: fixed;
+    z-index: 3;
+    bottom: 96px;
+    left: 28px;
+    width: 510px;
+    margin: 0;
+  }
+  #welcome #status {
+    position: fixed;
+    z-index: 3;
+    bottom: 58px;
+    left: 76px;
+    margin: 0;
+  }
+}
 
 @media (max-width: 860px) {
   .mobile #welcome { padding: 0; }
@@ -401,6 +516,14 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   .menu-bird::after { top: 30px; height: 7px; }
   #welcome .mode-button { min-height: 52px; font-size: 16px; }
   .lobby-details { grid-template-columns: 1fr; }
+  #welcome > .lobby-foreground {
+    right: 10px;
+    left: auto;
+    bottom: -10px;
+    width: 340px;
+    transform: none;
+  }
+  .lobby-piece { font-size: 12px; }
 }
 
 @media (max-width: 460px) {
@@ -424,6 +547,14 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   .search-controls { grid-template-columns: 1fr; }
   #welcome .setting-controls, #welcome .solo-controls { grid-template-columns: 1fr; }
   #welcome .controls { display: grid; }
+  #welcome > .lobby-foreground {
+    right: auto;
+    left: 50%;
+    bottom: 0;
+    width: min(94vw, 360px);
+    transform: translateX(-50%);
+  }
+  .lobby-piece { font-size: 11px; }
 }
 
 @media (max-height: 760px) and (min-width: 861px) {
@@ -436,9 +567,20 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   .menu-bird.right { right: -46px; }
   .menu-bird::after { top: 30px; height: 7px; }
   .lobby-secondary { margin-top: 12px; }
+  #welcome > .lobby-foreground {
+    right: 10px;
+    left: auto;
+    bottom: -10px;
+    width: 340px;
+    transform: none;
+  }
+  .lobby-piece { font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .menu-bird { animation: none; }
+  .pawn-carry-bird { animation: none; transform: none; }
+  .delivery-pawn { animation: none; opacity: 0; }
+  .lobby-target { animation: none; }
   #welcome .mode-button, #welcome .secondary-button { transition: none; }
 }
