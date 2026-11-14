@@ -162,12 +162,23 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   --deep: #25264d;
   --sky: #45b8f5;
   --sky-light: #9de1ff;
+  isolation: isolate;
   display: block;
   padding: 0;
   color: var(--ink);
-  background: linear-gradient(180deg, #45b8f5 0 54%, #83d6f8 54% 76%, #c7efff 76% 100%);
+  background: #6f3b95;
   image-rendering: pixelated;
 }
+#welcome::before {
+  content: '';
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  background: #6f3b95 url('./art/lobby-park-background.webp') center center / cover no-repeat;
+  image-rendering: pixelated;
+}
+#welcome > * { position: relative; z-index: 1; }
 #welcome[hidden] { display: none; }
 .lobby-header {
   position: sticky;
@@ -364,11 +375,7 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 #welcome .controls { border-color: #8298ca; color: #dce9ff; }
 #welcome .note, #welcome .touch-intro { color: #dce9ff; font-size: 12px; }
 .lobby-landscape {
-  width: 100%;
-  height: clamp(175px, 15vw, 215px);
-  margin-top: 0;
-  background: url('./art/lobby-landscape.png') center bottom / 100% 100% no-repeat;
-  image-rendering: pixelated;
+  display: none;
 }
 body[data-room-state="waiting"] .lobby-actions,
 body[data-room-state="waiting"] .lobby-details,
