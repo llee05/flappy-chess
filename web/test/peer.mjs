@@ -16,8 +16,62 @@ await withBrowser(async browser => {
     await page.until(() => page.evaluate("document.getElementById('host')?.disabled === false"), 'loading lobby');
   };
   const failure = page => page.evaluate("document.getElementById('connection-failure').hidden === false");
+  const third = await browser.page();
   await open(host, browser.url);
   await host.evaluate("document.getElementById('match-minutes').value = '1'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
+  await host.evaluate("document.getElementById('matchmake').click()");
+  await host.until(() => host.evaluate("document.body.dataset.roomState === 'searching' && !document.getElementById('search-room').hidden"), 'entering random matchmaking search');
+  await host.screenshot('online-searching');
+  await host.evaluate("document.getElementById('cancel-search').click()");
+  await host.until(() => host.evaluate("!document.body.dataset.roomState && document.getElementById('search-room').hidden && document.getElementById('matchmake').disabled === false"), 'cancelling random matchmaking search');
+
+  await open(guest, browser.url);
+  await open(third, browser.url);
+  await host.evaluate("document.getElementById('matchmake').click()");
+  await host.until(() => host.evaluate("document.body.dataset.roomState === 'searching'"), 'waiting in matchmaking queue');
+  await guest.evaluate("document.getElementById('matchmake').click()");
+  for (const [page, side] of [[host, 'WHITE'], [guest, 'BLACK']]) {
+    await page.until(async () => {
+      assert.equal(await failure(page), false,
+        await page.evaluate("document.getElementById('failure-message').textContent"));
+      return page.evaluate("document.body.dataset.game === 'ready'");
+    }, `matching ${side}`);
+    assert.equal(await page.evaluate('document.body.dataset.side'), side);
+    assert.equal(await page.evaluate('document.body.dataset.connection'), 'open');
+    assert.equal(await page.evaluate('document.body.dataset.timeControl'), '5+0', 'Random matchmaking must use the default 5+0 time control');
+  }
+  await third.evaluate("document.getElementById('matchmake').click()");
+  await third.until(() => third.evaluate("document.body.dataset.roomState === 'searching' && !document.getElementById('search-room').hidden"), 'third player searching while first two are matched');
+  await host.press('KeyE', 'e', 69);
+  await guest.until(async () => (await summary(guest)).carrier === 'White', 'synchronizing pickup in matched game');
+  await sleep(300);
+  assert.equal(await failure(third), false);
+  assert.equal(await third.evaluate('document.body.dataset.roomState'), 'searching', 'Third player must continue searching');
+  assert.equal(await third.evaluate('!document.body.dataset.game'), true);
+  await third.evaluate("document.getElementById('cancel-search').click()");
+  await third.until(() => third.evaluate("!document.body.dataset.roomState && document.getElementById('search-room').hidden && document.getElementById('matchmake').disabled === false"), 'cancelling third player search');
+  await third.evaluate("document.getElementById('matchmake').click()");
+  await third.until(() => third.evaluate("document.body.dataset.roomState === 'searching'"), 'third player resuming search');
+  await host.evaluate("document.getElementById('leave-room').click()");
+  await host.until(() => host.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched host to lobby');
+  await guest.until(() => failure(guest), 'notifying matched guest of disconnect');
+  await guest.evaluate("document.getElementById('return-lobby').click()");
+  await guest.until(() => guest.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched guest to lobby');
+  await guest.evaluate("document.getElementById('matchmake').click()");
+  for (const [page, side] of [[third, 'WHITE'], [guest, 'BLACK']]) {
+    await page.until(async () => {
+      assert.equal(await failure(page), false,
+        await page.evaluate("document.getElementById('failure-message').textContent"));
+      return page.evaluate("document.body.dataset.game === 'ready'");
+    }, `pairing waiting third player as ${side}`);
+    assert.equal(await page.evaluate('document.body.dataset.side'), side);
+  }
+  await third.evaluate("document.getElementById('leave-room').click()");
+  await third.until(() => third.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning third player to lobby');
+  await guest.until(() => failure(guest), 'notifying guest of third player disconnect');
+  await guest.evaluate("document.getElementById('return-lobby').click()");
+  await guest.until(() => guest.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning guest to lobby after second match');
+
   await host.evaluate("document.getElementById('host').click()");
   await host.until(() => host.evaluate("!!document.getElementById('invite-link').value"), 'creating a room');
   const invite = await host.evaluate("document.getElementById('invite-link').value");
@@ -87,7 +141,6 @@ await withBrowser(async browser => {
   }
 
   // A third connection receives a clear rejection without replacing either player.
-  const third = await browser.page();
   await open(third, invite);
   await third.evaluate("document.getElementById('join').click()");
   await third.until(() => failure(third), 'rejecting a third player');

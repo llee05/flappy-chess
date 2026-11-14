@@ -64,8 +64,8 @@ public final class WebLauncher {
         });
     }
 
-    private static void startPeer(boolean host) {
-        launch(new PeerGame(host, host ? selectedSettings() : MatchSettings.DEFAULT));
+    private static void startPeer(boolean host, boolean quickMatch) {
+        launch(new PeerGame(host, host && !quickMatch ? selectedSettings() : MatchSettings.DEFAULT));
     }
 
     static MatchSettings selectedSettings() { return MatchSettings.minutes(selectedMinutes(), selectedIncrement()); }
@@ -174,7 +174,7 @@ public final class WebLauncher {
     @JSBody(script = "document.getElementById('play').disabled = false; document.getElementById('tutorial').disabled = false; document.getElementById('solo').disabled = false; document.getElementById('status').textContent = 'Try Flight School, the computer, or a friend.';")
     private static native void enablePlay();
 
-    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('solo').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
+    @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('solo').disabled = true; document.getElementById('matchmake').disabled = true; document.getElementById('host').disabled = true; document.getElementById('join').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
     private static native void showLoading();
 
     @JSBody(params = "tutorial", script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready'; document.body.dataset.mode = tutorial ? 'tutorial' : 'local';")

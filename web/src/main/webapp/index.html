@@ -124,6 +124,7 @@
         <button id="tutorial" class="mode-button school" type="button" disabled>FLIGHT SCHOOL</button>
         <button id="play" class="mode-button local" type="button" disabled>LOCAL PLAY</button>
         <button id="solo" class="mode-button computer" type="button" disabled>PLAY COMPUTER</button>
+        <button id="matchmake" class="mode-button match" type="button" disabled>FIND RANDOM MATCH</button>
         <button id="host" class="mode-button online" type="button" disabled>CREATE ONLINE ROOM</button>
         <form id="join-form" class="join-card">
           <label for="room">Room code or invite link</label>
@@ -138,6 +139,13 @@
           <input id="invite-link" type="text" readonly aria-label="Invite link">
           <button id="copy-room" type="button">COPY ROOM LINK</button>
           <button id="cancel-room" type="button">CANCEL ROOM</button>
+        </div>
+      </section>
+      <section id="search-room" class="share-card search-card" hidden>
+        <label for="cancel-search">Random online match · 5:00 clock · White or Black</label>
+        <div class="search-controls">
+          <p id="search-note">Waiting in the matchmaking queue for the next online player...</p>
+          <button id="cancel-search" type="button">CANCEL SEARCH</button>
         </div>
       </section>
       <p id="status" role="status" aria-live="polite">Loading the game...</p>
@@ -179,7 +187,7 @@
             <p><strong>WHITE</strong><br>A / D &nbsp; Move<br>SPACE &nbsp; Flap<br>E &nbsp; Pick / drop</p>
             <p><strong>BLACK</strong><br>LEFT / RIGHT &nbsp; Move<br>UP &nbsp; Flap<br>ENTER &nbsp; Pick / drop</p>
           </div>
-          <p class="note">Flight School is always untimed. Solo, local and online play support touch controls or a keyboard.<br>Online: creator chooses the clock and starts White; guest starts Black. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Esc or Lobby leaves the game.</p>
+          <p class="note">Flight School is always untimed. Solo, local and online play support touch controls or a keyboard.<br>Online: random matches use the 5:00 clock; room creators choose the clock and start White. Either layout flies your own bird.<br>After a result: R keeps colors, X swaps. Scores follow players.<br>M toggles sound effects. Esc or Lobby leaves the game.</p>
         </div>
       </section>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
@@ -208,8 +216,7 @@
   <script>
     window.addEventListener('error', () => {
       document.getElementById('welcome').hidden = false;
-      document.getElementById('play').disabled = true;
-      document.getElementById('tutorial').disabled = true;
+      for (const id of ['play', 'tutorial', 'solo', 'matchmake', 'host', 'join']) document.getElementById(id).disabled = true;
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
     });
     document.getElementById('lobby-menu').addEventListener('click', event => {
