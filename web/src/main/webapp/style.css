@@ -120,7 +120,6 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 .mobile #welcome { padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
 .mobile article { padding: 20px; box-shadow: 4px 4px #171c2c; }
 .mobile h1 { font-size: clamp(40px, 13vw, 64px); }
-.mobile .tagline { color: #efb95b; margin-bottom: 6px; }
 .mobile .touch-intro { display: block; margin-top: 0; color: #b6c2d0; font-size: 12px; }
 .mobile input, .mobile select { font-size: 16px; min-height: 44px; }
 .mobile .setting-controls { gap: 8px; }
@@ -239,58 +238,18 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 }
 .lobby-hero {
   display: grid;
-  grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.18fr);
-  align-items: center;
-  gap: clamp(32px, 5vw, 76px);
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
 }
 .title-lockup { text-align: center; }
-.title-lockup > img {
+.title-logo {
   display: block;
-  width: min(43%, 190px);
+  width: min(78vw, 900px);
+  max-width: 100%;
   height: auto;
-  margin: 0 auto -14px;
-  filter: drop-shadow(6px 7px 0 #111943);
+  margin: 0 auto;
   image-rendering: pixelated;
 }
-.title-lockup > .title-wordmark {
-  width: min(92%, 420px);
-  margin: 0 auto;
-  filter: none;
-}
-.checkered-divider {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: min(78%, 300px);
-  margin: 28px auto 0;
-}
-.checkered-divider::before, .checkered-divider::after { content: ''; height: 3px; flex: 1; background: #172358; }
-.checkered-divider span {
-  width: 64px;
-  height: 24px;
-  flex: 0 0 64px;
-  border: 2px solid #172358;
-  background: conic-gradient(#172358 25%, #91d4f7 0 50%, #172358 0 75%, #91d4f7 0) 0 0 / 20px 20px;
-}
-#welcome .tagline {
-  margin: 12px 0 0;
-  color: #24356c;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-}
-.preview-frame {
-  position: relative;
-  padding: 10px;
-  border: 5px solid #101943;
-  background: #eef8ff;
-  box-shadow: inset 0 0 0 4px #9fc9f1, 8px 9px 0 #1a2755;
-  clip-path: polygon(14px 0, calc(100% - 14px) 0, 100% 14px, 100% calc(100% - 14px), calc(100% - 14px) 100%, 14px 100%, 0 calc(100% - 14px), 0 14px);
-  width: min(100%, 680px);
-  justify-self: end;
-}
-.preview-frame img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; image-rendering: pixelated; }
 .lobby-actions {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -391,10 +350,7 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   .lobby-current { min-width: 82px; padding: 7px 9px; font-size: 14px; }
   #welcome .lobby-toolbar button { min-width: 42px; min-height: 38px; padding: 6px 9px; font-size: 15px; }
   .lobby-page { padding: 32px 16px 20px; }
-  .lobby-hero { grid-template-columns: 1fr; gap: 38px; }
-  .title-lockup > img { width: min(44%, 175px); }
-  .title-lockup > .title-wordmark { width: min(92%, 420px); }
-  .preview-frame { width: min(100%, 680px); margin: 0 auto; }
+  .title-logo { width: min(92vw, 760px); }
   .lobby-actions { grid-template-columns: 1fr 1fr; margin-top: 36px; }
   #host { grid-column: 1 / -1; }
   .join-card { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, .55fr); align-items: end; gap: 8px; }
@@ -409,11 +365,7 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   .lobby-brand span { font-size: 15px; }
   .lobby-current { display: none; }
   .lobby-page { padding-top: 26px; }
-  .title-lockup > img { width: 145px; margin-bottom: -8px; }
-  .title-lockup > .title-wordmark { width: min(94%, 330px); }
-  #welcome .tagline { margin-top: 24px; font-size: 10px; }
-  .lobby-hero { gap: 32px; }
-  .preview-frame { padding: 6px; border-width: 4px; box-shadow: inset 0 0 0 2px #9fc9f1, 5px 6px 0 #1a2755; }
+  .title-logo { width: min(96vw, 440px); }
   .lobby-actions { gap: 12px; }
   #welcome .mode-button { min-height: 62px; padding: 9px 6px; font-size: 14px; border-width: 3px; box-shadow: 0 6px 0 var(--edge), inset 0 3px 0 #fff5c8; }
   .join-card { display: grid; grid-template-columns: 1fr; }
