@@ -76,9 +76,9 @@ To play a random opponent online:
 1. Open the game and choose **Find random match**.
 2. Wait in the matchmaking queue while the game claims or joins an open signaling
    slot, or choose **Cancel search** to return to the lobby.
-3. When another player searches, the waiting player starts as White (host) and
-   the arriving player starts as Black (guest) with a standard five-minute clock
-   and no increment; the clock starts when both boards are ready.
+3. When two players are paired, either player may be assigned White (host) or
+   Black (guest) with a standard five-minute clock and no increment; the clock
+   starts when both boards are ready.
 
 To play a friend with a private invite link:
 
