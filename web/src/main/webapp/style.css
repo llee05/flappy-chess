@@ -740,8 +740,8 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   transform: translateX(-3px);
 }
 #welcome .mode-button small {
-  color: #cfa7a1;
-  font: 700 9px/1.15 'Lobby Pixel', monospace;
+  color: #f0cda9;
+  font: 700 11px/1.15 'Lobby Pixel', monospace;
   letter-spacing: 0;
   text-align: right;
   text-shadow: 1px 1px 0 #211226;
@@ -847,10 +847,10 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   margin: 10px 0 0;
   padding: 0;
   border: 0;
-  color: #d9b995;
+  color: #f0cda9;
   background: transparent;
   box-shadow: none;
-  font-size: 9px;
+  font-size: 11px;
   line-height: 1.35;
   text-align: center;
 }
@@ -879,17 +879,29 @@ body[data-room-state="searching"] .lobby-details { display: none; }
 }
 #welcome > .lobby-foreground {
   z-index: 2;
-  right: clamp(-52px, -2vw, -18px);
-  bottom: clamp(-58px, -4vh, -26px);
+  right: 5vw;
+  bottom: 3vh;
   left: auto;
-  width: min(61vw, 1050px);
+  width: min(43vw, 820px);
   transform: none;
-  filter: drop-shadow(0 16px 14px #1b122694);
+  filter: drop-shadow(0 8px 0 #1b122654);
+}
+#welcome > .lobby-foreground::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  right: 8%;
+  bottom: -1.5%;
+  left: 8%;
+  height: 8%;
+  background: radial-gradient(ellipse, #1a1325b8 0 54%, #1a132568 55% 67%, transparent 68%);
+  transform: scaleY(.55);
 }
 .lobby-table-art { content: url('./art/lobby-table-redesign.webp'); }
 .lobby-piece {
-  font-size: clamp(15px, 2.05vw, 35px);
-  filter: drop-shadow(0 2px 0 #211329);
+  font-size: clamp(13px, 1.25vw, 23px);
+  filter: drop-shadow(0 1px 0 #211329);
+  -webkit-font-smoothing: none;
 }
 .lobby-piece.black {
   color: #302a43;
@@ -902,51 +914,43 @@ body[data-room-state="searching"] .lobby-details { display: none; }
 .mechanic-bird {
   position: absolute;
   z-index: 5;
-  width: 25%;
+  width: 24%;
   height: auto;
   image-rendering: pixelated;
-  filter: drop-shadow(0 5px 3px #26152f7a);
+  filter: drop-shadow(0 3px 0 #26152f8f);
   transform-origin: center;
 }
 .black-bird {
-  left: 16%;
+  left: -7%;
   top: 7%;
-  animation: black-piece-delivery 9s steps(9, end) infinite;
+  animation: black-piece-delivery 3.6s steps(4, end) infinite;
 }
 .white-bird {
-  left: 53%;
-  top: 13%;
-  animation: white-piece-delivery 9s steps(9, end) infinite;
+  right: -7%;
+  left: auto;
+  top: 17%;
+  animation: white-piece-delivery 3.6s steps(4, end) infinite;
 }
-.black-knight-source, .white-pawn-source { animation: none; }
-.delivered-piece { display: none; }
-.lobby-target {
-  width: 7.4%;
-  height: 4.7%;
-  border: max(1px, .12vw) solid #ffd06a;
-  background: #ffcf4330;
-  box-shadow: 0 0 8px #ffc55d87;
-  opacity: .68;
-  transform: skewX(-5deg);
-  animation: target-piece-cycle 9s steps(2, end) infinite;
+.lobby-origin {
+  position: absolute;
+  z-index: 3;
+  border: max(1px, .11vw) dashed #ffd376;
+  background: #ffc55424;
+  box-shadow: inset 0 0 0 max(1px, .06vw) #65364c;
+  transform: skewX(-4deg);
+  animation: origin-square-pulse 2.4s steps(2, end) infinite;
 }
-.black-target { left: 36.4%; top: 23.1%; }
-.white-target { left: 51.4%; top: 31.6%; }
+.black-origin { left: 29.86%; top: 14.38%; width: 6.76%; height: 4.19%; }
+.white-origin { left: 49.36%; top: 39.5%; width: 8.5%; height: 4.19%; }
 @keyframes black-piece-delivery {
-  0%, 10%, 100% { opacity: 1; transform: translate(-30%, -22%) rotate(-7deg) scale(.76); }
-  16% { opacity: 1; }
-  48% { opacity: 1; transform: translate(4%, 13%) rotate(2deg) scale(.94); }
-  63% { opacity: 1; transform: translate(18%, 32%) rotate(-2deg) scale(.9); }
-  70%, 92% { opacity: 1; transform: translate(35%, 18%) rotate(7deg) scale(.78); }
+  0%, 100% { transform: translate(0, 2%) rotate(-3deg) scale(.9); }
+  50% { transform: translate(5%, -4%) rotate(2deg) scale(.94); }
 }
 @keyframes white-piece-delivery {
-  0%, 10%, 100% { opacity: 1; transform: translate(28%, -24%) rotate(7deg) scale(.76); }
-  16% { opacity: 1; }
-  48% { opacity: 1; transform: translate(1%, 11%) rotate(-2deg) scale(.94); }
-  63% { opacity: 1; transform: translate(-15%, 32%) rotate(2deg) scale(.9); }
-  70%, 92% { opacity: 1; transform: translate(-34%, 16%) rotate(-7deg) scale(.78); }
+  0%, 100% { transform: translate(0, 2%) rotate(3deg) scale(.9); }
+  50% { transform: translate(-5%, -4%) rotate(-2deg) scale(.94); }
 }
-@keyframes target-piece-cycle { 0%, 100% { opacity: .5; } 50% { opacity: .9; } }
+@keyframes origin-square-pulse { 0%, 100% { opacity: .55; } 50% { opacity: .95; } }
 #welcome.menu-open .lobby-foreground,
 #welcome.challenge-open.menu-open .lobby-foreground,
 body[data-room-state="waiting"] .lobby-foreground,
@@ -960,7 +964,7 @@ body[data-room-state="searching"] .lobby-menu-card { visibility: hidden; }
   .title-logo { width: min(35vw, 390px); }
   .lobby-menu-card { width: min(36vw, 390px); padding: 15px 16px 12px; }
   #welcome .mode-button { min-height: 47px; font-size: 15px; }
-  #welcome > .lobby-foreground { width: min(59vw, 800px); right: -28px; bottom: -42px; }
+  #welcome > .lobby-foreground { width: min(44vw, 600px); right: 3vw; bottom: 3vh; }
   .share-card { left: 4vw; width: min(36vw, 390px); }
 }
 
@@ -1006,14 +1010,17 @@ body[data-room-state="searching"] .lobby-menu-card { visibility: hidden; }
     border-left-width: 4px;
     font-size: 14px;
   }
-  #welcome .mode-button small { font-size: 7px; }
+  #welcome .mode-button small { font-size: 8px; }
   .lobby-secondary { gap: 4px; margin-top: 9px; padding-top: 9px; }
   #welcome .secondary-button { min-height: 29px; padding: 5px 4px; font-size: 7px; }
-  #welcome #status { margin-top: 7px; font-size: 8px; }
+  #welcome #status { margin-top: 7px; font-size: 9px; }
   #welcome > .lobby-foreground {
     bottom: 15px;
     width: min(104vw, 430px);
   }
+  .mechanic-bird { width: 22%; }
+  .black-bird { left: 1%; top: 7%; }
+  .white-bird { right: 1%; top: 17%; }
   .lobby-piece { font-size: clamp(12px, 5.1vw, 19px); }
   .share-card { top: 22%; }
   #welcome.challenge-open .lobby-foreground { opacity: 0; }
@@ -1029,9 +1036,7 @@ body[data-room-state="searching"] .lobby-menu-card { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   .mechanic-bird { animation: none; opacity: 1; }
-  .black-bird { transform: translate(12%, 24%) scale(.9); }
-  .white-bird { transform: translate(-10%, 24%) scale(.9); }
-  .black-knight-source, .white-pawn-source { opacity: 0; animation: none; }
-  .delivered-piece { opacity: 1; animation: none; }
-  .lobby-target { opacity: .7; animation: none; }
+  .black-bird { transform: rotate(-3deg) scale(.9); }
+  .white-bird { transform: rotate(3deg) scale(.9); }
+  .lobby-origin { opacity: .8; animation: none; }
 }
