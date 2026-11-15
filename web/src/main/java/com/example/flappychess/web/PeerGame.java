@@ -2,6 +2,7 @@ package com.example.flappychess.web;
 
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.math.Vector2;
@@ -24,6 +25,11 @@ final class PeerGame extends ApplicationAdapter {
         renderer = new GameRenderer(true);
         match = new PeerMatch(host, PeerNetwork::send, System::nanoTime, settings);
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
+            @Override public boolean keyDown(int key) {
+                if (key != Keys.ESCAPE) return false;
+                WebLauncher.leaveGame();
+                return true;
+            }
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSwapAt(match.getSession(), point)) { match.requestRematch(true); return true; }

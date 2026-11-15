@@ -86,6 +86,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private void installInput() {
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
+                if (key == Keys.ESCAPE) { exitAction.run(); return true; }
                 if (setup != null) return true;
                 if (school != null && school.isComplete()) {
                     if (key == Keys.ENTER) restart(false);

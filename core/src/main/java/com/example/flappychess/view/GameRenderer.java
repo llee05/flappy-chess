@@ -42,6 +42,11 @@ public final class GameRenderer implements Disposable {
     private static final Color MINT = Color.valueOf("add2b2");
     private static final Color GOLD = Color.valueOf("efb95b");
     private static final Color BLUE = Color.valueOf("78c4d0");
+    private static final Color SKY_HIGH = Color.valueOf("4d83ad");
+    private static final Color SKY_MID = Color.valueOf("6ba8c4");
+    private static final Color SKY_LOW = Color.valueOf("a8d5d4");
+    private static final Color CLOUD = Color.valueOf("e9e4c9");
+    private static final Color CLOUD_SHADE = Color.valueOf("c5d4c4");
     private static final Color MUTED = Color.valueOf("94a3b8");
     private static final Color DANGER = Color.valueOf("ed8c78");
     private static final Color SELECTED = Color.valueOf("baa96d");
@@ -118,8 +123,9 @@ public final class GameRenderer implements Disposable {
         shapes.setProjectionMatrix(rasterProjection);
         batch.setProjectionMatrix(rasterProjection);
         canvas.begin();
-        ScreenUtils.clear(PANEL);
+        ScreenUtils.clear(SKY_HIGH);
         beginShapes();
+        drawSkyBackdrop();
         drawBoard(game);
         drawPanels(game);
         if (!review.isActive()) drawBirdMarkers(game);
@@ -149,7 +155,7 @@ public final class GameRenderer implements Disposable {
         }
         canvas.end();
 
-        ScreenUtils.clear(INK);
+        ScreenUtils.clear(SKY_HIGH);
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
@@ -220,13 +226,31 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        rect(0, 0, 200, 800, PANEL);
-        rect(1000, 0, 200, 800, PANEL);
         rect(196, 0, 4, 800, EDGE);
         rect(1000, 0, 4, 800, INK);
         rect(1004, 0, 2, 800, EDGE);
         drawClockCard(game, Side.BLACK, 666);
         drawClockCard(game, Side.WHITE, 24);
+    }
+
+    private void drawSkyBackdrop() {
+        rect(0, 0, 1200, 800, SKY_LOW);
+        rect(0, 250, 1200, 550, SKY_MID);
+        rect(0, 560, 1200, 240, SKY_HIGH);
+        diamond(94, 690, 28, GOLD);
+        cloud(16, 546, 2);
+        cloud(82, 432, 1);
+        cloud(1018, 414, 2);
+        cloud(1080, 274, 1);
+    }
+
+    private void cloud(float x, float y, int scale) {
+        float p = 8 * scale;
+        rect(x + p, y, p * 7, p, CLOUD_SHADE);
+        rect(x, y + p, p * 10, p * 2, CLOUD);
+        rect(x + p * 2, y + p * 3, p * 6, p, CLOUD);
+        rect(x + p * 3, y + p * 4, p * 2, p, CLOUD);
+        rect(x + p * 6, y + p * 4, p, p, CLOUD);
     }
 
     private void drawClockCard(GameSession game, Side side, float y) {

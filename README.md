@@ -113,7 +113,7 @@ The distribution is `web/build/dist/`. Serve the entire directory over HTTP;
 opening `index.html` directly with `file://` will not load browser assets.
 The start screen shows both players' controls. Arrow keys and Space are captured
 by the game, and losing focus releases held input. Clocks continue while the
-game is unfocused. The timers-only in-match screen has no leave shortcut.
+game is unfocused. Press Escape to leave the match and return to the menu.
 
 Browser checks require Node.js 22+ and an installed Chromium or Chrome:
 
@@ -233,7 +233,8 @@ captures get a larger gold burst. Invalid drops flash the destination, with lega
 targets left visible. Quiet sound
 effects accompany flaps, pickups, deliveries, captures, invalid actions, check,
 and the first 30-second warning for each player. The in-match sound, setup, help,
-exit, review, and export shortcuts are disabled. Board feedback remains visible.
+review, and export shortcuts are disabled; Escape is the only menu-return
+shortcut. Board feedback remains visible.
 
 The previous move's origin and destination stay highlighted on the board. Move,
 capture, and PGN data are still recorded by the game, but the timers-only HUD
