@@ -450,7 +450,7 @@ public final class GameRenderer implements Disposable {
             int count = GameRecord.capturedCount(moves, ply, by, types[i]);
             if (count == 0) continue;
             any = true;
-            float x = 32 + i * 32;
+            float x = 24 + i * 38;
             drawPiece(Piece.make(by.flip(), types[i]), x, pieceY, 2);
             if (count > 1) text(Integer.toString(count), x + 4, pieceY - 8, 2, accent(by));
         }
@@ -536,7 +536,9 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPiece(Piece piece, float x, float y, int scale) {
-        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - 8 * scale), snap(y - 10 * scale), 16 * scale, 20 * scale);
+        float size = 25 * scale;
+        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - size / 2),
+                snap(y - size / 2), size, size);
     }
 
     private void overlay(GameSession game) {
