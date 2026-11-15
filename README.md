@@ -73,7 +73,7 @@ Android and iOS devices before a mobile release.
 
 To play a random opponent online:
 
-1. Open the game and choose **Play** to find a random online match.
+1. Open the game and choose **Find random match**.
 2. Wait in the matchmaking queue while the game claims or joins an open signaling
    slot, or choose **Cancel search** to return to the lobby.
 3. When two players are paired, either player may be assigned White (host) or
@@ -82,7 +82,7 @@ To play a random opponent online:
 
 To play a friend with a private invite link:
 
-1. Open the game, choose **Challenge a Friend**, then **Create a room**.
+1. Open the game and choose **Create online room**.
 2. Choose **Copy room link** and send the link to your friend. Keep the page open.
 3. Your friend opens the link and chooses **Join friend**. The creator plays
    White and the guest plays Black in round one; the clock starts when both boards are ready.
