@@ -11,10 +11,10 @@ import com.github.bhlangonijr.chesslib.Side;
 /** Hand-authored silhouettes, shaded into a tiny nearest-filtered sprite atlas. */
 final class PixelSprites implements Disposable {
     private static final String[] PIECES = {
-        // King: bold cross, rounded crown, narrow stem, and weighted base.
-        "......xx....../....xxxxxx..../......xx....../......xx....../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Queen: three ball-tipped coronet points above a slender, flared body.
-        "...x..xx..x.../............../...x..xx..x.../..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // King: bold cross above a broad split dome, band, and weighted base.
+        "......xx....../....xxxxxx..../......xx....../.....xxxx...../...xxx..xxx.../..xxxx..xxxx../.xxxxx..xxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Queen: five ball-tipped points fan above a rounded coronet band.
+        "......xx....../...x......x.../x............x/.x.x..xx..x.x./.xx.xxxxxx.xx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
         // Rook: chunky crenellated turret, inset tower, and broad stepped base.
         "..xxx.xx.xxx../..xxx.xx.xxx../.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./xxxxxxxxxxxxxx",
         // Bishop: rounded mitre with a deep diagonal slit and tapered stem.
