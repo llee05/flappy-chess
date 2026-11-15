@@ -4,7 +4,7 @@ import { touchControls } from './touch.mjs';
 
 export async function checkMobile(browser) {
   const page = await browser.page();
-  const { send, evaluate, until, screenshot } = page;
+  const { send, evaluate, press, until, screenshot } = page;
   const touch = touchControls(page);
   const size = (width, height) => send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 3, mobile: true });
   await size(390, 844);
@@ -65,8 +65,6 @@ export async function checkMobile(browser) {
   assert((await bird()).y > 730, 'Holding Flap must not repeat a flap');
   await touch.up(2);
   assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Touch input must unlock audio');
-  await touch.tap('#mobile-sound');
-  await until(() => evaluate("document.body.dataset.sound === 'off'"), 'muting through the mobile toolbar');
   await touch.down('[data-hold="A"]');
   await sleep(250);
   await touch.cancel();
@@ -95,12 +93,10 @@ export async function checkMobile(browser) {
     await screenshot('mobile-' + name);
   }
   await size(390, 844);
-  await touch.tap('#mobile-menu');
-  await touch.tap('[data-key="S"].local-action');
-  await until(() => evaluate("!document.getElementById('mobile-setup').hidden"), 'opening mobile match setup');
-  await screenshot('mobile-setup');
-  await touch.tap('#mobile-setup [data-key="ENTER"]');
-  await until(() => evaluate("!document.body.dataset.setup"), 'starting a configured match by touch');
+  await press('Escape', 'Escape', 27);
+  await until(() => evaluate("document.getElementById('play')?.disabled === false && !document.body?.dataset.game"), 'returning to the mobile lobby');
+  await evaluate("document.getElementById('match-minutes').value = '1'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('play').click()");
+  await until(() => evaluate("document.body.dataset.game === 'ready' && document.getElementById('white-clock').classList.contains('active')"), 'starting a fresh mobile match');
   await touch.tap('[data-hold="E"]');
   await until(() => evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'picking up with touch');
   let lastFlap = 0;
@@ -115,35 +111,25 @@ export async function checkMobile(browser) {
   }, 'flying to e3 by touch', 15000);
   await touch.tap('[data-hold="E"]');
   await until(async () => (await history()).last === 'e2e3', 'completing a legal move with touch');
-  assert.match(await evaluate("document.getElementById('mobile-moves').textContent"), /1\. e3/);
   await screenshot('mobile-delivery');
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
   await send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: 61000, maxVirtualTimeTaskStarvationCount: 10000 });
   await until(async () => (await history()).ended === 'true', 'mobile timeout result', 60000);
   const frame = () => send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: 100 });
   await screenshot('mobile-result');
-  await touch.tap('#mobile-result [data-key="V"]');
-  await frame();
-  await until(async () => (await history()).review === 'true', 'opening review by touch');
-  await touch.tap('#mobile-review [data-key="HOME"]');
-  await frame();
-  await until(async () => (await history()).ply === '0', 'reviewing the starting position by touch');
-  await screenshot('mobile-review');
-  await touch.tap('#mobile-review [data-key="V"]');
-  await until(async () => { await frame(); return (await history()).review === 'false'; }, 'returning to the result by touch');
   await touch.tap('#mobile-result [data-key="X"]');
   await frame();
   await until(() => evaluate("document.getElementById('touch-first').dataset.side === 'BLACK'"), 'touch pad following swapped player colors');
   assert.match(await evaluate("document.querySelector('#touch-first .flap').textContent"), /↓/);
-  await touch.tap('#mobile-leave');
-  await until(async () => { await frame(); return evaluate("document.getElementById('solo')?.disabled === false && !document.body.dataset.game"); }, 'leaving through mobile Lobby');
+  await press('Escape', 'Escape', 27);
+  await until(async () => { await frame(); return evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"); }, 'leaving mobile play with Escape');
   await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('solo-side').value = 'BLACK'; document.getElementById('solo').click()");
   await until(async () => { await frame(); return evaluate("document.body.dataset.mode === 'solo'"); }, 'starting mobile solo as Black');
   assert.equal(await evaluate("document.getElementById('touch-second').hidden"), true);
   assert.equal(await evaluate("document.getElementById('touch-first').dataset.side"), 'BLACK');
   await screenshot('mobile-solo-black');
   await checkTouchLesson(browser);
-  console.log('Mobile checks passed: responsive layouts, multi-touch, single flaps, cancellation, focus, delivery, setup, review, swaps, and solo ownership.');
+  console.log('Mobile checks passed: responsive layouts, multi-touch, single flaps, cancellation, focus, delivery, swaps, Escape, and solo ownership.');
 }
 
 async function checkTouchLesson(browser) {
@@ -157,7 +143,7 @@ async function checkTouchLesson(browser) {
   await evaluate("document.getElementById('tutorial').click()");
   const stage = expected => until(() => evaluate(`document.getElementById('lesson-summary').dataset.stage === '${expected}'`), 'touch lesson: ' + expected);
   await stage('WHITE_FLY');
-  assert.match(await evaluate("document.getElementById('mobile-feedback').textContent"), /Hold ◀ \/ ▶/);
+  assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /A \/ D steer.*SPACE/);
   assert.equal(await evaluate("document.getElementById('white-time').textContent"), 'Untimed');
   await touch.down('[data-hold="D"]');
   await sleep(1150);

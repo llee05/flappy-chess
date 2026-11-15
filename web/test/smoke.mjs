@@ -42,22 +42,6 @@ await withBrowser(async browser => {
   await screenshot('gameplay');
   await until(() => evaluate("Howler._howls.length === 7 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
   assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Sound must unlock on keyboard input');
-  await key('keyDown', 'KeyM', 'm', 77);
-  await key('keyDown', 'KeyM', 'm', 77);
-  await key('keyUp', 'KeyM', 'm', 77);
-  await until(() => evaluate("document.body.dataset.sound === 'off'"), 'muting without repeated-key toggles');
-  const playedBeforeMute = await evaluate('window.effectPlays');
-  await press('Space', ' ', 32);
-  await sleep(150);
-  assert.equal(await evaluate('window.effectPlays'), playedBeforeMute, 'Muted actions must not play sounds');
-  const clickSound = async () => {
-    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 70, y: 132, button: 'left', clickCount: 1 });
-    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 70, y: 132, button: 'left', clickCount: 1 });
-  };
-  await clickSound();
-  await until(() => evaluate("document.body.dataset.sound === 'on'"), 'unmuting with the Sound control');
-  await clickSound();
-  await until(() => evaluate("document.body.dataset.sound === 'off'"), 'muting with the Sound control');
   assert.deepEqual(await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]"), [1200, 800]);
   await evaluate("document.addEventListener('keydown', e => { window.arrowCaught = e.defaultPrevented; }, { once: true })");
   await press('ArrowUp', 'ArrowUp', 38);
@@ -81,18 +65,13 @@ await withBrowser(async browser => {
   }
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0, 'Expected no WebGL error');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("!document.body.dataset.game && document.getElementById('play')?.disabled === false"), 'returning to the welcome screen');
+  await until(() => evaluate("!document.body?.dataset.game && document.getElementById('play')?.disabled === false"), 'returning to the welcome screen');
   await evaluate("document.getElementById('tutorial').click()");
   await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'starting Flight School');
   assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
   assert.equal(await evaluate("document.body.dataset.timeControl"), 'UNTIMED');
-  assert.equal(await evaluate("document.body.dataset.sound"), 'off', 'Mute preference must survive returning to the lobby');
-  await press('KeyM', 'm', 77);
   assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /SPACE/);
-  await press('Space', ' ', 32);
   await screenshot('flight-school');
-  await press('KeyT', 't', 84);
-  await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'restarting Flight School');
   const stage = expected => until(() => evaluate(`document.getElementById('lesson-summary').dataset.stage === '${expected}'`), `lesson: ${expected}`);
   // Fly using real keyboard input and the normal fixed-step physics. Align horizontally
   // at the boundary, then use two separate flaps to reach and deliver each pawn.
@@ -125,15 +104,8 @@ await withBrowser(async browser => {
   await press('Enter', 'Enter', 13);
   await until(() => evaluate("document.body.dataset.mode === 'local'"), 'starting a match after Flight School');
   assert.equal(await evaluate("document.body.dataset.timeControl"), '10+5');
-  await press('KeyS', 's', 83);
-  await until(() => evaluate("document.body.dataset.setup === '10+5'"), 'opening match setup');
-  await screenshot('match-setup');
-  await press('ArrowLeft', 'ArrowLeft', 37);
-  await press('ArrowDown', 'ArrowDown', 40);
-  await press('Enter', 'Enter', 13);
-  await until(() => evaluate("document.body.dataset.timeControl === '5+2' && !document.body.dataset.setup"), 'starting a configured match');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
+  await until(() => evaluate("!document.body?.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
   await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change'))");
   assert.equal(await evaluate("document.getElementById('match-increment').disabled"), true);
   await evaluate("document.getElementById('play').click()");

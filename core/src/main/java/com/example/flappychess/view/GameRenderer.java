@@ -1,7 +1,6 @@
 package com.example.flappychess.view;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -18,7 +17,6 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.controller.MatchSetup;
-import com.example.flappychess.controller.GameRecord;
 import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.controller.ChessController.CompletedMove;
 import com.example.flappychess.model.Birb;
@@ -27,7 +25,6 @@ import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import java.util.Locale;
-import java.util.function.Function;
 
 /** Pixel-art presentation; model coordinates retain their original top-left origin. */
 public final class GameRenderer implements Disposable {
@@ -45,6 +42,11 @@ public final class GameRenderer implements Disposable {
     private static final Color MINT = Color.valueOf("add2b2");
     private static final Color GOLD = Color.valueOf("efb95b");
     private static final Color BLUE = Color.valueOf("78c4d0");
+    private static final Color SKY_HIGH = Color.valueOf("4d83ad");
+    private static final Color SKY_MID = Color.valueOf("6ba8c4");
+    private static final Color SKY_LOW = Color.valueOf("a8d5d4");
+    private static final Color CLOUD = Color.valueOf("e9e4c9");
+    private static final Color CLOUD_SHADE = Color.valueOf("c5d4c4");
     private static final Color MUTED = Color.valueOf("94a3b8");
     private static final Color DANGER = Color.valueOf("ed8c78");
     private static final Color SELECTED = Color.valueOf("baa96d");
@@ -62,7 +64,6 @@ public final class GameRenderer implements Disposable {
     // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
     private final FrameBuffer canvas = new FrameBuffer(Pixmap.Format.RGBA8888, 600, 400, false);
     private final TextureRegion canvasImage;
-    private final boolean online;
     private float animationTime;
     private FlightSchool school;
     private ChessBoardView displayBoard;
@@ -71,7 +72,6 @@ public final class GameRenderer implements Disposable {
     public GameRenderer() { this(false); }
 
     public GameRenderer(boolean online) {
-        this.online = online;
         canvas.getColorBufferTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         canvasImage = new TextureRegion(canvas.getColorBufferTexture());
         canvasImage.flip(false, true);
@@ -94,54 +94,12 @@ public final class GameRenderer implements Disposable {
     public void toggleSound() { feedback.toggleSound(); }
     public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
     public String feedbackMessage() { return feedback.message(); }
-    public boolean isSoundToggleAt(Vector2 point) {
-        return point.x >= 16 && point.x <= 184 && point.y >= 658 && point.y <= 684;
-    }
-    public boolean isSetupAt(Vector2 point) {
-        return !online && point.x >= 16 && point.x <= 184 && point.y >= 580 && point.y <= 656;
-    }
     public PostgameReview getReview() { return review; }
-    public boolean historyKey(GameSession game, int key) {
-        review.bind(game);
-        boolean handled = review.keyDown(key);
-        if (handled) feedback.clearPresentation();
-        return handled;
-    }
-    public void exportPgn(GameSession game, Function<String, String> exporter) {
-        try { feedback.notice(exporter.apply(new GameRecord(game).pgn())); }
-        catch (RuntimeException unavailable) {
-            feedback.notice("PGN export failed.");
-            Gdx.app.log("PGN", "The game could not be exported.");
-        }
-    }
-    public boolean isExportAt(GameSession game, Vector2 point) {
-        return game.isGameOver() && (review.isActive()
-                ? inside(point, 1016, 210, 168, 30) : inside(point, 608, 348, 208, 48));
-    }
     public boolean isPlayAgainAt(Vector2 point) {
-        return review.isActive() ? inside(point, 1016, 174, 84, 30)
-                : school != null ? inside(point, 450, 260, 300, 60) : inside(point, 384, 260, 208, 60);
+        return school != null ? inside(point, 450, 260, 300, 60) : inside(point, 384, 260, 208, 60);
     }
     public boolean isSwapAt(GameSession game, Vector2 point) {
-        return game.isGameOver() && (review.isActive() ? inside(point, 1100, 174, 84, 30) : inside(point, 608, 260, 208, 60));
-    }
-    public boolean historyClick(GameSession game, Vector2 point) {
-        review.bind(game);
-        if (!game.isGameOver()) return false;
-        if (!review.isActive()) {
-            if (!inside(point, 384, 348, 208, 48)) return false;
-            review.keyDown(Keys.V);
-            feedback.clearPresentation();
-            return true;
-        }
-        if (inside(point, 1016, 400, 168, 30)) review.seek(review.getPly() - 1);
-        else if (inside(point, 1016, 362, 168, 30)) review.seek(review.getPly() + 1);
-        else if (inside(point, 1016, 324, 168, 30)) review.seek(0);
-        else if (inside(point, 1016, 286, 168, 30)) review.seek(review.getRecord().moves().size());
-        else if (inside(point, 1016, 248, 168, 30)) review.keyDown(Keys.V);
-        else return false;
-        feedback.clearPresentation();
-        return true;
+        return game.isGameOver() && inside(point, 608, 260, 208, 60);
     }
     private static boolean inside(Vector2 point, float x, float y, float width, float height) {
         return point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
@@ -165,8 +123,9 @@ public final class GameRenderer implements Disposable {
         shapes.setProjectionMatrix(rasterProjection);
         batch.setProjectionMatrix(rasterProjection);
         canvas.begin();
-        ScreenUtils.clear(PANEL);
+        ScreenUtils.clear(SKY_HIGH);
         beginShapes();
+        drawSkyBackdrop();
         drawBoard(game);
         drawPanels(game);
         if (!review.isActive()) drawBirdMarkers(game);
@@ -190,17 +149,13 @@ public final class GameRenderer implements Disposable {
         beginShapes();
         if (!review.isActive()) feedback.drawShapes(shapes);
         shapes.end();
-        batch.begin();
-        feedback.drawText(font, batch);
-        batch.end();
         if (!boardOnly) {
-            if (school != null && !school.isComplete()) lessonBanner();
             if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
             if (setup != null) setupOverlay(setup);
         }
         canvas.end();
 
-        ScreenUtils.clear(INK);
+        ScreenUtils.clear(SKY_HIGH);
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
         batch.begin();
@@ -271,57 +226,43 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        rect(0, 0, 200, 800, PANEL);
-        rect(1000, 0, 200, 800, PANEL);
-        rect(192, 0, 4, 800, EDGE);
-        rect(196, 0, 4, 800, INK);
+        rect(196, 0, 4, 800, EDGE);
         rect(1000, 0, 4, 800, INK);
-        rect(1004, 0, 4, 800, EDGE);
-        rect(20, 776, 24, 4, GOLD);
-        rect(48, 776, 8, 4, GOLD);
-        star(168, 744, 4, GOLD);
-        star(158, 704, 2, BLUE);
-        stepped(16, 580, 168, 76, CARD, EDGE);
-        rect(20, 566, 156, 2, EDGE);
-        int rows = school == null ? (game.getHistory().size() + 1) / 2 : 0;
-        int firstRow = journalFirstRow(game, rows);
-        for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
-            float y = 480 - (row - firstRow) * 22;
-            if ((row - firstRow) % 2 == 0) rect(16, y - 2, 168, 22, CARD);
-            int selectedRow = review.isActive() ? review.getPly() == 0 ? -1 : (review.getPly() - 1) / 2 : rows - 1;
-            if (row == selectedRow) rect(16, y, 2, 16, MINT);
-        }
-        rect(20, 134, 156, 2, EDGE);
-        stepped(16, 24, 42, 24, CARD, EDGE);
-        drawClockCard(game, Side.BLACK, 650);
+        rect(1004, 0, 2, 800, EDGE);
+        drawClockCard(game, Side.BLACK, 666);
         drawClockCard(game, Side.WHITE, 24);
-        stepped(1016, 550, 168, 76, CARD, EDGE);
-        diamond(1032, 608, 4, game.isGameOver() ? MUTED : MINT);
-        if (review.isActive()) {
-            for (int y : new int[] {400, 362, 324, 286, 248, 210, 174}) stepped(1016, y, 168, 30, CARD, EDGE);
-        } else {
-            rect(1020, 340, 160, 2, EDGE);
-            int[] keys = game.getSoloSettings() == null ? new int[] {462, 428, 394, 260, 226, 192}
-                    : new int[] {462, 428, 394};
-            for (int y : keys) drawKey(1020, y, 68);
-        }
+    }
+
+    private void drawSkyBackdrop() {
+        rect(0, 0, 1200, 800, SKY_LOW);
+        rect(0, 250, 1200, 550, SKY_MID);
+        rect(0, 560, 1200, 240, SKY_HIGH);
+        diamond(94, 690, 28, GOLD);
+        cloud(16, 546, 2);
+        cloud(82, 432, 1);
+        cloud(1018, 414, 2);
+        cloud(1080, 274, 1);
+    }
+
+    private void cloud(float x, float y, int scale) {
+        float p = 8 * scale;
+        rect(x + p, y, p * 7, p, CLOUD_SHADE);
+        rect(x, y + p, p * 10, p * 2, CLOUD);
+        rect(x + p * 2, y + p * 3, p * 6, p, CLOUD);
+        rect(x + p * 3, y + p * 4, p * 2, p, CLOUD);
+        rect(x + p * 6, y + p * 4, p, p, CLOUD);
     }
 
     private void drawClockCard(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
-        stepped(1016, y, 168, 130, CARD, active ? color : EDGE);
-        if (active) rect(1016, y + 38, 4, 54, color);
+        stepped(1016, y, 168, 110, CARD, active ? color : EDGE);
+        if (active) rect(1016, y + 22, 4, 66, color);
         for (int i = 0; i < 17; i++) {
             double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
-            rect(1032 + i * 8, y + 14, 6, 4, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
+            rect(1032 + i * 8, y + 12, 6, 3, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
         }
-    }
-
-    private void drawKey(float x, float y, float width) {
-        stepped(x, y, width, 26, EDGE, INK);
-        rect(x + 4, y + 22, width - 8, 2, MUTED);
     }
 
     private void drawCoordinates() {
@@ -332,106 +273,8 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        text("FLAPPY", 20, 760, 4, CREAM);
-        text("CHESS", 20, 720, 4, CREAM);
-        text(feedback.isSoundEnabled() ? "M SOUND: ON" : "M SOUND: OFF", 16, 674, 2, MUTED);
-        centered(school != null ? "FLIGHT SCHOOL" : "ROUND " + game.getSeries().round(), 100, 642, 2, GOLD);
-        centered(school != null ? "UNTIMED" : game.getSeries().score(), 100, 620, 2, MINT);
-        centered(school != null ? "T RESTART" : (online ? "ONLINE " : "S SETUP ") + game.getSettings().label(), 100, 596, 2, MUTED);
-        if (school != null) {
-            text("YOUR LESSON", 20, 550, 2, CREAM);
-            text("NO CLOCK.\nNO RUSH.", 16, 508, 2, MINT);
-            String[] steps = {"WHITE: FLY", "PICK UP", "DELIVER", "BLACK: FLY", "PICK UP", "DELIVER"};
-            for (int i = 0; i < steps.length; i++) {
-                text((i + 1) + " " + steps[i], 16, 434 - i * 38, 2,
-                        i < school.getStage().ordinal() ? MINT : i == school.getStage().ordinal() ? GOLD : MUTED);
-            }
-            text("DROP AT START\nTO CANCEL.", 16, 216, 2, MUTED);
-        } else {
-            drawMoveLog(game);
-            drawCaptured(game, Side.WHITE, 270, 232);
-            drawCaptured(game, Side.BLACK, 206, 168);
-        }
-        if (school != null) text("T FLIGHT SCHOOL", 16, 154, 2, MINT);
-        if (feedback.message().isEmpty()) {
-            text("MAKE EVERY", 20, 114, 2, CREAM);
-            text("FLAP COUNT.", 20, 92, 2, GOLD);
-        }
-        centered("ESC", 37, 42, 2, CREAM);
-        text("EXIT GAME", 66, 42, 2, MUTED);
-        drawClockText(game, Side.BLACK, 650);
+        drawClockText(game, Side.BLACK, 666);
         drawClockText(game, Side.WHITE, 24);
-        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", game.getHistory().size() / 2 + 1), 1046, 614, 2, MINT);
-        String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
-        if (!game.isGameOver()) {
-            if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
-            else if (game.getCarrier() != null) status = "DELIVER PIECE";
-        }
-        centered(status, 1100, 584, 2, CREAM);
-        if (review.isActive()) { drawReviewControls(); return; }
-        if (game.getSoloSettings() != null) {
-            var solo = game.getSoloSettings();
-            Side human = game.getSeries().sideFor(true);
-            text("YOU " + human.name(), 1020, 534, 2, accent(human));
-            text(human == Side.WHITE ? "FALLS DOWN" : "FALLS UP", 1020, 508, 2, MUTED);
-            control("A / D", "MOVE", 462);
-            control("SPACE", "FLAP", 428);
-            control("E", "CARRY", 394);
-            text("EITHER LAYOUT", 1020, 376, 2, MUTED);
-            text("AI " + human.flip().name(), 1020, 328, 2, accent(human.flip()));
-            text("CHESS " + solo.chess().name(), 1020, 294, 2, CREAM);
-            text("FLIGHT " + solo.flight().name(), 1020, 260, 2, CREAM);
-            text(game.getAiPhase(), 1020, 226, 2, MINT);
-            text("S MATCH SETUP", 1020, 192, 2, MUTED);
-            return;
-        }
-        boolean firstWhite = school != null || game.getSeries().firstWhite();
-        text(game.getSeries().shortNameFor(Side.WHITE) + " WHITE", 1020, 534, 2, GOLD);
-        text("FALLS DOWN", 1020, 508, 2, MUTED);
-        control(firstWhite ? "A / D" : "< / >", "MOVE", 462);
-        control(firstWhite ? "SPACE" : "UP", "FLAP", 428);
-        control(firstWhite ? "E" : "ENTER", "CARRY", 394);
-        text("PICK UP / DROP", 1020, 376, 2, MUTED);
-        text(game.getSeries().shortNameFor(Side.BLACK) + " BLACK", 1020, 328, 2, BLUE);
-        text("FALLS UP", 1020, 302, 2, MUTED);
-        control(firstWhite ? "< / >" : "A / D", "MOVE", 260);
-        control(firstWhite ? "UP" : "SPACE", "FLAP", 226);
-        control(firstWhite ? "ENTER" : "E", "CARRY", 192);
-        text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
-    }
-
-    private void drawMoveLog(GameSession game) {
-        text("MOVE LOG", 20, 550, 2, CREAM);
-        text("#", 22, 520, 2, MUTED);
-        text("WHITE", 44, 520, 2, GOLD);
-        text("BLACK", 116, 520, 2, BLUE);
-        var moves = game.getHistory();
-        if (moves.isEmpty()) {
-            text("TAKE FLIGHT.", 20, 478, 2, CREAM);
-            text("Find a piece.\nE to pick up.", 20, 448, 2, MUTED);
-            text("01", 20, 396, 4, EDGE);
-            text("FLY", 78, 392, 2, MINT);
-            text("02", 20, 344, 4, EDGE);
-            text("PICK UP", 78, 340, 2, GOLD);
-            text("03", 20, 292, 4, EDGE);
-            text("DELIVER", 78, 288, 2, BLUE);
-        } else {
-            int rows = (moves.size() + 1) / 2;
-            int firstRow = journalFirstRow(game, rows);
-            for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
-                int index = row * 2;
-                float y = 496 - (row - firstRow) * 22;
-                String number = Integer.toString(row + 1);
-                text(number, 40 - font.width(number, 2), y, 2, MUTED);
-                journalMove(moves.get(index).notation(), 44, y);
-                if (index + 1 < moves.size()) journalMove(moves.get(index + 1).notation(), 116, y);
-            }
-        }
-    }
-
-    private int journalFirstRow(GameSession game, int rows) {
-        int focus = review.isActive() ? Math.max(0, (review.getPly() - 1) / 2) : rows - 1;
-        return Math.max(0, Math.min(rows - 10, focus - 4));
     }
 
     private CompletedMove lastMove(GameSession game) {
@@ -440,56 +283,11 @@ public final class GameRenderer implements Disposable {
         return ply == 0 ? null : moves.get(ply - 1);
     }
 
-    private void drawCaptured(GameSession game, Side by, float labelY, float pieceY) {
-        text(by == Side.WHITE ? "WHITE TOOK" : "BLACK TOOK", 16, labelY, 2, accent(by));
-        var moves = review.isActive() ? review.getRecord().moves() : game.getHistory();
-        int ply = review.isActive() ? review.getPly() : moves.size();
-        PieceType[] types = {PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN};
-        boolean any = false;
-        for (int i = 0; i < types.length; i++) {
-            int count = GameRecord.capturedCount(moves, ply, by, types[i]);
-            if (count == 0) continue;
-            any = true;
-            float x = 32 + i * 32;
-            drawPiece(Piece.make(by.flip(), types[i]), x, pieceY, 2);
-            if (count > 1) text(Integer.toString(count), x + 4, pieceY - 8, 2, accent(by));
-        }
-        if (!any) text("NONE", 20, pieceY + 8, 2, MUTED);
-    }
-
-    private void drawReviewControls() {
-        centered("REVIEW", 1100, 534, 2, GOLD);
-        centered(review.getPly() + " / " + review.getRecord().moves().size(), 1100, 500, 2, CREAM);
-        centered(review.getPly() == 0 ? "START POSITION" : review.getRecord().moves().get(review.getPly() - 1).notation(), 1100, 464, 2, MINT);
-        text("< PREVIOUS", 1020, 420, 2, CREAM);
-        text("> NEXT", 1020, 382, 2, CREAM);
-        text("HOME FIRST", 1020, 344, 2, CREAM);
-        text("END LAST", 1020, 306, 2, CREAM);
-        text("V RESULT", 1020, 268, 2, GOLD);
-        text("P EXPORT PGN", 1020, 230, 2, MINT);
-        text("R AGAIN", 1020, 194, 2, MINT);
-        text("X SWAP", 1108, 194, 2, MINT);
-    }
-
-    private void journalMove(String notation, float x, float y) {
-        font.drawCompact(batch, notation, snap(x), snap(y), 2, CREAM);
-    }
-
-    private void control(String key, String action, float y) {
-        centered(key, 1054, y + 20, 2, CREAM);
-        text(action, 1098, y + 20, 2, MUTED);
-    }
-
     private void drawClockText(GameSession game, Side side, float y) {
-        boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        drawBirdSprite(side, 1038, y + 106, 2, false, active ? frame() : 1);
-        text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
-        if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
-        else text("UNTIMED", 1032, y + 82, 2, CREAM);
-        boolean computer = game.getSoloSettings() != null && side == game.getSeries().sideFor(false);
-        text(game.isGameOver() ? "FINISHED" : active ? computer ? "> AI MOVE" : "> YOUR MOVE" : "  WAITING",
-                1032, y + 40, 2, active ? MINT : MUTED);
+        if (game.isTimed()) centered(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60),
+                1100, y + 66, 4, seconds <= 30 ? DANGER : CREAM);
+        else centered("UNTIMED", 1100, y + 64, 2, CREAM);
     }
 
     private void drawBirdMarkers(GameSession game) {
@@ -557,10 +355,6 @@ public final class GameRenderer implements Disposable {
                 stepped(384, 260, 208, 60, MINT, INK);
                 stepped(608, 260, 208, 60, BLUE, INK);
             }
-            if (!complete) {
-                stepped(384, 348, 208, 48, CARD, EDGE);
-                stepped(608, 348, 208, 48, CARD, EDGE);
-            }
         } else {
             for (int i = 0; i < 4; i++) stepped(384 + i * 112, 278, 96, 118, CARD, EDGE);
         }
@@ -568,41 +362,25 @@ public final class GameRenderer implements Disposable {
         batch.begin();
         centered(complete ? "FLIGHT SCHOOL COMPLETE" : ended ? "ROUND " + game.getSeries().round() + " COMPLETE" : "LEVEL UP", 600, 528, 2, GOLD);
         centered(complete ? "READY TO PLAY!" : ended ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
-        centered(complete ? "Both birds mastered. R to practice again." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
+        centered(complete ? "Both birds mastered." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
         if (ended) {
             if (complete) {
                 drawBirdSprite(Side.WHITE, 566, 376, 4, false, 1);
                 drawBirdSprite(Side.BLACK, 634, 376, 4, true, 1);
-            } else {
-                centered("REVIEW [V]", 488, 378, 2, CREAM);
-                centered("PGN [P]", 712, 378, 2, CREAM);
             }
-            if (complete) centered("PLAY LOCAL [ENTER]", 600, 298, 2, INK);
+            if (complete) centered("PLAY LOCAL", 600, 298, 2, INK);
             else {
-                centered("AGAIN [R]", 488, 298, 2, INK);
-                centered("SWAP [X]", 712, 298, 2, INK);
+                centered("PLAY AGAIN", 488, 298, 2, INK);
+                centered("SWAP COLORS", 712, 298, 2, INK);
             }
         } else {
             PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
-            String[] labels = {"[Q]", "[R]", "[B]", "[N]"};
+            String[] labels = {"QUEEN", "ROOK", "BISHOP", "KNIGHT"};
             for (int i = 0; i < options.length; i++) {
                 drawPiece(Piece.make(game.getChess().getSideToMove(), options[i]), 432 + i * 112, 352, 4);
                 centered(labels[i], 432 + i * 112, 306, 2, GOLD);
             }
         }
-        centered("ESC  EXIT GAME", 600, 248, 2, MUTED);
-        batch.end();
-    }
-
-    private void lessonBanner() {
-        beginShapes();
-        stepped(216, 712, 768, 72, PANEL, EDGE);
-        for (int i = 0; i < 6; i++) rect(236 + i * 18, 722, 12, 4,
-                i <= school.getStage().ordinal() ? MINT : EDGE);
-        shapes.end();
-        batch.begin();
-        text(school.title(), 236, 774, 2, GOLD);
-        text(school.instruction(), 236, 750, 2, CREAM);
         batch.end();
     }
 
@@ -620,17 +398,17 @@ public final class GameRenderer implements Disposable {
         shapes.end();
         batch.begin();
         centered("NEW MATCH", 600, 622, 4, CREAM);
-        centered("Opponent [C] / solo color [W]", 600, 570, 2, MUTED);
+        centered("CHOOSE THE MATCH OPTIONS", 600, 570, 2, MUTED);
         centered(setup.opponentLabel(), 488, 530, 2, GOLD);
         centered(setup.colorLabel(), 712, 530, 2, BLUE);
         centered(setup.timeLabel(), 600, 464, 2, GOLD);
-        centered("LEFT / RIGHT OR CLICK", 600, 424, 2, MUTED);
+        centered("CLICK TO CHANGE", 600, 424, 2, MUTED);
         centered(setup.incrementLabel(), 600, 388, 2, BLUE);
-        centered("UP / DOWN OR CLICK", 600, 348, 2, MUTED);
-        centered("START [ENTER]", 600, 298, 2, INK);
+        centered("CLICK TO CHANGE", 600, 348, 2, MUTED);
+        centered("START", 600, 298, 2, INK);
         centered("CHESS " + setup.chessLabel(), 488, 224, 2, CREAM);
         centered("FLIGHT " + setup.flightLabel(), 712, 224, 2, CREAM);
-        centered("AI CHESS [E] / FLIGHT [F]    S CLOSE", 600, 184, 2, MUTED);
+        centered("CLICK A CHOICE TO CHANGE IT", 600, 184, 2, MUTED);
         batch.end();
     }
 

@@ -55,15 +55,12 @@ Hold **◀ / ▶** to steer, tap **Flap** once per flap, and tap **Pick / drop**
 carry a piece or deliver it to a legal destination. You can steer and flap with
 two fingers at once. White flaps up; Black flaps down. Solo and online games use
 one pad for your bird, including when colors swap. Local games and Flight School
-show a pad for each player. Flight School teaches the same physics with touch
-instructions on small screens.
+show a pad for each player.
 
-The toolbar provides **Lobby**, **Sound**, and **More**. More shows the latest
-moves, capture counts, series score, PGN export, and local match setup or Flight
-School. Promotion, results, rematches, setup, and postgame review all have touch
-buttons. Leaving through Lobby ends the current match or connection. Clocks keep
-running while menus are open or the page is unfocused. Interrupted touches,
-screen rotation, and focus loss release held controls; they do not pause clocks.
+The in-match HUD shows only the two clocks. Promotion and result choices still
+use temporary touch dialogs. Clocks keep running while the page is unfocused.
+Interrupted touches, screen rotation, and focus loss release held controls; they
+do not pause clocks.
 
 Chromium phone and tablet emulation is covered by the browser checks below.
 Gameplay feel and browser-specific behavior should also be assessed on physical
@@ -94,9 +91,7 @@ the host. After game over, both players choose **R / Again** to keep colors or
 **X / Swap** to exchange colors. Both must choose the same option to start the
 next round. Scores follow players: one point for a win, half a point for a draw.
 Local series use the same choices; Player 1 keeps A/D, Space, E even when Black,
-and Player 2 keeps the arrow keys and Enter. **S** starts a new series through
-match setup. PGN exports include the round and current player colors.
-**Leave** or Escape ends the connection; disconnection freezes
+and Player 2 keeps the arrow keys and Enter. Disconnection freezes
 the match and offers a return to the lobby. There is no match recovery or host
 migration. Keep the host's game visible for continuous physics; clocks continue
 when the tab is hidden, but browsers can suspend background pages.
@@ -118,7 +113,7 @@ The distribution is `web/build/dist/`. Serve the entire directory over HTTP;
 opening `index.html` directly with `file://` will not load browser assets.
 The start screen shows both players' controls. Arrow keys and Space are captured
 by the game, and losing focus releases held input. Clocks continue while the
-game is unfocused. Escape returns to the start screen and ends the current game.
+game is unfocused. Press Escape to leave the match and return to the menu.
 
 Browser checks require Node.js 22+ and an installed Chromium or Chrome:
 
@@ -213,13 +208,9 @@ The online room creator chooses the time control for both players, while random
 matchmaking uses the five-minute default, and rematches
 keep the match's time control. The browser remembers your last choice. Flight School stays untimed.
 
-The desktop opens a **New match** setup screen. Left/Right change the time,
-Up/Down change the bonus, and Enter starts play; you can also click each choice
-and **Start**. **C** switches between a local friend and the computer; **W** picks
-your color, **E** cycles chess skill, and **F** cycles flying skill. These choices
-are also clickable. During local play, **S** or the setup card opens this screen for a
-new match. Opening setup during a game releases movement keys and keeps the
-current match's clock running until you start a new match or press S to return.
+The desktop opens a **New match** setup screen. Click each choice to cycle it,
+then click **Start**. Match setup cannot be reopened from the timers-only
+in-match screen.
 
 For solo play in the browser, choose your color, chess skill and flying skill,
 then **Play computer**. Both keyboard layouts control your bird. The computer
@@ -231,41 +222,23 @@ acceleration and speed remain identical. Thinking and flying both use clock
 time. Rematches keep the difficulty settings, and **X** swaps your color with
 the computer while preserving the series score.
 
-Choose **Flight School** in the browser, or press **T** during local desktop or
-browser play, for an untimed lesson. Fly to White's E2 pawn, pick it up, and
+Choose **Flight School** in the browser for an untimed lesson. Fly to White's E2 pawn, pick it up, and
 deliver it to E3 or E4, then practice Black's reversed gravity with D7 to D6 or
-D5. The lesson highlights the pawn, shows each objective, and allows retries and
-cancelled pickups. After both deliveries, **Enter** or **Play local** starts a
-regular match; **R** repeats the lesson. **Esc** exits as usual.
+D5. The lesson highlights the target pawn and allows retries and cancelled
+pickups. After both deliveries, **Enter** or **Play local** starts a regular
+match; **R** repeats the lesson.
 
 Pickups and deliveries have small pixel bursts and a brief piece animation;
-captures get a larger gold burst. Invalid drops flash the destination and explain
-that the piece is still carried, with legal targets left visible. Quiet sound
+captures get a larger gold burst. Invalid drops flash the destination, with legal
+targets left visible. Quiet sound
 effects accompany flaps, pickups, deliveries, captures, invalid actions, check,
-and the first 30-second warning for each player. Press **M** or click **Sound** in
-the upper-left panel to mute or unmute; this preference is saved on the device.
-Visual feedback remains available while muted. Online feedback comes from the
-host and each numbered event is presented once, including invalid guest drops.
+and the first 30-second warning for each player. The in-match sound, setup, help,
+review, and export shortcuts are disabled; Escape is the only menu-return
+shortcut. Board feedback remains visible.
 
-The previous move's origin and destination stay highlighted on the board. The
-move log shows the latest ten full moves; **White took** and **Black took** show
-captured pieces grouped by type, with counts for duplicates. En passant and
-promotion captures count the piece actually removed from the board.
-
-After a match ends, click **Review** or press **V** to inspect the game without
-changing its result or clocks. Left/Right step through moves, Home/End jump to
-the start/final position, and V returns to the result screen. These controls are
-also clickable in the right panel. Review highlights the move just played and
-shows captures up to that position. Each online player reviews independently;
-the usual two-player rematch agreement still applies.
-
-Press **P** to export a PGN at any time during a match, or use **PGN** on the
-result screen or **Export PGN** during review. Browsers download
-`flappy-chess.pgn`. Desktop saves a timestamped `.pgn` in the `exports/` directory
-under the launcher's working directory and prints the absolute path to the
-console. Exports include SAN moves, the result, the time control, and a FEN tag
-when the game began from a custom position. Date is left unknown, as the game
-does not record a match date. Exports contain completed moves only.
+The previous move's origin and destination stay highlighted on the board. Move,
+capture, and PGN data are still recorded by the game, but the timers-only HUD
+does not expose the move log, review, or export actions.
 
 Both birds move continuously, with opposite gravity. Fly the active player's
 bird over a piece, pick it up, then carry it to a highlighted legal destination.
@@ -282,7 +255,7 @@ play, either layout controls your own bird.
 | Pick up / drop | E | Enter |
 
 Promotion: **Q** queen, **R** rook, **B** bishop, **N** knight.
-After a game ends, **R / Again** keeps colors and **X / Swap** swaps them. **Esc** exits.
+After a game ends, **R / Again** keeps colors and **X / Swap** swaps them.
 Timed matches charge the active player's clock during promotion and while the
 window is unfocused. The bonus is added only when a legal move is complete,
 including the promotion choice. Invalid drops and cancelled pickups add no time.

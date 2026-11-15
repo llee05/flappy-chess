@@ -20,12 +20,10 @@ final class MobileControls {
             int key = switch (name) {
                 case "A" -> Keys.A; case "D" -> Keys.D; case "SPACE" -> Keys.SPACE;
                 case "LEFT" -> Keys.LEFT; case "RIGHT" -> Keys.RIGHT; case "UP" -> Keys.UP;
-                case "DOWN" -> Keys.DOWN; case "ENTER" -> Keys.ENTER;
-                case "E" -> Keys.E; case "M" -> Keys.M; case "P" -> Keys.P;
+                case "ENTER" -> Keys.ENTER;
+                case "E" -> Keys.E;
                 case "Q" -> Keys.Q; case "R" -> Keys.R; case "B" -> Keys.B; case "N" -> Keys.N;
-                case "V" -> Keys.V; case "X" -> Keys.X; case "S" -> Keys.S;
-                case "C" -> Keys.C; case "W" -> Keys.W; case "F" -> Keys.F; case "T" -> Keys.T;
-                case "HOME" -> Keys.HOME; case "END" -> Keys.END;
+                case "X" -> Keys.X;
                 default -> Keys.UNKNOWN;
             };
             if (key == Keys.UNKNOWN || Gdx.input.getInputProcessor() == null) return;
@@ -59,8 +57,6 @@ final class MobileControls {
                 game.getResult(), game.getReason(), ownSide, game.getSoloSettings() != null,
                 school != null, school != null && school.isComplete(), school == null ? "" : school.title(),
                 school == null ? "" : school.instruction());
-        if (setup != null) showSetup(setup.opponentLabel(), setup.colorLabel(), setup.chessLabel(),
-                setup.flightLabel(), setup.timeLabel(), setup.incrementLabel());
     }
 
     private static String clock(GameSession game, Side side) {
@@ -74,8 +70,4 @@ final class MobileControls {
     private static native void show(String turn, String white, String black, String carrier, boolean promotion,
             String result, String reason, String ownSide, boolean solo, boolean tutorial, boolean complete,
             String title, String instruction);
-
-    @JSBody(params = {"opponent", "color", "chess", "flight", "time", "increment"},
-            script = "window.FlappyMobile.setup({opponent: opponent, color: color, chess: chess, flight: flight, time: time, increment: increment});")
-    private static native void showSetup(String opponent, String color, String chess, String flight, String time, String increment);
 }

@@ -1,6 +1,4 @@
 import assert from 'node:assert/strict';
-import { readFile, rm, rename } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { sleep } from './browser.mjs';
 
 export async function checkHistory(browser) {
@@ -67,51 +65,11 @@ export async function checkHistory(browser) {
   await until(async () => (await history()).last === 'e4d5', 'recording the capture');
   assert.equal((await history()).whiteCaptured, '1');
   await screenshot('history-capture');
-  const finalFen = (await history()).fen;
-
   // Chromium advances the actual monotonic browser clock; session rules still declare timeout.
   await send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: 61000, maxVirtualTimeTaskStarvationCount: 10000 });
   await until(async () => (await history()).ended === 'true', 'ending the game on time', 60000);
   const frame = () => send('Emulation.setVirtualTimePolicy', { policy: 'advance', budget: 100 });
   await screenshot('history-result');
-  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 488, y: 428, button: 'left', clickCount: 1 });
-  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 488, y: 428, button: 'left', clickCount: 1 });
-  await frame();
-  await until(async () => (await history()).review === 'true', 'opening postgame review');
-  await press('Home', 'Home', 36);
-  await frame();
-  await until(async () => (await history()).ply === '0', 'reviewing the starting position');
-  assert.equal((await history()).whiteCaptured, '0');
-  assert.match((await history()).fen, /^rnbqkbnr\/pppppppp/);
-  await screenshot('history-review-start');
-  await press('End', 'End', 35);
-  await frame();
-  await until(async () => (await history()).ply === '3', 'reviewing the final position');
-  assert.equal((await history()).fen, finalFen);
-  assert.equal((await history()).whiteCaptured, '1');
-  await screenshot('history-review-final');
-  await send('Input.dispatchMouseEvent', { type: 'mousePressed', x: 1100, y: 385, button: 'left', clickCount: 1 });
-  await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: 1100, y: 385, button: 'left', clickCount: 1 });
-  await frame();
-  await until(async () => (await history()).ply === '2', 'clicking the previous move');
-  await press('ArrowRight', 'ArrowRight', 39);
-  await frame();
-  await until(async () => (await history()).ply === '3', 'stepping forward again');
-
-  const file = resolve(browser.reports, 'flappy-chess.pgn');
-  await rm(file, { force: true });
-  await send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: browser.reports });
-  await press('KeyP', 'p', 80);
-  await frame();
-  await until(async () => { try { return (await readFile(file, 'utf8')).includes('exd5'); } catch { return false; } }, 'downloading PGN');
-  const pgn = await readFile(file, 'utf8');
-  assert.match(pgn, /\[TimeControl "60\+0"\]/);
-  assert.match(pgn, /\[Result "1-0"\]/);
-  assert.match(pgn, /1\. e4 d5 2\. exd5 1-0/);
-  await rename(file, resolve(browser.reports, 'local-match.pgn'));
-  await press('KeyV', 'v', 86);
-  await frame();
-  await until(async () => (await history()).review === 'false', 'returning to the result');
   assert.equal((await history()).ended, 'true');
   await press('KeyX', 'x', 88);
   await frame();
@@ -121,5 +79,5 @@ export async function checkHistory(browser) {
   assert.equal((await history()).moves, '0');
   assert.equal((await history()).ended, 'false');
   await screenshot('series-swapped');
-  console.log('Browser history checks passed: capture, timeout, review, and PGN download.');
+  console.log('Browser history checks passed: capture, timeout, and color-swap rematch.');
 }

@@ -21,12 +21,10 @@ export async function checkSolo(browser) {
   assert.equal(carried, true, 'AI must visibly carry the piece');
   await screenshot('solo-ai-move');
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
-  await press('KeyS', 's', 83);
-  await press('KeyW', 'w', 87);
-  await press('KeyE', 'e', 69);
-  await press('KeyF', 'f', 70);
-  await press('Enter', 'Enter', 13);
-  await until(async () => (await solo()).side === 'BLACK', 'choosing the opposite gravity in match setup');
+  await press('Escape', 'Escape', 27);
+  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"), 'returning to solo setup');
+  await evaluate("document.getElementById('solo-side').value = 'WHITE'; document.getElementById('solo-chess').value = 'EASY'; document.getElementById('solo-flight').value = 'MEDIUM'; document.getElementById('solo-flight').dispatchEvent(new Event('change')); document.getElementById('solo').click()");
+  await until(async () => (await solo()).side === 'BLACK', 'starting solo with the opposite gravity');
   assert.equal((await solo()).chess, 'EASY');
   assert.equal((await solo()).flight, 'MEDIUM');
   await sleep(200);
@@ -35,7 +33,7 @@ export async function checkSolo(browser) {
   await until(async () => (await solo()).carrier === 'WHITE', 'human picks up using either layout');
   await screenshot('solo-human-white');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body.dataset.game"), 'leaving solo');
-  assert.equal(await evaluate('window.FlappySettings.solo().side'), 'BLACK', 'Solo lobby preferences persist');
-  console.log('Solo browser checks passed: independent difficulties, physical AI delivery, setup, controls, and exit.');
+  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"), 'leaving solo');
+  assert.equal(await evaluate('window.FlappySettings.solo().side'), 'WHITE', 'Solo lobby preferences persist');
+  console.log('Solo browser checks passed: independent difficulties, physical AI delivery, lobby setup, controls, and exit.');
 }
