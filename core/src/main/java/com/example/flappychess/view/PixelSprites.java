@@ -11,22 +11,22 @@ import com.github.bhlangonijr.chesslib.Side;
 /** Hand-authored silhouettes, shaded into a tiny nearest-filtered sprite atlas. */
 final class PixelSprites implements Disposable {
     private static final String[] PIECES = {
-        // King: cross, crown, narrow stem, stepped plinth.
-        "......xx....../.....xxxx...../......xx....../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Queen: raised orb, three-point crown, slender waist, and flared skirt.
-        "......xx....../............../..xx......xx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Rook: crenellations, tower, and a broad base.
-        "............../............../.xxx.xxxx.xxx./.xxx.xxxx.xxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Bishop: split mitre above a slender body.
-        "......xx....../.....xxxx...../....xxxx....../...xxxx..xx.../...xxx..xxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Knight: ears, long muzzle, mane, and curved neck.
-        ".....xx..xx.../.....xxxxxx.../....xxxxxxxx../...xxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxx../.xxxx..xxxxx../..xx...xxxxx../......xxxxxx../.....xxxxxx.../....xxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Pawn: round head, collar, and compact pedestal.
-        "............../............../............../............../.....xxxx...../....xxxxxx..../....xxxxxx..../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx."
+        // King: bold cross, rounded crown, narrow stem, and weighted base.
+        "......xx....../....xxxxxx..../......xx....../......xx....../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Queen: three ball-tipped coronet points above a slender, flared body.
+        "...x..xx..x.../............../...x..xx..x.../..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Rook: chunky crenellated turret, inset tower, and broad stepped base.
+        "..xxx.xx.xxx../..xxx.xx.xxx../.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./xxxxxxxxxxxxxx",
+        // Bishop: rounded mitre with a deep diagonal slit and tapered stem.
+        "......xx....../.....xxxx...../....xxx.xx..../...xxx..xxx.../...xxx..xxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Knight: pricked ears, long muzzle, cut jaw, mane, and curved neck.
+        ".....xx..xx.../....xxxxxxxx../...xxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxx../xxxxxxxxxxxx../xxxxx..xxxx.../.xxx...xxxx.../......xxxx..../.....xxxxxx.../....xxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Pawn: ball head, strong collar, short stem, and weighted base.
+        "............../............../.....xxxx...../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx."
     };
     private static final Color OUTLINE = Color.valueOf("202538");
-    private static final Color[] WHITE = colors("b99c79", "f1dfb3", "fff3d1", "e6aa5d");
-    private static final Color[] BLACK = colors("414568", "737fa4", "b0c4db", "7ed0d6");
+    private static final Color[] WHITE = colors("b18a5f", "eed9b2", "fff0d0", "d8a057");
+    private static final Color[] BLACK = colors("2f333b", "505660", "777e88", "69727d");
     private static final Color[] GOLD_BIRD = colors("b77345", "efb95b", "ffe5a1", "d99045");
     private static final Color[] BLUE_BIRD = colors("416788", "78c4d0", "c6f0e7", "579eae");
     private final Texture atlas;
