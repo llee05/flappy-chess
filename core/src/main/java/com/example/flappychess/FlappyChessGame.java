@@ -25,7 +25,6 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private FlightSchool school;
     private GameRenderer renderer;
     private int frames;
-    private boolean soundHeld;
     private MatchSettings settings;
     private SoloSettings solo;
     private MatchSetup setup;
@@ -87,30 +86,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private void installInput() {
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
-                if (key == Keys.M) {
-                    if (!soundHeld) renderer.toggleSound();
-                    soundHeld = true;
-                    return true;
-                }
-                if (key == Keys.H) { renderer.toggleHelp(); return true; }
-                if (key == Keys.ESCAPE) { exitAction.run(); return true; }
-                if (setup != null) {
-                    if (key == Keys.LEFT) setup.changeTime(-1);
-                    if (key == Keys.RIGHT) setup.changeTime(1);
-                    if (key == Keys.DOWN) setup.changeIncrement(-1);
-                    if (key == Keys.UP) setup.changeIncrement(1);
-                    if (key == Keys.C) setup.toggleOpponent();
-                    if (key == Keys.W) setup.changeColor();
-                    if (key == Keys.E) setup.changeChess();
-                    if (key == Keys.F) setup.changeFlight();
-                    if (key == Keys.ENTER) startConfiguredMatch();
-                    if (key == Keys.S && !waitingToStart) setup = null;
-                    return true;
-                }
-                if (key == Keys.S) { openSetup(); return true; }
-                if (school == null && key == Keys.P) { renderer.exportPgn(session, pgnExporter); return true; }
-                if (school == null && renderer.historyKey(session, key)) return true;
-                if (key == Keys.T) { restart(true); return true; }
+                if (setup != null) return true;
                 if (school != null && school.isComplete()) {
                     if (key == Keys.ENTER) restart(false);
                     else if (key == Keys.R) restart(true);
@@ -119,15 +95,8 @@ public final class FlappyChessGame extends ApplicationAdapter {
                 if ((key == Keys.R || key == Keys.X) && session.isGameOver()) { rematch(key == Keys.X); return true; }
                 return false;
             }
-            @Override public boolean keyUp(int key) {
-                if (key != Keys.M) return false;
-                soundHeld = false;
-                return true;
-            }
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
-                if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
-                if (renderer.isHelpAt(point)) { renderer.toggleHelp(); return true; }
                 if (setup != null) {
                     if (point.y >= 500 && point.y <= 544) {
                         if (point.x >= 380 && point.x < 600) setup.toggleOpponent();
@@ -144,12 +113,6 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     if (point.x >= 450 && point.x <= 750 && point.y >= 260 && point.y <= 320) startConfiguredMatch();
                     return true;
                 }
-                if (renderer.isSetupAt(point)) { openSetup(); return true; }
-                if (school == null && renderer.isExportAt(session, point)) {
-                    renderer.exportPgn(session, pgnExporter);
-                    return true;
-                }
-                if (school == null && renderer.historyClick(session, point)) return true;
                 if (school == null && renderer.isSwapAt(session, point)) { rematch(true); return true; }
                 if ((session.isGameOver() || school != null && school.isComplete()) && renderer.isPlayAgainAt(point)) {
                     if (school != null) restart(false); else rematch(false);
@@ -176,7 +139,6 @@ public final class FlappyChessGame extends ApplicationAdapter {
     public FlightSchool getFlightSchool() { return school; }
     public GameSession getSession() { return session; }
     public MatchSetup getMatchSetup() { return setup; }
-    private void openSetup() { releaseInput(); setup = new MatchSetup(settings, solo); }
     private void startConfiguredMatch() {
         settings = setup.settings();
         solo = setup.soloSettings();
@@ -196,7 +158,6 @@ public final class FlappyChessGame extends ApplicationAdapter {
     }
     @Override public void pause() { releaseInput(); }
     public void releaseInput() {
-        soundHeld = false;
         if (match != null) match.releaseInput();
         else if (session != null) session.releaseInput();
     }

@@ -12,7 +12,7 @@ body { margin: 0; overflow: hidden; }
 #board-stage { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; }
 #game-shell #canvas { width: 100%; height: 100%; margin: 0; }
 .mobile-only, .touch-intro { display: none; }
-body.online #game-shell { top: 48px; }
+body.online #game-shell { top: 0; }
 #canvas { display: block; width: 100vw; height: 100dvh; image-rendering: pixelated; touch-action: none; outline: none; }
 #welcome { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 24px; background: #20283c; }
 #welcome[hidden] { display: none; }
@@ -59,11 +59,12 @@ body[data-room-state="searching"] .controls { display: none; }
 #copy-room, #cancel-room, #cancel-search { padding: 10px; font-size: 14px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 #network-bar { position: fixed; inset: 0 0 auto; height: 48px; display: flex; align-items: center; gap: 16px; padding: 6px 12px; border-bottom: 2px solid #46516a; background: #20283c; font-size: 12px; }
+body.online #network-bar { display: none; }
 #player-role { color: #efb95b; white-space: nowrap; }
 body[data-side="BLACK"] #player-role { color: #78c4d0; }
 #network-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; color: #b6c2d0; }
 #leave-room { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
-body.online #canvas { height: calc(100dvh - 48px); margin-top: 48px; }
+body.online #canvas { height: 100dvh; margin-top: 0; }
 #connection-failure { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #141b2de8; }
 #failure-title { font-size: clamp(18px, 5vw, 26px); color: #ed8c78; }
 #status { min-height: 24px; color: #add2b2; font-size: 14px; }
@@ -75,7 +76,7 @@ body.online #canvas { height: calc(100dvh - 48px); margin-top: 48px; }
 
 /* The renderer crops to the square board; DOM controls keep their native size. */
 body.mobile { --network-space: 0px; }
-body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
+body.mobile.online { --network-space: 0px; }
 .mobile #game-shell {
   top: var(--network-space); bottom: auto; height: calc(100dvh - var(--network-space));
   display: flex; flex-direction: column; overflow: hidden;
@@ -84,41 +85,24 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 .mobile.online #game-shell { padding-top: 0; }
 .mobile .mobile-only { display: block; }
 .mobile #canvas { pointer-events: none; }
-.mobile #mobile-hud { position: relative; flex: 0 0 auto; padding: 7px 10px 0; }
+.mobile #mobile-hud { position: relative; flex: 0 0 auto; padding: 7px 10px; }
 .mobile #board-stage { flex: 0 0 auto; width: 100%; height: auto; aspect-ratio: 1; }
 .mobile button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-.mobile-matchbar { display: flex; align-items: stretch; gap: 7px; }
-.mobile-brand {
-  display: grid; place-items: center; flex: 0 0 38px; border-bottom: 2px solid #efb95b;
-  color: #efb95b; font-weight: bold; letter-spacing: -.08em;
-}
-.mobile-matchbar > button, .mobile-utilities button, .action-grid button {
+.action-grid button {
   min-height: 44px; margin: 0; padding: 8px; border-top-width: 2px; font-size: 13px;
 }
-.mobile-matchbar > button { flex: 0 0 44px; background: #2c354d; color: #f1dfb3; border-top-color: #46516a; }
-.mobile-clocks { display: grid; grid-template-columns: 1fr 1fr; flex: 1; gap: 6px; min-width: 0; }
-.clock { display: flex; justify-content: space-between; align-items: center; gap: 5px; padding: 5px 7px; border-bottom: 2px solid #46516a; background: #273047; font-size: 10px; }
+.mobile-clocks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-width: 0; }
+.clock { display: flex; justify-content: center; align-items: center; padding: 7px; border-bottom: 2px solid #46516a; background: #273047; }
 .clock.white { color: #efb95b; }
 .clock.black { color: #78c4d0; }
 .clock.active { border-color: currentColor; background: #303a53; }
 .clock strong { color: #f1dfb3; font-size: 18px; font-variant-numeric: tabular-nums; }
 .clock.warning strong { color: #ed8c78; }
-#mobile-turn { margin: 0; color: #f1dfb3; font-size: 11px; font-weight: bold; white-space: nowrap; }
-#mobile-feedback { min-width: 0; margin: 0; overflow: hidden; color: #add2b2; font-size: 10px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
-.mobile-context { display: flex; justify-content: space-between; gap: 10px; min-height: 25px; padding: 7px 2px 5px; }
-#mobile-details { position: absolute; z-index: 5; left: 8px; right: 8px; top: 56px; max-height: calc(100dvh - 72px); overflow: auto; padding: 14px; border: 2px solid #78c4d0; box-shadow: 0 6px #171c2c; background: #20283cf8; }
-#mobile-details p { margin: 0 0 12px; font-size: 12px; }
-.mobile-utilities { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-.mobile-utilities button { background: #2c354d; color: #f1dfb3; border-top-color: #46516a; }
-#mobile-help-copy { margin: 0 0 14px; padding: 12px; border-left: 3px solid #efb95b; background: #2c354d; }
-#mobile-help-copy strong, .mobile-section-title { display: block; margin-bottom: 7px; color: #efb95b; font-size: 11px; text-transform: uppercase; }
-#mobile-help-copy p { margin: 0; color: #d5deea; line-height: 1.5; }
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 #mobile-dialog { position: absolute; z-index: 3; inset: 50% auto auto 50%; transform: translate(-50%, -50%); width: min(94%, 420px); max-height: 100%; overflow-y: auto; padding: 16px; border: 3px solid #efb95b; background: #20283cf5; box-shadow: 4px 4px #171c2c; }
 #mobile-dialog h2 { margin: 0 0 10px; font-size: 20px; }
 #mobile-dialog p { margin: 0 0 14px; font-size: 12px; }
 #touch-controls { flex: 0 0 auto; padding: 4px 12px 12px; background: #20283c; }
-#touch-hint { display: none; }
 .touch-pad { margin-top: 8px; }
 .touch-pad > strong { display: block; margin-bottom: 5px; font-size: 11px; color: #efb95b; }
 .touch-pad[data-side="BLACK"] > strong { color: #78c4d0; }
@@ -127,7 +111,6 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 .pad-buttons .flap { background: #efb95b; border-top-color: #f1dfb3; }
 .pad-buttons .carry { background: #78c4d0; border-top-color: #c6f0e7; font-size: 12px; }
 .pad-buttons button.held { transform: translateY(3px); box-shadow: 0 1px #171c2c; filter: brightness(1.15); }
-#mobile-review { grid-template-columns: repeat(3, 1fr); }
 .mobile #welcome { padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
 .mobile article { padding: 20px; box-shadow: 4px 4px #171c2c; }
 .mobile h1 { font-size: clamp(40px, 13vw, 64px); }
@@ -146,24 +129,20 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 @media (orientation: portrait) and (max-height: 650px) {
   .mobile #mobile-hud { padding-top: 6px; }
   .mobile .clock { padding: 4px 6px; gap: 6px; }
-  .mobile .clock span { font-size: 10px; white-space: nowrap; }
   .mobile .clock strong { font-size: 18px; }
   .mobile .pad-buttons button { min-height: 44px; }
-  .mobile #touch-hint { display: none; }
 }
 @media (orientation: landscape) and (max-height: 600px) {
   .mobile #game-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 38%); grid-template-rows: minmax(0, 1fr) auto; }
   .mobile #board-stage { grid-column: 1; grid-row: 1 / 3; width: auto; aspect-ratio: auto; }
   .mobile #mobile-hud { grid-column: 2; grid-row: 1; padding: 6px 10px 0; overflow: visible; }
   .mobile #touch-controls { grid-column: 2; grid-row: 2; padding: 4px 10px 8px; }
-  .mobile-clocks { margin-top: 8px; gap: 6px; }
+  .mobile-clocks { margin-top: 0; gap: 6px; }
   .clock { display: block; padding: 4px 6px; }
   .clock strong { display: block; font-size: 18px; }
-  #mobile-feedback { min-height: 15px; }
   .pad-buttons { gap: 6px; }
   .pad-buttons button { min-height: 44px; font-size: 13px; }
   .pad-buttons .carry { font-size: 11px; }
-  #touch-hint { display: none; }
   #mobile-dialog { padding: 12px; }
 }
 

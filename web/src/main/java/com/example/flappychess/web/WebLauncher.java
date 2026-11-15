@@ -163,7 +163,7 @@ public final class WebLauncher {
     }
 
     static void catchGameKeys() {
-        for (int key : new int[] {Keys.SPACE, Keys.UP, Keys.DOWN, Keys.LEFT, Keys.RIGHT, Keys.HOME, Keys.END, Keys.ENTER}) {
+        for (int key : new int[] {Keys.SPACE, Keys.UP, Keys.LEFT, Keys.RIGHT, Keys.ENTER}) {
             Gdx.input.setCatchKey(key, true);
         }
     }

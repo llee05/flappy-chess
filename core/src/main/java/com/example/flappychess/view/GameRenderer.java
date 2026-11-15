@@ -1,7 +1,6 @@
 package com.example.flappychess.view;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -18,7 +17,6 @@ import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.controller.MatchSetup;
-import com.example.flappychess.controller.GameRecord;
 import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.controller.ChessController.CompletedMove;
 import com.example.flappychess.model.Birb;
@@ -27,7 +25,6 @@ import com.github.bhlangonijr.chesslib.PieceType;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
 import java.util.Locale;
-import java.util.function.Function;
 
 /** Pixel-art presentation; model coordinates retain their original top-left origin. */
 public final class GameRenderer implements Disposable {
@@ -62,17 +59,14 @@ public final class GameRenderer implements Disposable {
     // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
     private final FrameBuffer canvas = new FrameBuffer(Pixmap.Format.RGBA8888, 600, 400, false);
     private final TextureRegion canvasImage;
-    private final boolean online;
     private float animationTime;
     private FlightSchool school;
     private ChessBoardView displayBoard;
     private boolean boardOnly;
-    private boolean helpVisible;
 
     public GameRenderer() { this(false); }
 
     public GameRenderer(boolean online) {
-        this.online = online;
         canvas.getColorBufferTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         canvasImage = new TextureRegion(canvas.getColorBufferTexture());
         canvasImage.flip(false, true);
@@ -93,60 +87,14 @@ public final class GameRenderer implements Disposable {
     }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
     public void toggleSound() { feedback.toggleSound(); }
-    public void toggleHelp() { helpVisible = !helpVisible; }
     public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
     public String feedbackMessage() { return feedback.message(); }
-    public boolean isSoundToggleAt(Vector2 point) {
-        return inside(point, 100, 20, 84, 28);
-    }
-    public boolean isHelpAt(Vector2 point) {
-        return inside(point, 16, 20, 76, 28) || helpVisible && inside(point, 450, 196, 300, 48);
-    }
-    public boolean isSetupAt(Vector2 point) {
-        return !online && inside(point, 16, 54, 168, 26);
-    }
     public PostgameReview getReview() { return review; }
-    public boolean historyKey(GameSession game, int key) {
-        review.bind(game);
-        boolean handled = review.keyDown(key);
-        if (handled) feedback.clearPresentation();
-        return handled;
-    }
-    public void exportPgn(GameSession game, Function<String, String> exporter) {
-        try { feedback.notice(exporter.apply(new GameRecord(game).pgn())); }
-        catch (RuntimeException unavailable) {
-            feedback.notice("PGN export failed.");
-            Gdx.app.log("PGN", "The game could not be exported.");
-        }
-    }
-    public boolean isExportAt(GameSession game, Vector2 point) {
-        return game.isGameOver() && (review.isActive()
-                ? inside(point, 1016, 210, 168, 30) : inside(point, 608, 348, 208, 48));
-    }
     public boolean isPlayAgainAt(Vector2 point) {
-        return review.isActive() ? inside(point, 1016, 174, 84, 30)
-                : school != null ? inside(point, 450, 260, 300, 60) : inside(point, 384, 260, 208, 60);
+        return school != null ? inside(point, 450, 260, 300, 60) : inside(point, 384, 260, 208, 60);
     }
     public boolean isSwapAt(GameSession game, Vector2 point) {
-        return game.isGameOver() && (review.isActive() ? inside(point, 1100, 174, 84, 30) : inside(point, 608, 260, 208, 60));
-    }
-    public boolean historyClick(GameSession game, Vector2 point) {
-        review.bind(game);
-        if (!game.isGameOver()) return false;
-        if (!review.isActive()) {
-            if (!inside(point, 384, 348, 208, 48)) return false;
-            review.keyDown(Keys.V);
-            feedback.clearPresentation();
-            return true;
-        }
-        if (inside(point, 1016, 400, 168, 30)) review.seek(review.getPly() - 1);
-        else if (inside(point, 1016, 362, 168, 30)) review.seek(review.getPly() + 1);
-        else if (inside(point, 1016, 324, 168, 30)) review.seek(0);
-        else if (inside(point, 1016, 286, 168, 30)) review.seek(review.getRecord().moves().size());
-        else if (inside(point, 1016, 248, 168, 30)) review.keyDown(Keys.V);
-        else return false;
-        feedback.clearPresentation();
-        return true;
+        return game.isGameOver() && inside(point, 608, 260, 208, 60);
     }
     private static boolean inside(Vector2 point, float x, float y, float width, float height) {
         return point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
@@ -195,13 +143,8 @@ public final class GameRenderer implements Disposable {
         beginShapes();
         if (!review.isActive()) feedback.drawShapes(shapes);
         shapes.end();
-        batch.begin();
-        feedback.drawText(font, batch);
-        batch.end();
         if (!boardOnly) {
-            if (school != null && !school.isComplete()) lessonBanner();
             if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
-            if (helpVisible) helpOverlay(game);
             if (setup != null) setupOverlay(setup);
         }
         canvas.end();
@@ -282,40 +225,16 @@ public final class GameRenderer implements Disposable {
         rect(196, 0, 4, 800, EDGE);
         rect(1000, 0, 4, 800, INK);
         rect(1004, 0, 2, 800, EDGE);
-        rect(16, 778, 54, 2, GOLD);
-        rect(74, 778, 10, 2, BLUE);
-        stepped(16, 686, 168, 58, CARD, EDGE);
-        rect(20, 674, 156, 2, EDGE);
-        int rows = school == null ? (game.getHistory().size() + 1) / 2 : 0;
-        int firstRow = journalFirstRow(game, rows);
-        for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
-            float y = 594 - (row - firstRow) * 22;
-            if ((row - firstRow) % 2 == 0) rect(16, y - 2, 168, 22, CARD);
-            int selectedRow = review.isActive() ? review.getPly() == 0 ? -1 : (review.getPly() - 1) / 2 : rows - 1;
-            if (row == selectedRow) rect(16, y, 2, 16, MINT);
-        }
-        rect(20, 224, 156, 2, EDGE);
-        stepped(16, 54, 168, 26, CARD, EDGE);
-        stepped(16, 20, 76, 28, CARD, EDGE);
-        stepped(100, 20, 84, 28, CARD, EDGE);
-        drawClockCard(game, Side.BLACK, 650);
-        drawClockCard(game, Side.WHITE, 514);
-        stepped(1016, 446, 168, 50, CARD, EDGE);
-        diamond(1032, 480, 4, game.isGameOver() ? MUTED : MINT);
-        if (review.isActive()) {
-            stepped(1016, 550, 168, 76, CARD, EDGE);
-            for (int y : new int[] {400, 362, 324, 286, 248, 210, 174}) stepped(1016, y, 168, 30, CARD, EDGE);
-        } else if (game.getSoloSettings() != null) {
-            stepped(1016, 338, 168, 74, CARD, EDGE);
-        }
+        drawClockCard(game, Side.BLACK, 666);
+        drawClockCard(game, Side.WHITE, 24);
     }
 
     private void drawClockCard(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
-        stepped(1016, y, 168, 118, CARD, active ? color : EDGE);
-        if (active) rect(1016, y + 30, 4, 58, color);
+        stepped(1016, y, 168, 110, CARD, active ? color : EDGE);
+        if (active) rect(1016, y + 22, 4, 66, color);
         for (int i = 0; i < 17; i++) {
             double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
             rect(1032 + i * 8, y + 12, 6, 3, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
@@ -330,78 +249,8 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        text("FLAPPY", 20, 760, 2, CREAM);
-        text("CHESS", 102, 760, 2, GOLD);
-        centered(school != null ? "FLIGHT SCHOOL" : "ROUND " + game.getSeries().round() + " / " + game.getSettings().label(), 100, 726, 2, GOLD);
-        centered(school != null ? "UNTIMED" : game.getSeries().score(), 100, 702, 2, MINT);
-        if (school != null) {
-            text("YOUR LESSON", 20, 658, 2, CREAM);
-            text("NO CLOCK.\nNO RUSH.", 16, 620, 2, MINT);
-            String[] steps = {"WHITE: FLY", "PICK UP", "DELIVER", "BLACK: FLY", "PICK UP", "DELIVER"};
-            for (int i = 0; i < steps.length; i++) {
-                text((i + 1) + " " + steps[i], 16, 546 - i * 38, 2,
-                        i < school.getStage().ordinal() ? MINT : i == school.getStage().ordinal() ? GOLD : MUTED);
-            }
-            text("DROP AT START\nTO CANCEL.", 16, 318, 2, MUTED);
-        } else {
-            drawMoveLog(game);
-            drawCaptured(game, Side.WHITE, 354, 326);
-            drawCaptured(game, Side.BLACK, 292, 264);
-        }
-        if (school != null) text("T RESTART LESSON", 16, 246, 2, MINT);
-        if (feedback.message().isEmpty()) text("MAKE EVERY\nFLAP COUNT.", 16, 194, 2, MUTED);
-        centered(online ? "ONLINE MATCH" : "S  MATCH SETUP", 100, 72, 2, online ? BLUE : CREAM);
-        centered("H  HELP", 54, 39, 2, CREAM);
-        centered(feedback.isSoundEnabled() ? "M  ON" : "M  OFF", 142, 39, 2, CREAM);
-        centered("ESC  EXIT", 100, 102, 2, MUTED);
-        drawClockText(game, Side.BLACK, 650);
-        drawClockText(game, Side.WHITE, 514);
-        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", game.getHistory().size() / 2 + 1), 1046, 480, 2, MINT);
-        String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
-        if (!game.isGameOver()) {
-            if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
-            else if (game.getCarrier() != null) status = "DELIVER PIECE";
-        }
-        centered(status, 1100, 458, 2, CREAM);
-        if (review.isActive()) { drawReviewControls(); return; }
-        if (game.getSoloSettings() != null) {
-            var solo = game.getSoloSettings();
-            Side human = game.getSeries().sideFor(true);
-            text("YOU " + human.name() + " / AI " + human.flip().name(), 1024, 392, 2, accent(human));
-            text("CHESS " + solo.chess().name(), 1024, 370, 2, CREAM);
-            text("FLIGHT " + solo.flight().name(), 1024, 348, 2, CREAM);
-            text(game.getAiPhase(), 1024, 314, 2, MINT);
-            return;
-        }
-        centered("H  CONTROLS", 1100, 398, 2, MUTED);
-    }
-
-    private void drawMoveLog(GameSession game) {
-        text("MOVES", 20, 658, 2, CREAM);
-        text("#", 22, 628, 2, MUTED);
-        text("WHITE", 44, 628, 2, GOLD);
-        text("BLACK", 116, 628, 2, BLUE);
-        var moves = game.getHistory();
-        if (moves.isEmpty()) {
-            text("NO MOVES YET", 20, 586, 2, MUTED);
-            text("PRESS H FOR\nFLIGHT CONTROLS", 20, 548, 2, MINT);
-        } else {
-            int rows = (moves.size() + 1) / 2;
-            int firstRow = journalFirstRow(game, rows);
-            for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
-                int index = row * 2;
-                float y = 610 - (row - firstRow) * 22;
-                String number = Integer.toString(row + 1);
-                text(number, 40 - font.width(number, 2), y, 2, MUTED);
-                journalMove(moves.get(index).notation(), 44, y);
-                if (index + 1 < moves.size()) journalMove(moves.get(index + 1).notation(), 116, y);
-            }
-        }
-    }
-
-    private int journalFirstRow(GameSession game, int rows) {
-        int focus = review.isActive() ? Math.max(0, (review.getPly() - 1) / 2) : rows - 1;
-        return Math.max(0, Math.min(rows - 10, focus - 4));
+        drawClockText(game, Side.BLACK, 666);
+        drawClockText(game, Side.WHITE, 24);
     }
 
     private CompletedMove lastMove(GameSession game) {
@@ -410,56 +259,11 @@ public final class GameRenderer implements Disposable {
         return ply == 0 ? null : moves.get(ply - 1);
     }
 
-    private void drawCaptured(GameSession game, Side by, float labelY, float pieceY) {
-        text(by == Side.WHITE ? "WHITE TOOK" : "BLACK TOOK", 16, labelY, 2, accent(by));
-        var moves = review.isActive() ? review.getRecord().moves() : game.getHistory();
-        int ply = review.isActive() ? review.getPly() : moves.size();
-        PieceType[] types = {PieceType.PAWN, PieceType.KNIGHT, PieceType.BISHOP, PieceType.ROOK, PieceType.QUEEN};
-        boolean any = false;
-        for (int i = 0; i < types.length; i++) {
-            int count = GameRecord.capturedCount(moves, ply, by, types[i]);
-            if (count == 0) continue;
-            any = true;
-            float x = 32 + i * 32;
-            drawPiece(Piece.make(by.flip(), types[i]), x, pieceY, 2);
-            if (count > 1) text(Integer.toString(count), x + 4, pieceY - 8, 2, accent(by));
-        }
-        if (!any) text("NONE", 20, pieceY + 8, 2, MUTED);
-    }
-
-    private void drawReviewControls() {
-        centered("REVIEW", 1100, 534, 2, GOLD);
-        centered(review.getPly() + " / " + review.getRecord().moves().size(), 1100, 500, 2, CREAM);
-        centered(review.getPly() == 0 ? "START POSITION" : review.getRecord().moves().get(review.getPly() - 1).notation(), 1100, 464, 2, MINT);
-        text("< PREVIOUS", 1020, 420, 2, CREAM);
-        text("> NEXT", 1020, 382, 2, CREAM);
-        text("HOME FIRST", 1020, 344, 2, CREAM);
-        text("END LAST", 1020, 306, 2, CREAM);
-        text("V RESULT", 1020, 268, 2, GOLD);
-        text("P EXPORT PGN", 1020, 230, 2, MINT);
-        text("R AGAIN", 1020, 194, 2, MINT);
-        text("X SWAP", 1108, 194, 2, MINT);
-    }
-
-    private void journalMove(String notation, float x, float y) {
-        font.drawCompact(batch, notation, snap(x), snap(y), 2, CREAM);
-    }
-
-    private void control(String key, String action, float y) {
-        centered(key, 1054, y + 20, 2, CREAM);
-        text(action, 1098, y + 20, 2, MUTED);
-    }
-
     private void drawClockText(GameSession game, Side side, float y) {
-        boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        drawBirdSprite(side, 1038, y + 94, 2, false, active ? frame() : 1);
-        text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 104, 2, accent(side));
-        if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 72, 4, seconds <= 30 ? DANGER : CREAM);
-        else text("UNTIMED", 1032, y + 70, 2, CREAM);
-        boolean computer = game.getSoloSettings() != null && side == game.getSeries().sideFor(false);
-        text(game.isGameOver() ? "FINISHED" : active ? computer ? "> AI MOVE" : "> YOUR MOVE" : "  WAITING",
-                1032, y + 30, 2, active ? MINT : MUTED);
+        if (game.isTimed()) centered(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60),
+                1100, y + 66, 4, seconds <= 30 ? DANGER : CREAM);
+        else centered("UNTIMED", 1100, y + 64, 2, CREAM);
     }
 
     private void drawBirdMarkers(GameSession game) {
@@ -527,10 +331,6 @@ public final class GameRenderer implements Disposable {
                 stepped(384, 260, 208, 60, MINT, INK);
                 stepped(608, 260, 208, 60, BLUE, INK);
             }
-            if (!complete) {
-                stepped(384, 348, 208, 48, CARD, EDGE);
-                stepped(608, 348, 208, 48, CARD, EDGE);
-            }
         } else {
             for (int i = 0; i < 4; i++) stepped(384 + i * 112, 278, 96, 118, CARD, EDGE);
         }
@@ -538,83 +338,25 @@ public final class GameRenderer implements Disposable {
         batch.begin();
         centered(complete ? "FLIGHT SCHOOL COMPLETE" : ended ? "ROUND " + game.getSeries().round() + " COMPLETE" : "LEVEL UP", 600, 528, 2, GOLD);
         centered(complete ? "READY TO PLAY!" : ended ? game.getResult().toUpperCase(Locale.ROOT) : "PROMOTION", 600, 486, 4, CREAM);
-        centered(complete ? "Both birds mastered. R to practice again." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
+        centered(complete ? "Both birds mastered." : ended ? game.getReason() : "Choose a piece. The clock is running.", 600, 434, 2, MUTED);
         if (ended) {
             if (complete) {
                 drawBirdSprite(Side.WHITE, 566, 376, 4, false, 1);
                 drawBirdSprite(Side.BLACK, 634, 376, 4, true, 1);
-            } else {
-                centered("REVIEW [V]", 488, 378, 2, CREAM);
-                centered("PGN [P]", 712, 378, 2, CREAM);
             }
-            if (complete) centered("PLAY LOCAL [ENTER]", 600, 298, 2, INK);
+            if (complete) centered("PLAY LOCAL", 600, 298, 2, INK);
             else {
-                centered("AGAIN [R]", 488, 298, 2, INK);
-                centered("SWAP [X]", 712, 298, 2, INK);
+                centered("PLAY AGAIN", 488, 298, 2, INK);
+                centered("SWAP COLORS", 712, 298, 2, INK);
             }
         } else {
             PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
-            String[] labels = {"[Q]", "[R]", "[B]", "[N]"};
+            String[] labels = {"QUEEN", "ROOK", "BISHOP", "KNIGHT"};
             for (int i = 0; i < options.length; i++) {
                 drawPiece(Piece.make(game.getChess().getSideToMove(), options[i]), 432 + i * 112, 352, 4);
                 centered(labels[i], 432 + i * 112, 306, 2, GOLD);
             }
         }
-        centered("ESC  EXIT GAME", 600, 248, 2, MUTED);
-        batch.end();
-    }
-
-    private void lessonBanner() {
-        beginShapes();
-        stepped(216, 712, 768, 72, PANEL, EDGE);
-        for (int i = 0; i < 6; i++) rect(236 + i * 18, 722, 12, 4,
-                i <= school.getStage().ordinal() ? MINT : EDGE);
-        shapes.end();
-        batch.begin();
-        text(school.title(), 236, 774, 2, GOLD);
-        text(school.instruction(), 236, 750, 2, CREAM);
-        batch.end();
-    }
-
-    private void helpOverlay(GameSession game) {
-        beginShapes();
-        rect(0, 0, 1200, 800, VEIL);
-        stepped(348, 154, 504, 492, PANEL, EDGE);
-        rect(376, 574, 448, 2, EDGE);
-        stepped(376, 468, 448, 82, CARD, EDGE);
-        stepped(376, 354, 448, 82, CARD, EDGE);
-        stepped(450, 196, 300, 48, MINT, INK);
-        shapes.end();
-        batch.begin();
-        centered("FLIGHT CONTROLS", 600, 614, 4, CREAM);
-        centered("ONLY THE SIDE TO MOVE CAN CARRY A PIECE", 600, 584, 2, MUTED);
-        boolean firstWhite = school != null || game.getSeries().firstWhite();
-        if (game.getSoloSettings() != null || online) {
-            text("YOUR BIRD", 400, 528, 2, GOLD);
-            text("A / D  OR  LEFT / RIGHT", 400, 502, 2, CREAM);
-            text("SPACE  OR  UP", 400, 480, 2, CREAM);
-            text("E  OR  ENTER", 400, 458, 2, CREAM);
-        } else {
-            text(game.getSeries().shortNameFor(Side.WHITE) + " / WHITE", 400, 528, 2, GOLD);
-            text((firstWhite ? "A / D" : "LEFT / RIGHT") + "   MOVE", 400, 502, 2, CREAM);
-            text((firstWhite ? "SPACE" : "UP") + "   FLAP", 400, 480, 2, CREAM);
-            text((firstWhite ? "E" : "ENTER") + "   PICK / DROP", 400, 458, 2, CREAM);
-        }
-        if (game.getSoloSettings() == null && !online) {
-            text(game.getSeries().shortNameFor(Side.BLACK) + " / BLACK", 400, 414, 2, BLUE);
-            text((firstWhite ? "LEFT / RIGHT" : "A / D") + "   MOVE", 400, 388, 2, CREAM);
-            text((firstWhite ? "UP" : "SPACE") + "   FLAP", 400, 366, 2, CREAM);
-            text((firstWhite ? "ENTER" : "E") + "   PICK / DROP", 400, 344, 2, CREAM);
-        } else {
-            text("STEER", 400, 414, 2, BLUE);
-            text("FLAP", 400, 388, 2, BLUE);
-            text("PICK / DROP", 400, 366, 2, BLUE);
-        }
-        centered("HOLD TO STEER. TAP ONCE PER FLAP.", 600, 304, 2, CREAM);
-        centered("DROP ON THE STARTING SQUARE TO CANCEL.", 600, 278, 2, MUTED);
-        centered("LEGAL DESTINATIONS STAY HIGHLIGHTED.", 600, 256, 2, MUTED);
-        centered("H  BACK TO GAME", 600, 226, 2, INK);
-        centered("M SOUND    S SETUP    ESC EXIT", 600, 178, 2, MUTED);
         batch.end();
     }
 
@@ -632,17 +374,17 @@ public final class GameRenderer implements Disposable {
         shapes.end();
         batch.begin();
         centered("NEW MATCH", 600, 622, 4, CREAM);
-        centered("Opponent [C] / solo color [W]", 600, 570, 2, MUTED);
+        centered("CHOOSE THE MATCH OPTIONS", 600, 570, 2, MUTED);
         centered(setup.opponentLabel(), 488, 530, 2, GOLD);
         centered(setup.colorLabel(), 712, 530, 2, BLUE);
         centered(setup.timeLabel(), 600, 464, 2, GOLD);
-        centered("LEFT / RIGHT OR CLICK", 600, 424, 2, MUTED);
+        centered("CLICK TO CHANGE", 600, 424, 2, MUTED);
         centered(setup.incrementLabel(), 600, 388, 2, BLUE);
-        centered("UP / DOWN OR CLICK", 600, 348, 2, MUTED);
-        centered("START [ENTER]", 600, 298, 2, INK);
+        centered("CLICK TO CHANGE", 600, 348, 2, MUTED);
+        centered("START", 600, 298, 2, INK);
         centered("CHESS " + setup.chessLabel(), 488, 224, 2, CREAM);
         centered("FLIGHT " + setup.flightLabel(), 712, 224, 2, CREAM);
-        centered("AI CHESS [E] / FLIGHT [F]    S CLOSE", 600, 184, 2, MUTED);
+        centered("CLICK A CHOICE TO CHANGE IT", 600, 184, 2, MUTED);
         batch.end();
     }
 
