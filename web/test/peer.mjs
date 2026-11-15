@@ -51,10 +51,10 @@ await withBrowser(async browser => {
   await third.evaluate("document.getElementById('matchmake').click()");
   await third.until(() => third.evaluate("document.body.dataset.roomState === 'searching'"), 'third player resuming search');
   await host.press('Escape', 'Escape', 27);
-  await host.until(() => host.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched host to lobby');
+  await host.until(() => host.evaluate("!document.body?.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched host to lobby');
   await guest.until(() => failure(guest), 'notifying matched guest of disconnect');
   await guest.evaluate("document.getElementById('return-lobby').click()");
-  await guest.until(() => guest.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched guest to lobby');
+  await guest.until(() => guest.evaluate("!document.body?.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched guest to lobby');
   await guest.evaluate("document.getElementById('matchmake').click()");
   for (const [page, side] of [[third, 'WHITE'], [guest, 'BLACK']]) {
     await page.until(async () => {
@@ -65,10 +65,10 @@ await withBrowser(async browser => {
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
   }
   await third.press('Escape', 'Escape', 27);
-  await third.until(() => third.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning third player to lobby');
+  await third.until(() => third.evaluate("!document.body?.dataset.game && document.getElementById('host')?.disabled === false"), 'returning third player to lobby');
   await guest.until(() => failure(guest), 'notifying guest of third player disconnect');
   await guest.evaluate("document.getElementById('return-lobby').click()");
-  await guest.until(() => guest.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning guest to lobby after second match');
+  await guest.until(() => guest.evaluate("!document.body?.dataset.game && document.getElementById('host')?.disabled === false"), 'returning guest to lobby after second match');
 
   await host.evaluate("document.getElementById('host').click()");
   await host.until(() => host.evaluate("!!document.getElementById('invite-link').value"), 'creating a room');
@@ -183,7 +183,7 @@ await withBrowser(async browser => {
   await host.until(() => failure(host), 'notifying host of disconnect');
   await host.screenshot('online-disconnected');
   await host.evaluate("document.getElementById('return-lobby').click()");
-  await pumpUntil(host, "!document.body.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
+  await pumpUntil(host, "!document.body?.dataset.game && document.getElementById('host')?.disabled === false", 'returning host to lobby');
 
   await guest.evaluate("document.getElementById('room').value = 'flappychess-' + '0'.repeat(32); document.getElementById('join').click()");
   await pumpUntil(guest, "document.getElementById('connection-failure').hidden === false", 'reporting a nonexistent room');

@@ -22,7 +22,7 @@ export async function checkSolo(browser) {
   await screenshot('solo-ai-move');
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body.dataset.game"), 'returning to solo setup');
+  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"), 'returning to solo setup');
   await evaluate("document.getElementById('solo-side').value = 'WHITE'; document.getElementById('solo-chess').value = 'EASY'; document.getElementById('solo-flight').value = 'MEDIUM'; document.getElementById('solo-flight').dispatchEvent(new Event('change')); document.getElementById('solo').click()");
   await until(async () => (await solo()).side === 'BLACK', 'starting solo with the opposite gravity');
   assert.equal((await solo()).chess, 'EASY');
@@ -33,7 +33,7 @@ export async function checkSolo(browser) {
   await until(async () => (await solo()).carrier === 'WHITE', 'human picks up using either layout');
   await screenshot('solo-human-white');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body.dataset.game"), 'leaving solo');
+  await until(() => evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"), 'leaving solo');
   assert.equal(await evaluate('window.FlappySettings.solo().side'), 'WHITE', 'Solo lobby preferences persist');
   console.log('Solo browser checks passed: independent difficulties, physical AI delivery, lobby setup, controls, and exit.');
 }

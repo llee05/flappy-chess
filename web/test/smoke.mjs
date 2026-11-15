@@ -65,7 +65,7 @@ await withBrowser(async browser => {
   }
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0, 'Expected no WebGL error');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("!document.body.dataset.game && document.getElementById('play')?.disabled === false"), 'returning to the welcome screen');
+  await until(() => evaluate("!document.body?.dataset.game && document.getElementById('play')?.disabled === false"), 'returning to the welcome screen');
   await evaluate("document.getElementById('tutorial').click()");
   await until(() => evaluate("document.getElementById('lesson-summary').dataset.stage === 'WHITE_FLY'"), 'starting Flight School');
   assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
@@ -105,7 +105,7 @@ await withBrowser(async browser => {
   await until(() => evaluate("document.body.dataset.mode === 'local'"), 'starting a match after Flight School');
   assert.equal(await evaluate("document.body.dataset.timeControl"), '10+5');
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("!document.body.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
+  await until(() => evaluate("!document.body?.dataset.game && document.getElementById('tutorial')?.disabled === false"), 'returning to the lobby after the lesson');
   await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change'))");
   assert.equal(await evaluate("document.getElementById('match-increment').disabled"), true);
   await evaluate("document.getElementById('play').click()");

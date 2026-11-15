@@ -94,7 +94,7 @@ export async function checkMobile(browser) {
   }
   await size(390, 844);
   await press('Escape', 'Escape', 27);
-  await until(() => evaluate("document.getElementById('play')?.disabled === false && !document.body.dataset.game"), 'returning to the mobile lobby');
+  await until(() => evaluate("document.getElementById('play')?.disabled === false && !document.body?.dataset.game"), 'returning to the mobile lobby');
   await evaluate("document.getElementById('match-minutes').value = '1'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('play').click()");
   await until(() => evaluate("document.body.dataset.game === 'ready' && document.getElementById('white-clock').classList.contains('active')"), 'starting a fresh mobile match');
   await touch.tap('[data-hold="E"]');
@@ -122,7 +122,7 @@ export async function checkMobile(browser) {
   await until(() => evaluate("document.getElementById('touch-first').dataset.side === 'BLACK'"), 'touch pad following swapped player colors');
   assert.match(await evaluate("document.querySelector('#touch-first .flap').textContent"), /↓/);
   await press('Escape', 'Escape', 27);
-  await until(async () => { await frame(); return evaluate("document.getElementById('solo')?.disabled === false && !document.body.dataset.game"); }, 'leaving mobile play with Escape');
+  await until(async () => { await frame(); return evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"); }, 'leaving mobile play with Escape');
   await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('solo-side').value = 'BLACK'; document.getElementById('solo').click()");
   await until(async () => { await frame(); return evaluate("document.body.dataset.mode === 'solo'"); }, 'starting mobile solo as Black');
   assert.equal(await evaluate("document.getElementById('touch-second').hidden"), true);
