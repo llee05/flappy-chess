@@ -67,6 +67,7 @@ public final class GameRenderer implements Disposable {
     private FlightSchool school;
     private ChessBoardView displayBoard;
     private boolean boardOnly;
+    private boolean helpVisible;
 
     public GameRenderer() { this(false); }
 
@@ -92,13 +93,17 @@ public final class GameRenderer implements Disposable {
     }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
     public void toggleSound() { feedback.toggleSound(); }
+    public void toggleHelp() { helpVisible = !helpVisible; }
     public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
     public String feedbackMessage() { return feedback.message(); }
     public boolean isSoundToggleAt(Vector2 point) {
-        return point.x >= 16 && point.x <= 184 && point.y >= 658 && point.y <= 684;
+        return inside(point, 100, 20, 84, 28);
+    }
+    public boolean isHelpAt(Vector2 point) {
+        return inside(point, 16, 20, 76, 28) || helpVisible && inside(point, 450, 196, 300, 48);
     }
     public boolean isSetupAt(Vector2 point) {
-        return !online && point.x >= 16 && point.x <= 184 && point.y >= 580 && point.y <= 656;
+        return !online && inside(point, 16, 54, 168, 26);
     }
     public PostgameReview getReview() { return review; }
     public boolean historyKey(GameSession game, int key) {
@@ -196,6 +201,7 @@ public final class GameRenderer implements Disposable {
         if (!boardOnly) {
             if (school != null && !school.isComplete()) lessonBanner();
             if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
+            if (helpVisible) helpOverlay(game);
             if (setup != null) setupOverlay(setup);
         }
         canvas.end();
@@ -273,37 +279,34 @@ public final class GameRenderer implements Disposable {
     private void drawPanels(GameSession game) {
         rect(0, 0, 200, 800, PANEL);
         rect(1000, 0, 200, 800, PANEL);
-        rect(192, 0, 4, 800, EDGE);
-        rect(196, 0, 4, 800, INK);
+        rect(196, 0, 4, 800, EDGE);
         rect(1000, 0, 4, 800, INK);
-        rect(1004, 0, 4, 800, EDGE);
-        rect(20, 776, 24, 4, GOLD);
-        rect(48, 776, 8, 4, GOLD);
-        star(168, 744, 4, GOLD);
-        star(158, 704, 2, BLUE);
-        stepped(16, 580, 168, 76, CARD, EDGE);
-        rect(20, 566, 156, 2, EDGE);
+        rect(1004, 0, 2, 800, EDGE);
+        rect(16, 778, 54, 2, GOLD);
+        rect(74, 778, 10, 2, BLUE);
+        stepped(16, 686, 168, 58, CARD, EDGE);
+        rect(20, 674, 156, 2, EDGE);
         int rows = school == null ? (game.getHistory().size() + 1) / 2 : 0;
         int firstRow = journalFirstRow(game, rows);
         for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
-            float y = 480 - (row - firstRow) * 22;
+            float y = 594 - (row - firstRow) * 22;
             if ((row - firstRow) % 2 == 0) rect(16, y - 2, 168, 22, CARD);
             int selectedRow = review.isActive() ? review.getPly() == 0 ? -1 : (review.getPly() - 1) / 2 : rows - 1;
             if (row == selectedRow) rect(16, y, 2, 16, MINT);
         }
-        rect(20, 134, 156, 2, EDGE);
-        stepped(16, 24, 42, 24, CARD, EDGE);
+        rect(20, 224, 156, 2, EDGE);
+        stepped(16, 54, 168, 26, CARD, EDGE);
+        stepped(16, 20, 76, 28, CARD, EDGE);
+        stepped(100, 20, 84, 28, CARD, EDGE);
         drawClockCard(game, Side.BLACK, 650);
-        drawClockCard(game, Side.WHITE, 24);
-        stepped(1016, 550, 168, 76, CARD, EDGE);
-        diamond(1032, 608, 4, game.isGameOver() ? MUTED : MINT);
+        drawClockCard(game, Side.WHITE, 514);
+        stepped(1016, 446, 168, 50, CARD, EDGE);
+        diamond(1032, 480, 4, game.isGameOver() ? MUTED : MINT);
         if (review.isActive()) {
+            stepped(1016, 550, 168, 76, CARD, EDGE);
             for (int y : new int[] {400, 362, 324, 286, 248, 210, 174}) stepped(1016, y, 168, 30, CARD, EDGE);
-        } else {
-            rect(1020, 340, 160, 2, EDGE);
-            int[] keys = game.getSoloSettings() == null ? new int[] {462, 428, 394, 260, 226, 192}
-                    : new int[] {462, 428, 394};
-            for (int y : keys) drawKey(1020, y, 68);
+        } else if (game.getSoloSettings() != null) {
+            stepped(1016, 338, 168, 74, CARD, EDGE);
         }
     }
 
@@ -311,17 +314,12 @@ public final class GameRenderer implements Disposable {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
-        stepped(1016, y, 168, 130, CARD, active ? color : EDGE);
-        if (active) rect(1016, y + 38, 4, 54, color);
+        stepped(1016, y, 168, 118, CARD, active ? color : EDGE);
+        if (active) rect(1016, y + 30, 4, 58, color);
         for (int i = 0; i < 17; i++) {
             double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
-            rect(1032 + i * 8, y + 14, 6, 4, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
+            rect(1032 + i * 8, y + 12, 6, 3, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
         }
-    }
-
-    private void drawKey(float x, float y, float width) {
-        stepped(x, y, width, 26, EDGE, INK);
-        rect(x + 4, y + 22, width - 8, 2, MUTED);
     }
 
     private void drawCoordinates() {
@@ -332,95 +330,67 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        text("FLAPPY", 20, 760, 4, CREAM);
-        text("CHESS", 20, 720, 4, CREAM);
-        text(feedback.isSoundEnabled() ? "M SOUND: ON" : "M SOUND: OFF", 16, 674, 2, MUTED);
-        centered(school != null ? "FLIGHT SCHOOL" : "ROUND " + game.getSeries().round(), 100, 642, 2, GOLD);
-        centered(school != null ? "UNTIMED" : game.getSeries().score(), 100, 620, 2, MINT);
-        centered(school != null ? "T RESTART" : (online ? "ONLINE " : "S SETUP ") + game.getSettings().label(), 100, 596, 2, MUTED);
+        text("FLAPPY", 20, 760, 2, CREAM);
+        text("CHESS", 102, 760, 2, GOLD);
+        centered(school != null ? "FLIGHT SCHOOL" : "ROUND " + game.getSeries().round() + " / " + game.getSettings().label(), 100, 726, 2, GOLD);
+        centered(school != null ? "UNTIMED" : game.getSeries().score(), 100, 702, 2, MINT);
         if (school != null) {
-            text("YOUR LESSON", 20, 550, 2, CREAM);
-            text("NO CLOCK.\nNO RUSH.", 16, 508, 2, MINT);
+            text("YOUR LESSON", 20, 658, 2, CREAM);
+            text("NO CLOCK.\nNO RUSH.", 16, 620, 2, MINT);
             String[] steps = {"WHITE: FLY", "PICK UP", "DELIVER", "BLACK: FLY", "PICK UP", "DELIVER"};
             for (int i = 0; i < steps.length; i++) {
-                text((i + 1) + " " + steps[i], 16, 434 - i * 38, 2,
+                text((i + 1) + " " + steps[i], 16, 546 - i * 38, 2,
                         i < school.getStage().ordinal() ? MINT : i == school.getStage().ordinal() ? GOLD : MUTED);
             }
-            text("DROP AT START\nTO CANCEL.", 16, 216, 2, MUTED);
+            text("DROP AT START\nTO CANCEL.", 16, 318, 2, MUTED);
         } else {
             drawMoveLog(game);
-            drawCaptured(game, Side.WHITE, 270, 232);
-            drawCaptured(game, Side.BLACK, 206, 168);
+            drawCaptured(game, Side.WHITE, 354, 326);
+            drawCaptured(game, Side.BLACK, 292, 264);
         }
-        if (school != null) text("T FLIGHT SCHOOL", 16, 154, 2, MINT);
-        if (feedback.message().isEmpty()) {
-            text("MAKE EVERY", 20, 114, 2, CREAM);
-            text("FLAP COUNT.", 20, 92, 2, GOLD);
-        }
-        centered("ESC", 37, 42, 2, CREAM);
-        text("EXIT GAME", 66, 42, 2, MUTED);
+        if (school != null) text("T RESTART LESSON", 16, 246, 2, MINT);
+        if (feedback.message().isEmpty()) text("MAKE EVERY\nFLAP COUNT.", 16, 194, 2, MUTED);
+        centered(online ? "ONLINE MATCH" : "S  MATCH SETUP", 100, 72, 2, online ? BLUE : CREAM);
+        centered("H  HELP", 54, 39, 2, CREAM);
+        centered(feedback.isSoundEnabled() ? "M  ON" : "M  OFF", 142, 39, 2, CREAM);
+        centered("ESC  EXIT", 100, 102, 2, MUTED);
         drawClockText(game, Side.BLACK, 650);
-        drawClockText(game, Side.WHITE, 24);
-        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", game.getHistory().size() / 2 + 1), 1046, 614, 2, MINT);
+        drawClockText(game, Side.WHITE, 514);
+        text(game.isGameOver() ? "FINISHED" : "TURN " + String.format(Locale.ROOT, "%02d", game.getHistory().size() / 2 + 1), 1046, 480, 2, MINT);
         String status = game.isGameOver() ? "WELL PLAYED!" : game.getChess().getSideToMove() == Side.WHITE ? "WHITE TO MOVE" : "BLACK TO MOVE";
         if (!game.isGameOver()) {
             if (game.getBoardView().getBoard().isKingAttacked()) status = "KING IN CHECK";
             else if (game.getCarrier() != null) status = "DELIVER PIECE";
         }
-        centered(status, 1100, 584, 2, CREAM);
+        centered(status, 1100, 458, 2, CREAM);
         if (review.isActive()) { drawReviewControls(); return; }
         if (game.getSoloSettings() != null) {
             var solo = game.getSoloSettings();
             Side human = game.getSeries().sideFor(true);
-            text("YOU " + human.name(), 1020, 534, 2, accent(human));
-            text(human == Side.WHITE ? "FALLS DOWN" : "FALLS UP", 1020, 508, 2, MUTED);
-            control("A / D", "MOVE", 462);
-            control("SPACE", "FLAP", 428);
-            control("E", "CARRY", 394);
-            text("EITHER LAYOUT", 1020, 376, 2, MUTED);
-            text("AI " + human.flip().name(), 1020, 328, 2, accent(human.flip()));
-            text("CHESS " + solo.chess().name(), 1020, 294, 2, CREAM);
-            text("FLIGHT " + solo.flight().name(), 1020, 260, 2, CREAM);
-            text(game.getAiPhase(), 1020, 226, 2, MINT);
-            text("S MATCH SETUP", 1020, 192, 2, MUTED);
+            text("YOU " + human.name() + " / AI " + human.flip().name(), 1024, 392, 2, accent(human));
+            text("CHESS " + solo.chess().name(), 1024, 370, 2, CREAM);
+            text("FLIGHT " + solo.flight().name(), 1024, 348, 2, CREAM);
+            text(game.getAiPhase(), 1024, 314, 2, MINT);
             return;
         }
-        boolean firstWhite = school != null || game.getSeries().firstWhite();
-        text(game.getSeries().shortNameFor(Side.WHITE) + " WHITE", 1020, 534, 2, GOLD);
-        text("FALLS DOWN", 1020, 508, 2, MUTED);
-        control(firstWhite ? "A / D" : "< / >", "MOVE", 462);
-        control(firstWhite ? "SPACE" : "UP", "FLAP", 428);
-        control(firstWhite ? "E" : "ENTER", "CARRY", 394);
-        text("PICK UP / DROP", 1020, 376, 2, MUTED);
-        text(game.getSeries().shortNameFor(Side.BLACK) + " BLACK", 1020, 328, 2, BLUE);
-        text("FALLS UP", 1020, 302, 2, MUTED);
-        control(firstWhite ? "< / >" : "A / D", "MOVE", 260);
-        control(firstWhite ? "UP" : "SPACE", "FLAP", 226);
-        control(firstWhite ? "ENTER" : "E", "CARRY", 192);
-        text("1 PRESS 1 FLAP", 1020, 176, 2, MUTED);
+        centered("H  CONTROLS", 1100, 398, 2, MUTED);
     }
 
     private void drawMoveLog(GameSession game) {
-        text("MOVE LOG", 20, 550, 2, CREAM);
-        text("#", 22, 520, 2, MUTED);
-        text("WHITE", 44, 520, 2, GOLD);
-        text("BLACK", 116, 520, 2, BLUE);
+        text("MOVES", 20, 658, 2, CREAM);
+        text("#", 22, 628, 2, MUTED);
+        text("WHITE", 44, 628, 2, GOLD);
+        text("BLACK", 116, 628, 2, BLUE);
         var moves = game.getHistory();
         if (moves.isEmpty()) {
-            text("TAKE FLIGHT.", 20, 478, 2, CREAM);
-            text("Find a piece.\nE to pick up.", 20, 448, 2, MUTED);
-            text("01", 20, 396, 4, EDGE);
-            text("FLY", 78, 392, 2, MINT);
-            text("02", 20, 344, 4, EDGE);
-            text("PICK UP", 78, 340, 2, GOLD);
-            text("03", 20, 292, 4, EDGE);
-            text("DELIVER", 78, 288, 2, BLUE);
+            text("NO MOVES YET", 20, 586, 2, MUTED);
+            text("PRESS H FOR\nFLIGHT CONTROLS", 20, 548, 2, MINT);
         } else {
             int rows = (moves.size() + 1) / 2;
             int firstRow = journalFirstRow(game, rows);
             for (int row = firstRow; row < Math.min(rows, firstRow + 10); row++) {
                 int index = row * 2;
-                float y = 496 - (row - firstRow) * 22;
+                float y = 610 - (row - firstRow) * 22;
                 String number = Integer.toString(row + 1);
                 text(number, 40 - font.width(number, 2), y, 2, MUTED);
                 journalMove(moves.get(index).notation(), 44, y);
@@ -483,13 +453,13 @@ public final class GameRenderer implements Disposable {
     private void drawClockText(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
-        drawBirdSprite(side, 1038, y + 106, 2, false, active ? frame() : 1);
-        text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 116, 2, accent(side));
-        if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 84, 4, seconds <= 30 ? DANGER : CREAM);
-        else text("UNTIMED", 1032, y + 82, 2, CREAM);
+        drawBirdSprite(side, 1038, y + 94, 2, false, active ? frame() : 1);
+        text(game.getSeries().shortNameFor(side) + " " + GameSession.sideName(side).toUpperCase(Locale.ROOT), 1062, y + 104, 2, accent(side));
+        if (game.isTimed()) text(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60), 1034, y + 72, 4, seconds <= 30 ? DANGER : CREAM);
+        else text("UNTIMED", 1032, y + 70, 2, CREAM);
         boolean computer = game.getSoloSettings() != null && side == game.getSeries().sideFor(false);
         text(game.isGameOver() ? "FINISHED" : active ? computer ? "> AI MOVE" : "> YOUR MOVE" : "  WAITING",
-                1032, y + 40, 2, active ? MINT : MUTED);
+                1032, y + 30, 2, active ? MINT : MUTED);
     }
 
     private void drawBirdMarkers(GameSession game) {
@@ -603,6 +573,48 @@ public final class GameRenderer implements Disposable {
         batch.begin();
         text(school.title(), 236, 774, 2, GOLD);
         text(school.instruction(), 236, 750, 2, CREAM);
+        batch.end();
+    }
+
+    private void helpOverlay(GameSession game) {
+        beginShapes();
+        rect(0, 0, 1200, 800, VEIL);
+        stepped(348, 154, 504, 492, PANEL, EDGE);
+        rect(376, 574, 448, 2, EDGE);
+        stepped(376, 468, 448, 82, CARD, EDGE);
+        stepped(376, 354, 448, 82, CARD, EDGE);
+        stepped(450, 196, 300, 48, MINT, INK);
+        shapes.end();
+        batch.begin();
+        centered("FLIGHT CONTROLS", 600, 614, 4, CREAM);
+        centered("ONLY THE SIDE TO MOVE CAN CARRY A PIECE", 600, 584, 2, MUTED);
+        boolean firstWhite = school != null || game.getSeries().firstWhite();
+        if (game.getSoloSettings() != null || online) {
+            text("YOUR BIRD", 400, 528, 2, GOLD);
+            text("A / D  OR  LEFT / RIGHT", 400, 502, 2, CREAM);
+            text("SPACE  OR  UP", 400, 480, 2, CREAM);
+            text("E  OR  ENTER", 400, 458, 2, CREAM);
+        } else {
+            text(game.getSeries().shortNameFor(Side.WHITE) + " / WHITE", 400, 528, 2, GOLD);
+            text((firstWhite ? "A / D" : "LEFT / RIGHT") + "   MOVE", 400, 502, 2, CREAM);
+            text((firstWhite ? "SPACE" : "UP") + "   FLAP", 400, 480, 2, CREAM);
+            text((firstWhite ? "E" : "ENTER") + "   PICK / DROP", 400, 458, 2, CREAM);
+        }
+        if (game.getSoloSettings() == null && !online) {
+            text(game.getSeries().shortNameFor(Side.BLACK) + " / BLACK", 400, 414, 2, BLUE);
+            text((firstWhite ? "LEFT / RIGHT" : "A / D") + "   MOVE", 400, 388, 2, CREAM);
+            text((firstWhite ? "UP" : "SPACE") + "   FLAP", 400, 366, 2, CREAM);
+            text((firstWhite ? "ENTER" : "E") + "   PICK / DROP", 400, 344, 2, CREAM);
+        } else {
+            text("STEER", 400, 414, 2, BLUE);
+            text("FLAP", 400, 388, 2, BLUE);
+            text("PICK / DROP", 400, 366, 2, BLUE);
+        }
+        centered("HOLD TO STEER. TAP ONCE PER FLAP.", 600, 304, 2, CREAM);
+        centered("DROP ON THE STARTING SQUARE TO CANCEL.", 600, 278, 2, MUTED);
+        centered("LEGAL DESTINATIONS STAY HIGHLIGHTED.", 600, 256, 2, MUTED);
+        centered("H  BACK TO GAME", 600, 226, 2, INK);
+        centered("M SOUND    S SETUP    ESC EXIT", 600, 178, 2, MUTED);
         batch.end();
     }
 

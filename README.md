@@ -58,10 +58,11 @@ one pad for your bird, including when colors swap. Local games and Flight School
 show a pad for each player. Flight School teaches the same physics with touch
 instructions on small screens.
 
-The toolbar provides **Lobby**, **Sound**, and **More**. More shows the latest
-moves, capture counts, series score, PGN export, and local match setup or Flight
-School. Promotion, results, rematches, setup, and postgame review all have touch
-buttons. Leaving through Lobby ends the current match or connection. Clocks keep
+The compact match bar keeps both clocks and the active side visible. Its menu
+provides **Lobby**, **Sound**, contextual flight help, the latest moves, capture
+counts, series score, PGN export, and local match setup or Flight School.
+Promotion, results, rematches, setup, and postgame review all have touch buttons.
+Leaving through Lobby ends the current match or connection. Clocks keep
 running while menus are open or the page is unfocused. Interrupted touches,
 screen rotation, and focus loss release held controls; they do not pause clocks.
 
@@ -242,8 +243,9 @@ Pickups and deliveries have small pixel bursts and a brief piece animation;
 captures get a larger gold burst. Invalid drops flash the destination and explain
 that the piece is still carried, with legal targets left visible. Quiet sound
 effects accompany flaps, pickups, deliveries, captures, invalid actions, check,
-and the first 30-second warning for each player. Press **M** or click **Sound** in
-the upper-left panel to mute or unmute; this preference is saved on the device.
+and the first 30-second warning for each player. Press **M** or use **Sound** in
+the match menu to mute or unmute; this preference is saved on the device. Press
+**H** during desktop play to open the contextual flight controls.
 Visual feedback remains available while muted. Online feedback comes from the
 host and each numbered event is presented once, including invalid guest drops.
 

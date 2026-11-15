@@ -11,19 +11,30 @@
 <body>
   <div id="game-shell">
     <header id="mobile-hud" class="mobile-only">
-      <nav class="game-toolbar" aria-label="Game actions">
-        <button id="mobile-leave" type="button">Lobby</button>
-        <button id="mobile-sound" type="button" data-key="M" aria-pressed="true">Sound on</button>
-        <button id="mobile-menu" type="button" aria-expanded="false" aria-controls="mobile-details">More</button>
-      </nav>
-      <div class="mobile-clocks" aria-label="Chess clocks">
-        <div id="white-clock" class="clock white"><span id="white-label">White</span><strong id="white-time">5:00</strong></div>
-        <div id="black-clock" class="clock black"><span id="black-label">Black</span><strong id="black-time">5:00</strong></div>
+      <div class="mobile-matchbar">
+        <span class="mobile-brand" aria-label="Flappy Chess">FC</span>
+        <div class="mobile-clocks" aria-label="Chess clocks">
+          <div id="white-clock" class="clock white"><span id="white-label">White</span><strong id="white-time">5:00</strong></div>
+          <div id="black-clock" class="clock black"><span id="black-label">Black</span><strong id="black-time">5:00</strong></div>
+        </div>
+        <button id="mobile-menu" type="button" aria-expanded="false" aria-controls="mobile-details" aria-label="Match menu">•••</button>
       </div>
-      <p id="mobile-turn" role="status" aria-live="polite">White to move</p>
-      <p id="mobile-feedback" aria-live="polite"></p>
+      <div class="mobile-context">
+        <p id="mobile-turn" role="status" aria-live="polite">White to move</p>
+        <p id="mobile-feedback" aria-live="polite"></p>
+      </div>
       <section id="mobile-details" hidden aria-label="Match details and actions">
+        <nav class="mobile-utilities" aria-label="Game actions">
+          <button id="mobile-leave" type="button">Lobby</button>
+          <button id="mobile-sound" type="button" data-key="M" aria-pressed="true">Sound on</button>
+          <button id="mobile-help" type="button" aria-expanded="false" aria-controls="mobile-help-copy">Help</button>
+        </nav>
+        <div id="mobile-help-copy" hidden>
+          <strong>How to fly</strong>
+          <p>Hold ◀ / ▶ to steer. Tap Flap once to change height. Fly over a piece and tap Pick / drop, then deliver it to a highlighted square. Drop it where it started to cancel.</p>
+        </div>
         <p id="mobile-score"></p>
+        <strong class="mobile-section-title">Moves</strong>
         <p id="mobile-moves"></p>
         <p id="mobile-captures"></p>
         <div class="action-grid">
@@ -62,7 +73,7 @@
       </section>
     </div>
     <footer id="touch-controls" class="mobile-only" aria-label="Touch flight controls">
-      <p id="touch-hint">Hold to steer. Tap once per flap. Pick up, then deliver.</p>
+      <p id="touch-hint">Flight help is available from the match menu.</p>
       <section class="touch-pad" id="touch-first" aria-labelledby="touch-first-label">
         <strong id="touch-first-label">Player 1 · White ↓</strong>
         <div class="pad-buttons">

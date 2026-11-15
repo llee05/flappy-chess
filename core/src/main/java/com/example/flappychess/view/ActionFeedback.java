@@ -101,16 +101,16 @@ final class ActionFeedback implements Disposable {
         }
         if (messageTime > 0) {
             shapes.setColor(PANEL);
-            rect(shapes, 12, 54, 176, 76);
+            rect(shapes, 12, 136, 176, 76);
             shapes.setColor(messageColor);
-            rect(shapes, 12, 54, 2, 76);
+            rect(shapes, 12, 136, 2, 76);
         }
     }
 
     void drawText(PixelFont font, SpriteBatch batch) {
         if (messageTime > 0) {
             for (int i = 0; i < messageLines.size(); i++) {
-                font.draw(batch, messageLines.get(i), 16, 126 - i * 18, 2, messageColor);
+                font.draw(batch, messageLines.get(i), 16, 208 - i * 18, 2, messageColor);
             }
         }
     }

@@ -32,6 +32,7 @@ final class PeerGame extends ApplicationAdapter {
                     soundHeld = true;
                     return true;
                 }
+                if (key == Keys.H) { renderer.toggleHelp(); return true; }
                 if (key == Keys.P) {
                     renderer.exportPgn(match.getSession(), WebLauncher::exportPgn);
                     return true;
@@ -49,6 +50,7 @@ final class PeerGame extends ApplicationAdapter {
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
+                if (renderer.isHelpAt(point)) { renderer.toggleHelp(); return true; }
                 if (renderer.isExportAt(match.getSession(), point)) {
                     renderer.exportPgn(match.getSession(), WebLauncher::exportPgn);
                     return true;

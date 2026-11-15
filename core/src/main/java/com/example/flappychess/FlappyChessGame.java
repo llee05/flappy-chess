@@ -92,6 +92,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     soundHeld = true;
                     return true;
                 }
+                if (key == Keys.H) { renderer.toggleHelp(); return true; }
                 if (key == Keys.ESCAPE) { exitAction.run(); return true; }
                 if (setup != null) {
                     if (key == Keys.LEFT) setup.changeTime(-1);
@@ -126,6 +127,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
                 if (renderer.isSoundToggleAt(point)) { renderer.toggleSound(); return true; }
+                if (renderer.isHelpAt(point)) { renderer.toggleHelp(); return true; }
                 if (setup != null) {
                     if (point.y >= 500 && point.y <= 544) {
                         if (point.x >= 380 && point.x < 600) setup.toggleOpponent();

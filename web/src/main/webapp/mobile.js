@@ -24,6 +24,8 @@
   const closeMenu = () => {
     byId('mobile-details').hidden = true;
     byId('mobile-menu').setAttribute('aria-expanded', 'false');
+    byId('mobile-help-copy').hidden = true;
+    byId('mobile-help').setAttribute('aria-expanded', 'false');
   };
   const updateLayout = () => {
     release();
@@ -75,6 +77,12 @@
     const open = byId('mobile-details').hidden;
     byId('mobile-details').hidden = !open;
     byId('mobile-menu').setAttribute('aria-expanded', String(open));
+  });
+  byId('mobile-help').addEventListener('click', () => {
+    release();
+    const open = byId('mobile-help-copy').hidden;
+    byId('mobile-help-copy').hidden = !open;
+    byId('mobile-help').setAttribute('aria-expanded', String(open));
   });
   byId('mobile-leave').addEventListener('click', () => {
     release();
