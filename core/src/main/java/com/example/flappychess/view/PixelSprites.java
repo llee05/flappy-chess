@@ -11,18 +11,18 @@ import com.github.bhlangonijr.chesslib.Side;
 /** Hand-authored silhouettes, shaded into a tiny nearest-filtered sprite atlas. */
 final class PixelSprites implements Disposable {
     private static final String[] PIECES = {
-        // King: bold cross above a broad split dome, band, and weighted base.
-        "......xx....../....xxxxxx..../......xx....../.....xxxx...../...xxx..xxx.../..xxxx..xxxx../.xxxxx..xxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Queen: five ball-tipped points fan above a rounded coronet band.
-        "......xx....../...x......x.../x............x/.x.x..xx..x.x./.xx.xxxxxx.xx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Rook: chunky crenellated turret, inset tower, and broad stepped base.
-        "..xxx.xx.xxx../..xxx.xx.xxx../.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./xxxxxxxxxxxxxx",
-        // Bishop: rounded mitre with a deep diagonal slit and tapered stem.
-        "......xx....../.....xxxx...../....xxx.xx..../...xxx..xxx.../...xxx..xxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Knight: pricked ears, long muzzle, cut jaw, mane, and curved neck.
-        ".....xx..xx.../....xxxxxxxx../...xxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxx../xxxxxxxxxxxx../xxxxx..xxxx.../.xxx...xxxx.../......xxxx..../.....xxxxxx.../....xxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Pawn: ball head, strong collar, short stem, and weighted base.
-        "............../............../.....xxxx...../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx."
+        // King: compact cross and rounded crown over the shared oval plinth.
+        "......xx....../.....xxxx...../......xx....../...xxxxxxxx.../..xxxxxxxxxx../..xxx....xxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx.",
+        // Queen: five ball-tipped points open into a broad rounded coronet.
+        "......xx....../....x.xx.x..../.x..x.xx.x..x./..x.xxxxxx.x../..xxxxxxxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx.",
+        // Rook: three square merlons above a short, softly rounded turret.
+        "............../............../............../..xx..xx..xx../..xx..xx..xx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../..xxxxxxxxxx../..xxxxxxxxxx../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx.",
+        // Bishop: ball-tipped teardrop mitre with a deep diagonal slit.
+        "......xx....../.....xxxx...../......xx....../.....xxxx...../....xxxxxx..../...xxxx.xxx.../..xxxx..xxxx../..xxx..xxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx.",
+        // Knight: rounded horse profile, long muzzle, curved neck, and mane.
+        ".......xxx..../......xxxxx.../....xxxxxxxx../...xxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxx..../.xxxxxxxxx..../...xxxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx.",
+        // Pawn: simple ball head and rounded cone over the shared oval plinth.
+        "............../............../............../.....xxxx...../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../....xxxxxx..../..xxxxxxxxxx../.xxxxxxxxxxxx./...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./..xxxxxxxxxx../.xxxxxxxxxxxx./xxxxxxxxxxxxxx/.xxxxxxxxxxxx."
     };
     private static final Color OUTLINE = Color.valueOf("202538");
     private static final Color[] WHITE = colors("b18a5f", "eed9b2", "fff0d0", "d8a057");
@@ -46,6 +46,9 @@ final class PixelSprites implements Disposable {
                 if (piece == 4) {
                     pixels.setColor(OUTLINE);
                     pixels.drawPixel(x + 5, y + 4);
+                    pixels.drawPixel(x + 10, y + 5);
+                    pixels.drawPixel(x + 9, y + 6);
+                    pixels.drawPixel(x + 9, y + 7);
                 }
             }
             for (int frame = 0; frame < 3; frame++) drawBird(pixels, frame * 18, 44 + side * 18, side, frame);
