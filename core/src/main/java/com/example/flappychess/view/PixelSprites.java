@@ -13,8 +13,8 @@ final class PixelSprites implements Disposable {
     private static final String[] PIECES = {
         // King: cross, crown, narrow stem, stepped plinth.
         "......xx....../.....xxxx...../......xx....../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
-        // Queen: three crown points and a flared skirt.
-        "..xx..xx..xx../..xx..xx..xx../..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
+        // Queen: raised orb, three-point crown, slender waist, and flared skirt.
+        "......xx....../............../..xx......xx../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
         // Rook: crenellations, tower, and a broad base.
         "............../............../.xxx.xxxx.xxx./.xxx.xxxx.xxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.",
         // Bishop: split mitre above a slender body.
