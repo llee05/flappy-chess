@@ -143,7 +143,7 @@ async function checkTouchLesson(browser) {
   await evaluate("document.getElementById('tutorial').click()");
   const stage = expected => until(() => evaluate(`document.getElementById('lesson-summary').dataset.stage === '${expected}'`), 'touch lesson: ' + expected);
   await stage('WHITE_FLY');
-  assert.match(await evaluate("document.getElementById('mobile-feedback').textContent"), /Hold ◀ \/ ▶/);
+  assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /Hold ◀ \/ ▶/);
   assert.equal(await evaluate("document.getElementById('white-time').textContent"), 'Untimed');
   await touch.down('[data-hold="D"]');
   await sleep(1150);
