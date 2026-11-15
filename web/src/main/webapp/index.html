@@ -89,48 +89,45 @@
     </footer>
   </div>
   <main id="welcome">
-    <header class="lobby-header">
-      <a class="lobby-brand" href="#welcome" aria-label="Flappy Chess lobby">
-        <img src="./art/crowned-bird.png" alt="" width="68" height="46">
-        <span>FLAPPY <strong>CHESS</strong></span>
-      </a>
-      <nav class="lobby-toolbar" aria-label="Lobby controls">
-        <span class="lobby-current" aria-current="page">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
-          Lobby
-        </span>
-        <button id="lobby-sound" type="button" data-key="M" aria-label="Toggle sound">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.2-.7a5 5 0 0 1 0 7.4l1.4 1.5a7 7 0 0 0 0-10.4l-1.4 1.5zm-2.1 2.1a2 2 0 0 1 0 3.2l1.3 1.5a4 4 0 0 0 0-6.2l-1.3 1.5z"/></svg>
-        </button>
-        <button id="lobby-menu" type="button" aria-expanded="false" aria-controls="lobby-details" aria-label="Show match settings">•••</button>
-      </nav>
-    </header>
-
     <article class="lobby-page">
       <section class="lobby-hero" aria-labelledby="lobby-title">
         <div class="title-lockup">
-          <img src="./art/crowned-bird.png" alt="A crowned white bird in flight" width="230" height="155">
           <h1 id="lobby-title" class="sr-only">Flappy Chess</h1>
-          <img class="title-wordmark" src="./art/title-wordmark.png" alt="" width="420" height="176">
-          <div class="checkered-divider" aria-hidden="true"><span></span></div>
-          <p class="tagline">Take flight. Make your move.</p>
-        </div>
-        <div class="preview-frame">
-          <img src="./art/game-preview.png" alt="Crowned birds flying beside a chessboard between green and grey pipes" width="960" height="540">
+          <img class="title-logo" src="./art/title-logo.webp" alt="" width="2166" height="728">
         </div>
       </section>
 
-      <section class="lobby-actions" aria-label="Choose a game mode">
-        <button id="tutorial" class="mode-button school" type="button" disabled>FLIGHT SCHOOL</button>
-        <button id="play" class="mode-button local" type="button" disabled>LOCAL PLAY</button>
-        <button id="solo" class="mode-button computer" type="button" disabled>PLAY COMPUTER</button>
-        <button id="matchmake" class="mode-button match" type="button" disabled>FIND RANDOM MATCH</button>
-        <button id="host" class="mode-button online" type="button" disabled>CREATE ONLINE ROOM</button>
-        <form id="join-form" class="join-card">
-          <label for="room">Room code or invite link</label>
-          <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Paste code or link" maxlength="2048">
-          <button id="join" class="mode-button join" type="submit" disabled>JOIN ROOM</button>
-        </form>
+      <section class="lobby-menu-card" aria-label="Main menu">
+        <p class="menu-kicker">CHOOSE YOUR MATCH</p>
+        <section class="lobby-actions" aria-label="Choose a game mode">
+          <button id="matchmake" class="mode-button" type="button" disabled><span>PLAY</span><small>Find an online match</small></button>
+          <button id="solo" class="mode-button" type="button" disabled><span>VS AI</span><small>Play the computer</small></button>
+          <button id="play" class="mode-button" type="button" disabled><span>LOCAL</span><small>Share this screen</small></button>
+          <button id="challenge" class="mode-button" type="button" aria-expanded="false" aria-controls="challenge-panel" disabled><span>CHALLENGE A FRIEND</span><small>Create or join a room</small></button>
+        </section>
+
+        <section id="challenge-panel" class="challenge-panel" aria-label="Challenge a friend" hidden>
+          <button id="host" class="challenge-create" type="button" disabled>CREATE A ROOM</button>
+          <span class="challenge-divider">OR JOIN AN INVITE</span>
+          <form id="join-form" class="join-card">
+            <label class="sr-only" for="room">Room code or invite link</label>
+            <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Room code or invite link" maxlength="2048">
+            <button id="join" class="secondary-button" type="submit" disabled>JOIN</button>
+          </form>
+        </section>
+
+        <nav class="lobby-secondary" aria-label="More ways to play and lobby controls">
+          <button id="tutorial" class="secondary-button" type="button" disabled>FLIGHT SCHOOL</button>
+          <button id="lobby-sound" class="secondary-button icon-button" type="button" data-key="M" aria-label="Toggle sound" aria-pressed="true">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.2-.7a5 5 0 0 1 0 7.4l1.4 1.5a7 7 0 0 0 0-10.4l-1.4 1.5zm-2.1 2.1a2 2 0 0 1 0 3.2l1.3 1.5a4 4 0 0 0 0-6.2l-1.3 1.5z"/></svg>
+            <span>SOUND</span>
+          </button>
+          <button id="lobby-menu" class="secondary-button icon-button" type="button" aria-expanded="false" aria-controls="lobby-details" aria-label="Show match settings">
+            <span aria-hidden="true">⚙</span>
+            <span>SETTINGS</span>
+          </button>
+        </nav>
+        <p id="status" role="status" aria-live="polite">Loading the game...</p>
       </section>
 
       <section id="share-room" class="share-card" hidden>
@@ -148,8 +145,6 @@
           <button id="cancel-search" type="button">CANCEL SEARCH</button>
         </div>
       </section>
-      <p id="status" role="status" aria-live="polite">Loading the game...</p>
-
       <section id="lobby-details" class="lobby-details" aria-label="Match settings and controls">
         <div class="settings-column">
           <fieldset id="match-settings">
@@ -192,6 +187,45 @@
       </section>
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
+    <div class="lobby-foreground" aria-hidden="true">
+      <img class="lobby-table-art" src="./art/lobby-table-redesign.webp" alt="" width="1200" height="800">
+      <div class="lobby-board-scene">
+        <span class="lobby-piece black" style="--x:26.484%;--y:16.469%;--depth:0.063">♜</span>
+        <span class="lobby-piece black" style="--x:40.004%;--y:16.469%;--depth:0.063">♝</span>
+        <span class="lobby-piece black" style="--x:46.763%;--y:16.469%;--depth:0.063">♛</span>
+        <span class="lobby-piece black" style="--x:53.523%;--y:16.469%;--depth:0.063">♚</span>
+        <span class="lobby-piece black" style="--x:60.283%;--y:16.469%;--depth:0.063">♝</span>
+        <span class="lobby-piece black" style="--x:67.043%;--y:16.469%;--depth:0.063">♞</span>
+        <span class="lobby-piece black" style="--x:73.802%;--y:16.469%;--depth:0.063">♜</span>
+        <span class="lobby-piece black" style="--x:25.338%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:32.388%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:39.438%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:46.488%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:53.538%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:60.588%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:67.638%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece black" style="--x:74.688%;--y:20.656%;--depth:0.188">♟</span>
+        <span class="lobby-piece white" style="--x:19.605%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:28.107%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:36.609%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:45.111%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:62.115%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:70.617%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:79.119%;--y:41.594%;--depth:0.813">♙</span>
+        <span class="lobby-piece white" style="--x:18.459%;--y:45.781%;--depth:0.938">♖</span>
+        <span class="lobby-piece white" style="--x:27.251%;--y:45.781%;--depth:0.938">♘</span>
+        <span class="lobby-piece white" style="--x:36.043%;--y:45.781%;--depth:0.938">♗</span>
+        <span class="lobby-piece white" style="--x:44.836%;--y:45.781%;--depth:0.938">♕</span>
+        <span class="lobby-piece white" style="--x:53.628%;--y:45.781%;--depth:0.938">♔</span>
+        <span class="lobby-piece white" style="--x:62.420%;--y:45.781%;--depth:0.938">♗</span>
+        <span class="lobby-piece white" style="--x:71.213%;--y:45.781%;--depth:0.938">♘</span>
+        <span class="lobby-piece white" style="--x:80.005%;--y:45.781%;--depth:0.938">♖</span>
+        <span class="lobby-origin black-origin" aria-hidden="true"></span>
+        <span class="lobby-origin white-origin" aria-hidden="true"></span>
+        <img class="mechanic-bird black-bird" src="./art/black-carry-bird.webp" alt="" width="600" height="420">
+        <img class="mechanic-bird white-bird" src="./art/white-carry-bird.webp" alt="" width="600" height="420">
+      </div>
+    </div>
     <div class="lobby-landscape" aria-hidden="true"></div>
   </main>
   <aside id="network-bar" hidden aria-label="Online match">
@@ -216,7 +250,7 @@
   <script>
     window.addEventListener('error', () => {
       document.getElementById('welcome').hidden = false;
-      for (const id of ['play', 'tutorial', 'solo', 'matchmake', 'host', 'join']) document.getElementById(id).disabled = true;
+      for (const id of ['play', 'tutorial', 'solo', 'matchmake', 'challenge', 'host', 'join']) document.getElementById(id).disabled = true;
       document.getElementById('status').textContent = 'The game could not start. Refresh to retry with WebGL enabled.';
     });
     document.getElementById('lobby-menu').addEventListener('click', event => {
@@ -224,6 +258,17 @@
       const open = welcome.classList.toggle('menu-open');
       event.currentTarget.setAttribute('aria-expanded', String(open));
       if (open) document.getElementById('lobby-details').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+    window.setLobbyChallengeOpen = open => {
+      const welcome = document.getElementById('welcome');
+      const panel = document.getElementById('challenge-panel');
+      const button = document.getElementById('challenge');
+      panel.hidden = !open;
+      welcome.classList.toggle('challenge-open', open);
+      button.setAttribute('aria-expanded', String(open));
+    };
+    document.getElementById('challenge').addEventListener('click', () => {
+      window.setLobbyChallengeOpen(document.getElementById('challenge-panel').hidden);
     });
   </script>
   <script src="./settings.js"></script>
