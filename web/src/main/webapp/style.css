@@ -671,7 +671,7 @@ body[data-room-state="searching"] .lobby-details { display: none; }
 .lobby-menu-card {
   position: relative;
   width: min(38vw, 430px);
-  margin-top: clamp(12px, 2vh, 22px);
+  margin: clamp(12px, 2vh, 22px) auto 0;
   padding: 19px 20px 15px;
   border: 4px solid #d99a58;
   border-radius: 2px;
@@ -898,6 +898,10 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   transform: scaleY(.55);
 }
 .lobby-table-art { content: url('./art/lobby-table-redesign.webp'); }
+.lobby-table-art,
+.lobby-piece,
+.lobby-origin,
+#welcome > .lobby-foreground::after { display: none; }
 .lobby-piece {
   font-size: clamp(13px, 1.25vw, 23px);
   filter: drop-shadow(0 1px 0 #211329);
