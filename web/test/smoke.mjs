@@ -71,7 +71,6 @@ await withBrowser(async browser => {
   assert.equal(await evaluate("document.body.dataset.mode"), 'tutorial');
   assert.equal(await evaluate("document.body.dataset.timeControl"), 'UNTIMED');
   assert.match(await evaluate("document.getElementById('lesson-summary').textContent"), /SPACE/);
-  await press('Space', ' ', 32);
   await screenshot('flight-school');
   const stage = expected => until(() => evaluate(`document.getElementById('lesson-summary').dataset.stage === '${expected}'`), `lesson: ${expected}`);
   // Fly using real keyboard input and the normal fixed-step physics. Align horizontally
