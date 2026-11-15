@@ -15,7 +15,7 @@
   const byId = id => document.getElementById(id);
   const status = text => { byId('status').textContent = text; };
   const controls = disabled => {
-    for (const id of ['play', 'tutorial', 'solo', 'matchmake', 'host', 'join']) {
+    for (const id of ['play', 'tutorial', 'solo', 'matchmake', 'challenge', 'host', 'join']) {
       const element = byId(id);
       if (element) element.disabled = disabled;
     }
@@ -505,6 +505,7 @@
     install(start) {
       startGame = start;
       byId('matchmake').disabled = false;
+      byId('challenge').disabled = false;
       byId('host').disabled = false;
       byId('join').disabled = false;
       byId('matchmake').addEventListener('click', () => findMatch());
@@ -519,6 +520,7 @@
       const applyInviteHash = () => {
         const invited = new URLSearchParams(location.hash.slice(1)).get('room');
         if (invited) {
+          window.setLobbyChallengeOpen?.(true);
           byId('room').value = invited;
           byId('join').textContent = 'JOIN FRIEND';
         }
