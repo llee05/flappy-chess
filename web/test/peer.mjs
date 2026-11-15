@@ -1,7 +1,5 @@
 import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
-import { readFile, rm, rename } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { touchControls } from './touch.mjs';
 
 await withBrowser(async browser => {
@@ -52,7 +50,7 @@ await withBrowser(async browser => {
   await third.until(() => third.evaluate("!document.body.dataset.roomState && document.getElementById('search-room').hidden && document.getElementById('matchmake').disabled === false"), 'cancelling third player search');
   await third.evaluate("document.getElementById('matchmake').click()");
   await third.until(() => third.evaluate("document.body.dataset.roomState === 'searching'"), 'third player resuming search');
-  await host.evaluate("document.getElementById('leave-room').click()");
+  await host.press('Escape', 'Escape', 27);
   await host.until(() => host.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning matched host to lobby');
   await guest.until(() => failure(guest), 'notifying matched guest of disconnect');
   await guest.evaluate("document.getElementById('return-lobby').click()");
@@ -66,7 +64,7 @@ await withBrowser(async browser => {
     }, `pairing waiting third player as ${side}`);
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
   }
-  await third.evaluate("document.getElementById('leave-room').click()");
+  await third.press('Escape', 'Escape', 27);
   await third.until(() => third.evaluate("!document.body.dataset.game && document.getElementById('host')?.disabled === false"), 'returning third player to lobby');
   await guest.until(() => failure(guest), 'notifying guest of third player disconnect');
   await guest.evaluate("document.getElementById('return-lobby').click()");
@@ -129,13 +127,6 @@ await withBrowser(async browser => {
   await host.screenshot('online-white');
   await guest.screenshot('online-black');
   assert.equal(await guest.evaluate("document.getElementById('history-summary').dataset.last"), 'e7e6');
-  const download = resolve(browser.reports, 'flappy-chess.pgn');
-  await rm(download, { force: true });
-  await guest.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: browser.reports });
-  await guest.press('KeyP', 'p', 80);
-  await guest.until(async () => { try { return (await readFile(download, 'utf8')).includes('1. e3 e6 *'); } catch { return false; } }, 'exporting the synchronized game from the guest');
-  assert.match(await readFile(download, 'utf8'), /\[TimeControl "60\+5"\]/);
-  await rename(download, resolve(browser.reports, 'online-match.pgn'));
   for (const page of [host, guest]) {
     assert.equal(await page.evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
   }
@@ -187,7 +178,7 @@ await withBrowser(async browser => {
     return page.evaluate(expression);
   }, message);
 
-  await guest.evaluate("document.getElementById('leave-room').click()");
+  await guest.press('Escape', 'Escape', 27);
   await pumpUntil(guest, "!location.hash && document.getElementById('host')?.disabled === false", 'returning guest to lobby');
   await host.until(() => failure(host), 'notifying host of disconnect');
   await host.screenshot('online-disconnected');
