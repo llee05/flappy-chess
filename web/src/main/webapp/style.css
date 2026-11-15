@@ -228,9 +228,9 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
 }
 .lobby-hero {
   display: grid;
-  grid-template-columns: minmax(300px, .82fr) minmax(480px, 1.18fr);
+  grid-template-columns: minmax(300px, 520px);
   align-items: center;
-  gap: clamp(32px, 5vw, 76px);
+  justify-content: center;
 }
 .title-lockup { text-align: center; }
 .title-lockup > img {
@@ -285,7 +285,8 @@ body.mobile.online { --network-space: calc(48px + env(safe-area-inset-top)); }
   grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: end;
   gap: clamp(8px, 1.2vw, 18px);
-  margin-top: clamp(20px, 2.6vh, 28px);
+  width: min(100%, 1120px);
+  margin: clamp(20px, 2.6vh, 28px) auto 0;
 }
 #welcome .mode-button {
   min-height: 78px;
