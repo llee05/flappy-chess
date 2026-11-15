@@ -334,7 +334,9 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPiece(Piece piece, float x, float y, int scale) {
-        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - 8 * scale), snap(y - 10 * scale), 16 * scale, 20 * scale);
+        float size = 25 * scale;
+        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - size / 2),
+                snap(y - size / 2), size, size);
     }
 
     private void overlay(GameSession game) {
