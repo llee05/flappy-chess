@@ -69,12 +69,12 @@
       </section>
 
       <section class="lobby-menu-card" aria-label="Main menu">
-        <p class="menu-kicker">CHOOSE YOUR MATCH</p>
+        <img class="menu-panel-art" src="./art/menu-box-reference.png" alt="" width="1410" height="1116">
         <section class="lobby-actions" aria-label="Choose a game mode">
-          <button id="matchmake" class="mode-button" type="button" disabled><span>PLAY</span><small>Find an online match</small></button>
-          <button id="solo" class="mode-button" type="button" disabled><span>VS AI</span><small>Play the computer</small></button>
-          <button id="play" class="mode-button" type="button" disabled><span>LOCAL</span><small>Share this screen</small></button>
-          <button id="challenge" class="mode-button" type="button" aria-expanded="false" aria-controls="challenge-panel" disabled><span>CHALLENGE A FRIEND</span><small>Create or join a room</small></button>
+          <button id="matchmake" class="mode-button" type="button" disabled><span class="sr-only">Play</span></button>
+          <button id="solo" class="mode-button" type="button" disabled><span class="sr-only">VS AI</span></button>
+          <button id="play" class="mode-button" type="button" disabled><span class="sr-only">Local</span></button>
+          <button id="challenge" class="mode-button" type="button" aria-expanded="false" aria-controls="challenge-panel" disabled><span class="sr-only">Challenge a friend</span></button>
         </section>
 
         <section id="challenge-panel" class="challenge-panel" aria-label="Challenge a friend" hidden>
@@ -88,17 +88,15 @@
         </section>
 
         <nav class="lobby-secondary" aria-label="More ways to play and lobby controls">
-          <button id="tutorial" class="secondary-button" type="button" disabled>FLIGHT SCHOOL</button>
+          <button id="tutorial" class="secondary-button" type="button" disabled><span class="sr-only">Flight School</span></button>
           <button id="lobby-sound" class="secondary-button icon-button" type="button" data-key="M" aria-label="Toggle sound" aria-pressed="true">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4zm12.2-.7a5 5 0 0 1 0 7.4l1.4 1.5a7 7 0 0 0 0-10.4l-1.4 1.5zm-2.1 2.1a2 2 0 0 1 0 3.2l1.3 1.5a4 4 0 0 0 0-6.2l-1.3 1.5z"/></svg>
-            <span>SOUND</span>
+            <span class="sr-only">Sound</span>
           </button>
           <button id="lobby-menu" class="secondary-button icon-button" type="button" aria-expanded="false" aria-controls="lobby-details" aria-label="Show match settings">
-            <span aria-hidden="true">⚙</span>
-            <span>SETTINGS</span>
+            <span class="sr-only">Settings</span>
           </button>
         </nav>
-        <p id="status" role="status" aria-live="polite">Loading the game...</p>
+        <p id="status" class="sr-only" role="status" aria-live="polite">Loading the game...</p>
       </section>
 
       <section id="share-room" class="share-card" hidden>
