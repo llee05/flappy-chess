@@ -9,23 +9,11 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   const outline = '#202538';
   const palettes = {
-    whitePiece: ['#b99c79', '#f1dfb3', '#fff3d1', '#e6aa5d'],
-    blackPiece: ['#414568', '#737fa4', '#b0c4db', '#7ed0d6'],
     whiteBird: ['#b77345', '#efb95b', '#ffe5a1', '#d99045'],
     blackBird: ['#416788', '#78c4d0', '#c6f0e7', '#579eae']
   };
-
-  // Fallbacks for the gameplay PixelSprites silhouettes, in KING..PAWN order.
-  // Once game.js is cached below, its compiled masks replace these values so
-  // sprite redesigns (including the Queen) reach the menu automatically.
-  const pieces = [
-    '......xx....../.....xxxx...../......xx....../....xxxxxx..../...xxxxxxxx.../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.',
-    '..xx..xx..xx../..xx..xx..xx../..xxxxxxxxxx../...xxxxxxxx.../....xxxxxx..../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx./.xxxxxxxxxxxx.',
-    '............../............../.xxx.xxxx.xxx./.xxx.xxxx.xxx./.xxxxxxxxxxxx./..xxxxxxxxxx../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.',
-    '......xx....../.....xxxx...../....xxxx....../...xxxx..xx.../...xxx..xxx.../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.',
-    '.....xx..xx.../.....xxxxxx.../....xxxxxxxx../...xxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxx../.xxxx..xxxxx../..xx...xxxxx../......xxxxxx../.....xxxxxx.../....xxxxxxx.../...xxxxxxxx.../...xxxxxxxx.../..xxxxxxxxxx../..xxxxxxxxxx../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.',
-    '............../............../............../............../.....xxxx...../....xxxxxx..../....xxxxxx..../....xxxxxx..../.....xxxx...../....xxxxxx..../.....xxxx...../.....xxxx...../....xxxxxx..../....xxxxxx..../...xxxxxxxx.../..xxxxxxxxxx../.xxxxxxxxxxxx./.xxxxxxxxxxxx.'
-  ];
+  const pieceAtlas = new Image();
+  const pieceCellSize = 160;
   const wings = [
     'xx.../xxx../xxxx./.xxxx/..xxx',
     'xxxxx/xxxxx/.xxx.',
@@ -37,7 +25,7 @@
   const tracks = [0.18, 0.36, 0.62, 0.81];
   const mobileTracks = [0.69, 0.8, 0.9];
   const birds = [];
-  const sprites = { birds: [[], []], pieces: [[], []] };
+  const sprites = { birds: [[], []] };
   let width = 0;
   let height = 0;
   let ratio = 1;
@@ -73,23 +61,6 @@
     }
   }
 
-  function makePiece(side, piece) {
-    const sprite = document.createElement('canvas');
-    sprite.width = 16;
-    sprite.height = 20;
-    const spriteContext = sprite.getContext('2d');
-    const palette = palettes[side === 0 ? 'whitePiece' : 'blackPiece'];
-    fillMask(spriteContext, pieces[piece], 1, 1, palette);
-    spriteContext.fillStyle = palette[3];
-    spriteContext.fillRect(4, 16, 8, 1);
-    if (piece === 0 || piece === 1) spriteContext.fillRect(7, 5, 1, 1);
-    if (piece === 4) {
-      spriteContext.fillStyle = outline;
-      spriteContext.fillRect(5, 4, 1, 1);
-    }
-    return sprite;
-  }
-
   function makeBird(side, frame) {
     const sheet = document.createElement('canvas');
     sheet.width = 18;
@@ -119,28 +90,7 @@
   function buildSprites() {
     for (let side = 0; side < 2; side++) {
       for (let frame = 0; frame < 3; frame++) sprites.birds[side][frame] = makeBird(side, frame);
-      for (let piece = 0; piece < pieces.length; piece++) sprites.pieces[side][piece] = makePiece(side, piece);
     }
-  }
-
-  function refreshPiecesFromGame() {
-    fetch('./game.js', { cache: 'force-cache' })
-      .then(response => response.ok ? response.text() : Promise.reject(new Error('game.js unavailable')))
-      .then(source => {
-        const compiledPieces = Array.from(
-          source.matchAll(/(["'])([.x]{14}(?:\/[.x]{14}){17})\1/g),
-          match => match[2]
-        );
-        if (compiledPieces.length !== pieces.length) return;
-        pieces.splice(0, pieces.length, ...compiledPieces);
-        for (let side = 0; side < 2; side++) {
-          for (let piece = 0; piece < pieces.length; piece++) {
-            sprites.pieces[side][piece] = makePiece(side, piece);
-          }
-        }
-        draw(performance.now());
-      })
-      .catch(() => {});
   }
 
   function layout() {
@@ -199,13 +149,12 @@
 
   function drawBird(bird, time) {
     const size = Math.round(72 * bird.scale);
-    const pieceWidth = Math.round(size * 0.5);
-    const pieceHeight = Math.round(size * 0.625);
+    const pieceSize = Math.round(size * 0.625);
     const bob = reducedMotion.matches ? 0 : Math.sin(time * 0.0034 + bird.bob) * 7 * bird.scale;
     const x = Math.round(bird.x);
     const y = Math.round(bird.y + bob);
     const frame = reducedMotion.matches ? 1 : Math.floor(time / 130 + bird.bob) % 3;
-    const pieceX = Math.round(x - pieceWidth / 2);
+    const pieceX = Math.round(x - pieceSize / 2);
     const pieceY = Math.round(y + size * 0.34);
 
     context.save();
@@ -213,7 +162,11 @@
     context.fillStyle = '#efb95b';
     context.fillRect(Math.round(x - 8 * bird.scale), Math.round(y + size * 0.2), Math.max(1, Math.round(2 * bird.scale)), Math.round(size * 0.34));
     context.fillRect(Math.round(x + 6 * bird.scale), Math.round(y + size * 0.2), Math.max(1, Math.round(2 * bird.scale)), Math.round(size * 0.34));
-    context.drawImage(sprites.pieces[bird.side][bird.piece], pieceX, pieceY, pieceWidth, pieceHeight);
+    if (pieceAtlas.complete && pieceAtlas.naturalWidth) {
+      context.drawImage(pieceAtlas,
+        bird.piece * pieceCellSize, bird.side * pieceCellSize, pieceCellSize, pieceCellSize,
+        pieceX, pieceY, pieceSize, pieceSize);
+    }
     context.translate(x, y);
     context.scale(bird.direction, 1);
     context.drawImage(sprites.birds[bird.side][frame], -size / 2, -size / 2, size, size);
@@ -259,7 +212,8 @@
   }
 
   buildSprites();
-  refreshPiecesFromGame();
+  pieceAtlas.addEventListener('load', () => draw(performance.now()));
+  pieceAtlas.src = './assets/images/pieces.png';
   layout();
   draw(0);
   start();
