@@ -11,11 +11,14 @@ await withBrowser(async browser => {
     const canvas = document.getElementById('canvas');
     const context = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
     context.drawImage(canvas, 0, 0);
-    const pixels = context.getImageData(200, 0, 800, 800).data;
+    const scale = Math.min(canvas.width / 1600, canvas.height / 800);
+    const boardLeft = Math.round((canvas.width - 1600 * scale) / 2 + 400 * scale);
+    const boardWidth = Math.round(800 * scale);
+    const pixels = context.getImageData(boardLeft, 0, boardWidth, canvas.height).data;
     let total = 0, count = 0;
     for (let i = 0; i < pixels.length; i += 4) {
       if (pixels[i] === 255 && pixels[i + 1] === 229 && pixels[i + 2] === 161) {
-        total += (i / 4) % 800 + 200;
+        total += (i / 4) % boardWidth + boardLeft;
         count++;
       }
     }
@@ -45,7 +48,7 @@ await withBrowser(async browser => {
   assert.deepEqual(await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]"), [1200, 800]);
   // Movement expectations are model-space distances. The 1600-wide HUD is
   // fitted into this 1200-wide canvas, so compare against their rendered size.
-  const horizontalScale = await evaluate("document.getElementById('canvas').width / 1600");
+  const horizontalScale = await evaluate("Math.min(document.getElementById('canvas').width / 1600, document.getElementById('canvas').height / 800)");
   await evaluate("document.addEventListener('keydown', e => { window.arrowCaught = e.defaultPrevented; }, { once: true })");
   await press('ArrowUp', 'ArrowUp', 38);
   assert.equal(await evaluate('window.arrowCaught'), true, 'Arrow keys must not scroll the page');

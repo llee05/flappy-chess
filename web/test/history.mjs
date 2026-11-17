@@ -9,23 +9,25 @@ export async function checkHistory(browser) {
     const canvas = document.getElementById('canvas');
     const context = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
     context.drawImage(canvas, 0, 0);
-    const pixels = context.getImageData(200, 0, 800, 800).data;
+    const scale = Math.min(canvas.width / 1600, canvas.height / 800);
+    const boardLeft = Math.round((canvas.width - 1600 * scale) / 2 + 400 * scale);
+    const boardWidth = Math.round(800 * scale);
+    const pixels = context.getImageData(boardLeft, 0, boardWidth, canvas.height).data;
     const rgb = ${white ? '[255,229,161]' : '[198,240,231]'};
     let total = 0, count = 0;
     for (let i = 0; i < pixels.length; i += 4) {
       if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) {
-        total += Math.floor(i / 4 / 800);
+        total += Math.floor(i / 4 / boardWidth);
         count++;
       }
     }
     if (!count) { resolve(null); return; }
     const renderedY = total / count;
-    const scale = Math.min(canvas.width / 1600, canvas.height / 800);
     const viewportTop = (canvas.height - 800 * scale) / 2;
     const worldY = 800 - (renderedY - viewportTop) / scale;
-    // Convert the inset board presentation back to the unchanged model's
-    // top-left Y coordinate before comparing it with rank boundaries.
-    resolve(775 - (worldY - 36) / 0.91);
+    // Undo the inset board presentation so the existing rank thresholds keep
+    // their legacy 800px-board meaning, including the sprite's 25px offset.
+    resolve(800 - (worldY - 36) / 0.91);
   }))`);
   const reachRank = async (white, top, bottom) => {
     let lastFlap = 0;
