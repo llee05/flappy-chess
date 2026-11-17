@@ -49,12 +49,12 @@ final class ActionFeedback implements Disposable {
         for (Event event : game.getFeedback().events()) {
             if (event.sequence() <= seen) continue;
             seen = event.sequence();
-            float x = 250 + event.square().getFile().ordinal() * 100;
-            float y = 50 + event.square().getRank().ordinal() * 100;
+            float x = GameRenderer.BOARD_X + (event.square().getFile().ordinal() * 100 + 50) * GameRenderer.BOARD_SCALE_X;
+            float y = GameRenderer.BOARD_Y + (event.square().getRank().ordinal() * 100 + 50) * GameRenderer.BOARD_SCALE_Y;
             if (event.kind() == Kind.FLAP || event.kind() == Kind.PICKUP) {
                 Birb bird = event.side() == Side.WHITE ? game.getWhite() : game.getBlack();
-                x = 225 + (float) bird.getX();
-                y = 775 - (float) bird.getY();
+                x = GameRenderer.BOARD_X + ((float) bird.getX() + 25) * GameRenderer.BOARD_SCALE_X;
+                y = GameRenderer.BOARD_Y + (775 - (float) bird.getY()) * GameRenderer.BOARD_SCALE_Y;
             }
             if (bursts.size() == GameFeedback.LIMIT) bursts.remove(0);
             bursts.add(new Burst(event, x, y));
@@ -79,12 +79,12 @@ final class ActionFeedback implements Disposable {
             shapes.setColor(warning(kind) ? DANGER : kind == Kind.CAPTURE ? GOLD : MINT);
             if (kind == Kind.ILLEGAL_DROP || kind == Kind.NO_PIECE || kind == Kind.CHECK) {
                 if ((int) (burst.age * 12) % 2 == 0) {
-                    float x = 200 + burst.event.square().getFile().ordinal() * 100;
-                    float y = burst.event.square().getRank().ordinal() * 100;
-                    rect(shapes, x + 4, y + 4, 92, 4);
-                    rect(shapes, x + 4, y + 92, 92, 4);
-                    rect(shapes, x + 4, y + 4, 4, 92);
-                    rect(shapes, x + 92, y + 4, 4, 92);
+                    float x = GameRenderer.BOARD_X + burst.event.square().getFile().ordinal() * GameRenderer.SQUARE_WIDTH;
+                    float y = GameRenderer.BOARD_Y + burst.event.square().getRank().ordinal() * GameRenderer.SQUARE_HEIGHT;
+                    rect(shapes, x + 4, y + 4, GameRenderer.SQUARE_WIDTH - 8, 4);
+                    rect(shapes, x + 4, y + GameRenderer.SQUARE_HEIGHT - 8, GameRenderer.SQUARE_WIDTH - 8, 4);
+                    rect(shapes, x + 4, y + 4, 4, GameRenderer.SQUARE_HEIGHT - 8);
+                    rect(shapes, x + GameRenderer.SQUARE_WIDTH - 8, y + 4, 4, GameRenderer.SQUARE_HEIGHT - 8);
                 }
             } else if (kind != Kind.LOW_TIME) {
                 int count = kind == Kind.CAPTURE ? 12 : kind == Kind.FLAP ? 4 : 8;
@@ -95,7 +95,10 @@ final class ActionFeedback implements Disposable {
                     float x = burst.x + (float) Math.cos(angle) * radius;
                     float y = burst.y + (float) Math.sin(angle) * radius - burst.age * burst.age * 40;
                     // Keep particles on the board, clear of the HUD and outside letterboxing.
-                    if (x >= 202 && x <= 992 && y >= 2 && y <= 792) rect(shapes, x, y, size, size);
+                    if (x >= GameRenderer.BOARD_X && x <= GameRenderer.BOARD_X + GameRenderer.BOARD_WIDTH
+                            && y >= GameRenderer.BOARD_Y && y <= GameRenderer.BOARD_Y + GameRenderer.BOARD_HEIGHT) {
+                        rect(shapes, x, y, size, size);
+                    }
                 }
             }
         }

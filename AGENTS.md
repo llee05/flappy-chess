@@ -83,7 +83,7 @@ coordinates; clocks, setup, promotion, review, and rematches use native HTML con
 - The board uses 800x800 logical pixels with a top-left origin and 100px squares.
   Birds are 50x50; their centers determine pickup/drop squares.
 - The renderer converts to libGDX's bottom-left coordinates and uses a
-  1200x800 fit viewport with the board between side panels. Window resizing
+  1600x800 fit viewport with the board inset between side panels. Window resizing
   must not change model coordinates or square selection.
 - Both birds simulate continuously. White falls down; black falls up.
   Both use the same physics tuning with opposite gravity directions.
