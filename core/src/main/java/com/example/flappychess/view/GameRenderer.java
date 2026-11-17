@@ -35,18 +35,26 @@ public final class GameRenderer implements Disposable {
     private static final Color DARK_EDGE = Color.valueOf("657e7c");
     private static final Color DARK_SHINE = Color.valueOf("87a297");
     private static final Color PANEL = Color.valueOf("20283c");
-    private static final Color CARD = Color.valueOf("2c354d");
-    private static final Color EDGE = Color.valueOf("46516a");
+    private static final Color CARD = Color.valueOf("29364c");
+    private static final Color EDGE = Color.valueOf("4b6d75");
     private static final Color INK = Color.valueOf("202538");
-    private static final Color CREAM = Color.valueOf("f1dfb3");
+    private static final Color CREAM = Color.valueOf("e4cd9f");
     private static final Color MINT = Color.valueOf("add2b2");
     private static final Color GOLD = Color.valueOf("efb95b");
     private static final Color BLUE = Color.valueOf("78c4d0");
-    private static final Color SKY_HIGH = Color.valueOf("4d83ad");
-    private static final Color SKY_MID = Color.valueOf("6ba8c4");
-    private static final Color SKY_LOW = Color.valueOf("a8d5d4");
-    private static final Color CLOUD = Color.valueOf("e9e4c9");
-    private static final Color CLOUD_SHADE = Color.valueOf("c5d4c4");
+    private static final Color SKY_HIGH = Color.valueOf("1c2e48");
+    private static final Color SKY_MID = Color.valueOf("2c4559");
+    private static final Color SKY_LOW = Color.valueOf("345569");
+    private static final Color HUD_PANEL = Color.valueOf("3c6477");
+    private static final Color HUD_PANEL_HIGH = Color.valueOf("4a7788");
+    private static final Color HUD_INSET = Color.valueOf("6f857c");
+    private static final Color FRAME = Color.valueOf("d9caa5");
+    private static final Color FRAME_HIGH = Color.valueOf("f0dba7");
+    private static final Color FRAME_SHADE = Color.valueOf("9c8e73");
+    private static final Color ORNAMENT_HIGH = Color.valueOf("f4ce7b");
+    private static final Color PILLAR_FILL = Color.valueOf("769289");
+    private static final Color CLOUD = Color.valueOf("e4d6ad");
+    private static final Color CLOUD_SHADE = Color.valueOf("cbb992");
     private static final Color MUTED = Color.valueOf("94a3b8");
     private static final Color DANGER = Color.valueOf("ed8c78");
     private static final Color SELECTED = Color.valueOf("baa96d");
@@ -226,28 +234,142 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        rect(196, 0, 4, 800, EDGE);
-        rect(1000, 0, 4, 800, INK);
-        rect(1004, 0, 2, 800, EDGE);
-        drawClockCard(game, Side.BLACK, 666);
-        drawClockCard(game, Side.WHITE, 24);
+        drawPanelShell(0);
+        drawPanelShell(1000);
+
+        drawPillar(2);
+        drawPillar(172);
+        drawPillar(1002);
+        drawPillar(1172);
+
+        largeOrnament(100, 682);
+        divider(100, 628);
+        banner(100, 590);
+        diamond(100, 450, 7, GOLD);
+        cloud(52, 332, 1);
+        cloud(78, 274, 0.65f);
+        divider(100, 190);
+
+        drawClockCard(game, Side.BLACK, 650);
+        divider(1100, 616);
+        banner(1100, 590);
+        diamond(1100, 450, 7, GOLD);
+        cloud(1052, 332, 1);
+        cloud(1078, 274, 0.65f);
+        divider(1100, 190);
+        drawClockCard(game, Side.WHITE, 36);
+
+        drawBoardFrame();
     }
 
     private void drawSkyBackdrop() {
-        rect(0, 0, 1200, 800, SKY_LOW);
-        rect(0, 250, 1200, 550, SKY_MID);
-        rect(0, 560, 1200, 240, SKY_HIGH);
-        diamond(94, 690, 28, GOLD);
-        cloud(16, 546, 2);
-        cloud(82, 432, 1);
-        cloud(1018, 414, 2);
-        cloud(1080, 274, 1);
+        rect(0, 0, 1200, 800, SKY_HIGH);
+        rect(0, 20, 1200, 760, SKY_MID);
+        rect(10, 30, 1180, 740, SKY_LOW);
+        rect(18, 38, 1164, 724, SKY_MID);
     }
 
-    private void cloud(float x, float y, int scale) {
+    private void drawPanelShell(float x) {
+        rect(x + 12, 8, 176, 780, INK);
+        rect(x + 18, 12, 164, 776, FRAME_SHADE);
+        rect(x + 22, 18, 156, 764, HUD_PANEL);
+        rect(x + 28, 24, 144, 752, HUD_PANEL_HIGH);
+        rect(x + 34, 30, 132, 740, HUD_PANEL);
+        corners(x + 36, 34, 128, 732, 18, 2, HUD_INSET);
+        rect(x + 38, 44, 2, 712, HUD_PANEL_HIGH);
+        rect(x + 160, 44, 2, 712, EDGE);
+    }
+
+    private void drawPillar(float x) {
+        rect(x + 4, 18, 28, 764, INK);
+        rect(x + 2, 22, 28, 756, FRAME_SHADE);
+
+        rect(x + 6, 88, 20, 624, FRAME);
+        rect(x + 8, 96, 16, 608, PILLAR_FILL);
+        rect(x + 10, 102, 3, 596, HUD_INSET);
+        rect(x + 21, 102, 3, 596, EDGE);
+        diamond(x + 16, 650, 9, FRAME_SHADE);
+        diamond(x + 16, 650, 5, FRAME_HIGH);
+        diamond(x + 16, 150, 9, FRAME_SHADE);
+        diamond(x + 16, 150, 5, FRAME_HIGH);
+
+        pillarCap(x, 704, false);
+        pillarCap(x, 22, true);
+    }
+
+    private void pillarCap(float x, float y, boolean base) {
+        float direction = base ? 1 : -1;
+        rect(x, y, 32, 16, INK);
+        rect(x + 2, y + direction * 4, 28, 18, FRAME_SHADE);
+        rect(x + 4, y + direction * 6, 24, 16, FRAME);
+        rect(x + 6, y + direction * 8, 20, 10, PILLAR_FILL);
+        rect(x + 8, y + direction * 10, 16, 3, HUD_INSET);
+    }
+
+    private void largeOrnament(float x, float y) {
+        diamond(x + 4, y - 4, 24, INK);
+        diamond(x, y, 22, GOLD);
+        diamond(x - 3, y + 4, 13, ORNAMENT_HIGH);
+    }
+
+    private void divider(float x, float y) {
+        rect(x - 62, y - 1, 48, 3, FRAME_SHADE);
+        rect(x - 62, y + 2, 48, 3, GOLD);
+        rect(x + 14, y - 1, 48, 3, FRAME_SHADE);
+        rect(x + 14, y + 2, 48, 3, GOLD);
+        diamond(x, y + 2, 9, GOLD);
+        diamond(x, y + 3, 4, FRAME_HIGH);
+    }
+
+    private void banner(float centerX, float rodY) {
+        float left = centerX - 42;
+        float right = centerX + 42;
+        rect(left + 4, rodY - 136, 84, 130, INK);
+        triangle(left + 4, rodY - 136, centerX + 4, rodY - 174, right + 4, rodY - 136, INK);
+        rect(left, rodY - 132, 84, 126, FRAME_SHADE);
+        triangle(left, rodY - 132, centerX, rodY - 168, right, rodY - 132, FRAME_SHADE);
+        rect(left + 3, rodY - 130, 78, 122, FRAME);
+        triangle(left + 3, rodY - 130, centerX, rodY - 162, right - 3, rodY - 130, FRAME);
+        rect(left + 7, rodY - 126, 70, 116, HUD_PANEL);
+        triangle(left + 7, rodY - 126, centerX, rodY - 154, right - 7, rodY - 126, HUD_PANEL);
+        rect(left + 9, rodY - 122, 3, 108, HUD_PANEL_HIGH);
+        rect(right - 12, rodY - 122, 3, 108, EDGE);
+
+        rect(centerX - 50, rodY, 100, 8, INK);
+        rect(centerX - 48, rodY + 4, 96, 7, FRAME_SHADE);
+        rect(centerX - 44, rodY + 6, 88, 5, FRAME_HIGH);
+        rect(centerX - 56, rodY + 1, 10, 14, FRAME_SHADE);
+        rect(centerX + 46, rodY + 1, 10, 14, FRAME_SHADE);
+        diamond(centerX - 54, rodY + 8, 7, GOLD);
+        diamond(centerX + 54, rodY + 8, 7, GOLD);
+    }
+
+    private void drawBoardFrame() {
+        rect(192, 0, 816, 12, INK);
+        rect(192, 788, 816, 12, INK);
+        rect(192, 0, 12, 800, INK);
+        rect(996, 0, 12, 800, INK);
+
+        rect(196, 2, 808, 8, FRAME_SHADE);
+        rect(196, 790, 808, 8, FRAME);
+        rect(196, 0, 8, 800, FRAME);
+        rect(996, 0, 8, 800, FRAME_SHADE);
+        rect(202, 6, 796, 2, FRAME_HIGH);
+        rect(202, 792, 796, 2, FRAME_HIGH);
+
+        diamond(600, 794, 13, INK);
+        diamond(600, 796, 11, FRAME);
+        diamond(600, 797, 5, FRAME_HIGH);
+        diamond(600, 6, 13, INK);
+        diamond(600, 7, 11, FRAME);
+        diamond(600, 9, 5, FRAME_HIGH);
+    }
+
+    private void cloud(float x, float y, float scale) {
         float p = 8 * scale;
         rect(x + p, y, p * 7, p, CLOUD_SHADE);
-        rect(x, y + p, p * 10, p * 2, CLOUD);
+        rect(x, y + p, p * 10, p, CLOUD_SHADE);
+        rect(x + p, y + p * 2, p * 8, p, CLOUD);
         rect(x + p * 2, y + p * 3, p * 6, p, CLOUD);
         rect(x + p * 3, y + p * 4, p * 2, p, CLOUD);
         rect(x + p * 6, y + p * 4, p, p, CLOUD);
@@ -257,11 +379,13 @@ public final class GameRenderer implements Disposable {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
-        stepped(1016, y, 168, 110, CARD, active ? color : EDGE);
-        if (active) rect(1016, y + 22, 4, 66, color);
-        for (int i = 0; i < 17; i++) {
+        Color border = side == Side.WHITE ? color : EDGE;
+        stepped(1032, y, 136, 110, CARD, border);
+        outline(1038, y + 8, 124, 94, 2, active ? color : PANEL);
+        if (active) rect(1032, y + 22, 4, 66, color);
+        for (int i = 0; i < 13; i++) {
             double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
-            rect(1032 + i * 8, y + 12, 6, 3, i < (int) Math.ceil(17 * Math.min(1, fraction)) ? color : EDGE);
+            rect(1044 + i * 8, y + 12, 6, 3, i < (int) Math.ceil(13 * Math.min(1, fraction)) ? color : EDGE);
         }
     }
 
@@ -273,8 +397,10 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        drawClockText(game, Side.BLACK, 666);
-        drawClockText(game, Side.WHITE, 24);
+        drawBirdSprite(Side.BLACK, 100, 516, 4, false, 1);
+        drawBirdSprite(Side.WHITE, 1100, 516, 4, true, 1);
+        drawClockText(game, Side.BLACK, 650);
+        drawClockText(game, Side.WHITE, 36);
     }
 
     private CompletedMove lastMove(GameSession game) {
@@ -464,6 +590,11 @@ public final class GameRenderer implements Disposable {
     private void star(float x, float y, int radius, Color color) {
         rect(x - radius, y, radius * 2 + 2, 2, color);
         rect(x, y - radius, 2, radius * 2 + 2, color);
+    }
+
+    private void triangle(float x1, float y1, float x2, float y2, float x3, float y3, Color color) {
+        shapes.setColor(color);
+        shapes.triangle(snap(x1), snap(y1), snap(x2), snap(y2), snap(x3), snap(y3));
     }
 
     private void text(String value, float x, float y, int scale, Color color) {
