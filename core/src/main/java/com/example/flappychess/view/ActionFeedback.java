@@ -55,6 +55,11 @@ final class ActionFeedback implements Disposable {
                 Birb bird = event.side() == Side.WHITE ? game.getWhite() : game.getBlack();
                 x = GameRenderer.BOARD_X + ((float) bird.getX() + 25) * GameRenderer.BOARD_SCALE_X;
                 y = GameRenderer.BOARD_Y + (775 - (float) bird.getY()) * GameRenderer.BOARD_SCALE_Y;
+            } else if (event.kind() == Kind.BUMP) {
+                float midX = (float) (game.getWhite().getX() + game.getBlack().getX()) / 2f + 25;
+                float midY = 775 - (float) (game.getWhite().getY() + game.getBlack().getY()) / 2f;
+                x = GameRenderer.BOARD_X + midX * GameRenderer.BOARD_SCALE_X;
+                y = GameRenderer.BOARD_Y + midY * GameRenderer.BOARD_SCALE_Y;
             }
             if (bursts.size() == GameFeedback.LIMIT) bursts.remove(0);
             bursts.add(new Burst(event, x, y));
@@ -70,7 +75,7 @@ final class ActionFeedback implements Disposable {
     }
 
     private static boolean warning(Kind kind) {
-        return kind == Kind.ILLEGAL_DROP || kind == Kind.NO_PIECE || kind == Kind.CHECK || kind == Kind.LOW_TIME;
+        return kind == Kind.ILLEGAL_DROP || kind == Kind.NO_PIECE || kind == Kind.CHECK || kind == Kind.LOW_TIME || kind == Kind.BUMP;
     }
 
     void drawShapes(ShapeRenderer shapes) {
@@ -87,9 +92,17 @@ final class ActionFeedback implements Disposable {
                     rect(shapes, x + GameRenderer.SQUARE_WIDTH - 8, y + 4, 4, GameRenderer.SQUARE_HEIGHT - 8);
                 }
             } else if (kind != Kind.LOW_TIME) {
-                int count = kind == Kind.CAPTURE ? 12 : kind == Kind.FLAP ? 4 : 8;
-                float radius = 14 + burst.age * (kind == Kind.CAPTURE ? 112 : 64);
+                int count = kind == Kind.CAPTURE || kind == Kind.BUMP ? 12 : kind == Kind.FLAP ? 4 : 8;
+                float radius = 14 + burst.age * (kind == Kind.CAPTURE ? 112 : kind == Kind.BUMP ? 96 : 64);
                 float size = burst.age < 0.25f ? 6 : 4;
+                if (kind == Kind.BUMP && burst.age < 0.22f
+                        && burst.x >= GameRenderer.BOARD_X + 16 && burst.x <= GameRenderer.BOARD_X + GameRenderer.BOARD_WIDTH - 16
+                        && burst.y >= GameRenderer.BOARD_Y + 16 && burst.y <= GameRenderer.BOARD_Y + GameRenderer.BOARD_HEIGHT - 16) {
+                    shapes.setColor(GOLD);
+                    rect(shapes, burst.x - 14, burst.y - 2, 28, 4);
+                    rect(shapes, burst.x - 2, burst.y - 14, 4, 28);
+                    shapes.setColor(DANGER);
+                }
                 for (int i = 0; i < count; i++) {
                     double angle = i * Math.PI * 2 / count;
                     float x = burst.x + (float) Math.cos(angle) * radius;

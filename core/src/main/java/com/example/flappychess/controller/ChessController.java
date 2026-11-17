@@ -75,6 +75,17 @@ public class ChessController {
         return getCarriedPieceSymbol();
     }
 
+    public Square dropCarriedPiece() {
+        if (carriedSquare == Square.NONE || promotionRequest != null) {
+            return Square.NONE;
+        }
+        Square origin = carriedSquare;
+        carriedSquare = Square.NONE;
+        view.setHiddenPieceSquare(Square.NONE);
+        refresh();
+        return origin;
+    }
+
     public CompletedMove consumeCompletedMove() {
         CompletedMove move = completedMove;
         completedMove = null;

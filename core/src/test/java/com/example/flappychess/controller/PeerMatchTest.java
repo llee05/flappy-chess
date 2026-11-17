@@ -407,4 +407,47 @@ class PeerMatchTest {
         pair.guest.pulse();
         assertTrue(pair.guest.isDisconnected());
     }
+
+    @Test void hostBumpSynchronizesDroppedPieceKnockbackAndFeedbackWithGuest() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        assertEquals(Side.WHITE, pair.guest.getSession().getCarrier());
+        assertEquals(Square.E2, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        pair.advance(1);
+
+        assertNull(pair.host.getSession().getCarrier());
+        assertNull(pair.guest.getSession().getCarrier());
+        assertEquals(Square.NONE, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+        assertEquals(Piece.WHITE_PAWN, pair.guest.getSession().getBoardView().getBoard().getPiece(Square.E2));
+        assertTrue(pair.guest.getSession().getHistory().isEmpty());
+        assertEquals(-GameSession.BUMP_KNOCKBACK_X, pair.guest.getSession().getWhite().getVelocityX(), 1e-7);
+        assertTrue(pair.guest.getSession().getWhite().isStunned());
+
+        var hostEvents = pair.host.getSession().snapshot().feedback();
+        var guestEvents = pair.guest.getSession().snapshot().feedback();
+        assertEquals(GameFeedback.Kind.BUMP, hostEvents.get(hostEvents.size() - 1).kind());
+        assertEquals(hostEvents, guestEvents);
+
+        // A stale pre-bump state packet cannot restore the dropped carry or rewind feedback.
+        JsonValue stalePacket = packet("state");
+        put(stalePacket, "epoch", 1);
+        put(stalePacket, "sequence", 1);
+        put(stalePacket, "ack", 0);
+        put(stalePacket, "hostRematch", false);
+        put(stalePacket, "guestRematch", false);
+        put(stalePacket, "hostSwap", false);
+        put(stalePacket, "guestSwap", false);
+        stalePacket.addChild("state", snapshot(pair.host.getSession().snapshot()));
+        pair.guest.receive(encode(stalePacket));
+
+        int bumpCount = (int) guestEvents.stream().filter(e -> e.kind() == GameFeedback.Kind.BUMP).count();
+        assertEquals(1, bumpCount);
+        pair.advance(5);
+        assertEquals(1, pair.guest.getSession().snapshot().feedback().stream()
+                .filter(e -> e.kind() == GameFeedback.Kind.BUMP).count());
+        assertFalse(pair.guest.isDisconnected());
+    }
 }

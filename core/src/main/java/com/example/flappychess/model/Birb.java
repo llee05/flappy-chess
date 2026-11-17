@@ -18,6 +18,7 @@ public class Birb {
     private double velocityX;
     private double velocityY;
     private int horizontalInput;
+    private int stunSteps;
 
     private final double width;
     private final double height;
@@ -39,6 +40,9 @@ public class Birb {
     }
 
     public void jump() {
+        if (stunSteps > 0) {
+            return;
+        }
         velocityY = -gravityDirection * JUMP_SPEED;
     }
 
@@ -50,6 +54,9 @@ public class Birb {
         velocityY += GRAVITY * gravityDirection;
         velocityY = capFallSpeed(velocityY);
         updateHorizontalVelocity();
+        if (stunSteps > 0) {
+            stunSteps--;
+        }
 
         x += velocityX;
         y += velocityY;
@@ -64,9 +71,10 @@ public class Birb {
     }
 
     private void updateHorizontalVelocity() {
-        if (horizontalInput != 0) {
-            double targetVelocity = horizontalInput * HORIZONTAL_MOVE_SPEED;
-            double acceleration = Math.signum(velocityX) == -horizontalInput
+        int effectiveInput = stunSteps > 0 ? 0 : horizontalInput;
+        if (effectiveInput != 0) {
+            double targetVelocity = effectiveInput * HORIZONTAL_MOVE_SPEED;
+            double acceleration = Math.signum(velocityX) == -effectiveInput
                     ? HORIZONTAL_TURN_ACCELERATION
                     : HORIZONTAL_ACCELERATION;
 
@@ -75,7 +83,7 @@ public class Birb {
             velocityX *= HORIZONTAL_FRICTION;
         }
 
-        if (horizontalInput == 0 && Math.abs(velocityX) < MIN_HORIZONTAL_SPEED) {
+        if (effectiveInput == 0 && Math.abs(velocityX) < MIN_HORIZONTAL_SPEED) {
             velocityX = 0;
         }
     }
@@ -137,6 +145,32 @@ public class Birb {
         this.velocityX = x;
     }
 
+    public boolean overlaps(Birb other) {
+        return x < other.x + other.width && x + width > other.x
+                && y < other.y + other.height && y + height > other.y;
+    }
+
+    public void applyBump(double offsetX, double offsetY, double vx, double vy, int stun, double maxWidth, double maxHeight) {
+        x += offsetX;
+        y += offsetY;
+        velocityX = vx;
+        velocityY = vy;
+        stunSteps = Math.max(stunSteps, Math.max(0, stun));
+        constrainToBounds(maxWidth, maxHeight);
+    }
+
+    public void stun(int steps) {
+        stunSteps = Math.max(0, steps);
+    }
+
+    public boolean isStunned() {
+        return stunSteps > 0;
+    }
+
+    public int getStunSteps() {
+        return stunSteps;
+    }
+
     public Motion snapshot() { return new Motion(x, y, velocityX, velocityY); }
 
     public void restore(Motion motion) {
@@ -144,6 +178,7 @@ public class Birb {
         y = motion.y();
         velocityX = motion.velocityX();
         velocityY = motion.velocityY();
+        stunSteps = 0;
     }
 
     public void reconcile(Motion motion, double blend) {
