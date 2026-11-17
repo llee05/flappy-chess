@@ -450,4 +450,24 @@ class PeerMatchTest {
                 .filter(e -> e.kind() == GameFeedback.Kind.BUMP).count());
         assertFalse(pair.guest.isDisconnected());
     }
+
+    @Test void emptyHandedBumpSynchronizesWithoutStunningEitherBird() {
+        Pair pair = new Pair();
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+
+        pair.time.addAndGet(16_666_667);
+        pair.host.update(1f / 60);
+        pair.flush();
+
+        assertEquals(pair.host.getSession().snapshot(), pair.guest.getSession().snapshot());
+        assertEquals(-GameSession.EMPTY_BUMP_KNOCKBACK_X,
+                pair.guest.getSession().getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.EMPTY_BUMP_RECOIL_X,
+                pair.guest.getSession().getBlack().getVelocityX(), 1e-7);
+        assertFalse(pair.host.getSession().getWhite().isStunned());
+        assertFalse(pair.host.getSession().getBlack().isStunned());
+        assertFalse(pair.guest.getSession().getWhite().isStunned());
+        assertFalse(pair.guest.getSession().getBlack().isStunned());
+    }
 }

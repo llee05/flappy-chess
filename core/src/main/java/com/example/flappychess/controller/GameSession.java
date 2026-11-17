@@ -196,10 +196,14 @@ public final class GameSession extends InputAdapter {
         for (GameFeedback.Event event : state.feedback()) {
             if (event.sequence() > prevSeq && event.kind() == BUMP) {
                 bumpCooldown = BUMP_COOLDOWN_STEPS;
-                if (Math.abs(state.white().velocityX()) >= BUMP_KNOCKBACK_X - 0.1 || event.side() == Side.WHITE && Math.abs(state.white().velocityX()) >= BUMP_RECOIL_X - 0.1) {
+                boolean carryingBump = Math.abs(state.white().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
+                        || Math.abs(state.black().velocityX()) >= BUMP_KNOCKBACK_X - 0.1;
+                if (carryingBump && (Math.abs(state.white().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
+                        || event.side() == Side.WHITE && Math.abs(state.white().velocityX()) >= BUMP_RECOIL_X - 0.1)) {
                     white.stun(BUMP_STUN_STEPS);
                 }
-                if (Math.abs(state.black().velocityX()) >= BUMP_KNOCKBACK_X - 0.1 || event.side() == Side.BLACK && Math.abs(state.black().velocityX()) >= BUMP_RECOIL_X - 0.1) {
+                if (carryingBump && (Math.abs(state.black().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
+                        || event.side() == Side.BLACK && Math.abs(state.black().velocityX()) >= BUMP_RECOIL_X - 0.1)) {
                     black.stun(BUMP_STUN_STEPS);
                 }
             }
