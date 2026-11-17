@@ -18,7 +18,14 @@ export async function checkHistory(browser) {
         count++;
       }
     }
-    resolve(count ? total / count : null);
+    if (!count) { resolve(null); return; }
+    const renderedY = total / count;
+    const scale = Math.min(canvas.width / 1600, canvas.height / 800);
+    const viewportTop = (canvas.height - 800 * scale) / 2;
+    const worldY = 800 - (renderedY - viewportTop) / scale;
+    // Convert the inset board presentation back to the unchanged model's
+    // top-left Y coordinate before comparing it with rank boundaries.
+    resolve(775 - (worldY - 36) / 0.91);
   }))`);
   const reachRank = async (white, top, bottom) => {
     let lastFlap = 0;
