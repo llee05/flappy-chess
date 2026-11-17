@@ -31,11 +31,11 @@ public final class GameRenderer implements Disposable {
     private static final float WORLD_WIDTH = 1600;
     private static final float WORLD_HEIGHT = 800;
     static final float BOARD_X = 400;
-    static final float BOARD_Y = 28;
+    static final float BOARD_Y = 36;
     static final float BOARD_SCALE_X = 1;
-    static final float BOARD_SCALE_Y = 0.93f;
+    static final float BOARD_SCALE_Y = 0.91f;
     static final float SQUARE_WIDTH = 100;
-    static final float SQUARE_HEIGHT = 93;
+    static final float SQUARE_HEIGHT = 91;
     static final float BOARD_WIDTH = SQUARE_WIDTH * 8;
     static final float BOARD_HEIGHT = SQUARE_HEIGHT * 8;
     private static final Color LIGHT = Color.valueOf("daccaa");
@@ -157,7 +157,8 @@ public final class GameRenderer implements Disposable {
             if (square == Square.NONE || square == board.getHiddenPieceSquare()) continue;
             Piece piece = board.getBoard().getPiece(square);
             if (piece != Piece.NONE) drawPiece(piece, squareX(square) + SQUARE_WIDTH / 2,
-                    squareY(square) + SQUARE_HEIGHT / 2 + feedback.dropOffset(square) * BOARD_SCALE_Y, 4);
+                    squareY(square) + SQUARE_HEIGHT / 2 + feedback.dropOffset(square) * BOARD_SCALE_Y,
+                    4, BOARD_SCALE_Y);
         }
         if (!review.isActive()) {
             drawBird(game.getWhite(), Side.WHITE, game);
@@ -292,29 +293,46 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPillar(float x) {
-        rect(x + 2, 18, 48, 764, INK);
-        rect(x, 22, 48, 756, FRAME_SHADE);
+        rect(x + 6, 82, 42, 636, INK);
+        rect(x + 4, 90, 42, 620, FRAME_SHADE);
+        rect(x + 8, 86, 34, 628, FRAME);
+        rect(x + 11, 96, 28, 608, PILLAR_FILL);
+        rect(x + 14, 104, 6, 592, HUD_INSET);
+        rect(x + 35, 104, 4, 592, EDGE);
 
-        rect(x + 8, 88, 34, 624, FRAME);
-        rect(x + 12, 98, 26, 604, PILLAR_FILL);
-        rect(x + 15, 106, 5, 588, HUD_INSET);
-        rect(x + 34, 106, 4, 588, EDGE);
-        diamond(x + 25, 650, 13, FRAME_SHADE);
-        diamond(x + 25, 650, 8, FRAME_HIGH);
-        diamond(x + 25, 150, 13, FRAME_SHADE);
-        diamond(x + 25, 150, 8, FRAME_HIGH);
+        stepped(x + 8, 620, 34, 62, PILLAR_FILL, FRAME_SHADE);
+        diamond(x + 25, 651, 14, INK);
+        diamond(x + 25, 651, 10, FRAME_HIGH);
+        diamond(x + 25, 651, 5, GOLD);
+        stepped(x + 8, 118, 34, 62, PILLAR_FILL, FRAME_SHADE);
+        diamond(x + 25, 149, 14, INK);
+        diamond(x + 25, 149, 10, FRAME_HIGH);
+        diamond(x + 25, 149, 5, GOLD);
 
-        pillarCap(x, 704, false);
-        pillarCap(x, 22, true);
+        pillarCap(x, false);
+        pillarCap(x, true);
     }
 
-    private void pillarCap(float x, float y, boolean base) {
-        float direction = base ? 1 : -1;
-        rect(x - 4, y, 58, 18, INK);
-        rect(x - 2, y + direction * 4, 54, 22, FRAME_SHADE);
-        rect(x + 2, y + direction * 7, 46, 18, FRAME);
-        rect(x + 8, y + direction * 10, 34, 12, PILLAR_FILL);
-        rect(x + 12, y + direction * 12, 26, 4, HUD_INSET);
+    private void pillarCap(float x, boolean base) {
+        if (base) {
+            rect(x - 10, 16, 70, 24, INK);
+            rect(x - 8, 20, 66, 24, FRAME_SHADE);
+            rect(x - 3, 26, 56, 18, FRAME);
+            rect(x + 4, 32, 42, 10, PILLAR_FILL);
+            rect(x - 4, 46, 58, 18, FRAME_SHADE);
+            rect(x, 50, 50, 16, FRAME);
+            rect(x + 5, 56, 40, 8, PILLAR_FILL);
+            rect(x + 4, 66, 42, 22, FRAME);
+        } else {
+            rect(x + 4, 712, 42, 22, FRAME);
+            rect(x, 734, 50, 16, FRAME);
+            rect(x - 4, 738, 58, 18, FRAME_SHADE);
+            rect(x + 5, 740, 40, 8, PILLAR_FILL);
+            rect(x - 3, 754, 56, 18, FRAME);
+            rect(x - 8, 756, 66, 24, FRAME_SHADE);
+            rect(x - 10, 774, 70, 10, INK);
+            rect(x + 4, 758, 42, 10, PILLAR_FILL);
+        }
     }
 
     private void largeOrnament(float x, float y) {
@@ -333,26 +351,26 @@ public final class GameRenderer implements Disposable {
     }
 
     private void banner(float centerX, float rodY) {
-        float left = centerX - 70;
-        float right = centerX + 70;
-        rect(left + 5, rodY - 150, 140, 140, INK);
-        triangle(left + 5, rodY - 150, centerX + 5, rodY - 194, right + 5, rodY - 150, INK);
-        rect(left, rodY - 146, 140, 136, FRAME_SHADE);
-        triangle(left, rodY - 146, centerX, rodY - 188, right, rodY - 146, FRAME_SHADE);
-        rect(left + 4, rodY - 142, 132, 130, FRAME);
-        triangle(left + 4, rodY - 142, centerX, rodY - 180, right - 4, rodY - 142, FRAME);
-        rect(left + 9, rodY - 138, 122, 122, HUD_PANEL);
-        triangle(left + 9, rodY - 138, centerX, rodY - 170, right - 9, rodY - 138, HUD_PANEL);
-        rect(left + 12, rodY - 132, 4, 112, HUD_PANEL_HIGH);
-        rect(right - 16, rodY - 132, 4, 112, EDGE);
+        float left = centerX - 60;
+        float right = centerX + 60;
+        rect(left + 5, rodY - 160, 120, 150, INK);
+        triangle(left + 5, rodY - 160, centerX + 5, rodY - 208, right + 5, rodY - 160, INK);
+        rect(left, rodY - 156, 120, 146, FRAME_SHADE);
+        triangle(left, rodY - 156, centerX, rodY - 202, right, rodY - 156, FRAME_SHADE);
+        rect(left + 4, rodY - 152, 112, 140, FRAME);
+        triangle(left + 4, rodY - 152, centerX, rodY - 194, right - 4, rodY - 152, FRAME);
+        rect(left + 9, rodY - 148, 102, 132, HUD_PANEL);
+        triangle(left + 9, rodY - 148, centerX, rodY - 184, right - 9, rodY - 148, HUD_PANEL);
+        rect(left + 12, rodY - 142, 4, 122, HUD_PANEL_HIGH);
+        rect(right - 16, rodY - 142, 4, 122, EDGE);
 
-        rect(centerX - 90, rodY, 180, 9, INK);
-        rect(centerX - 86, rodY + 4, 172, 8, FRAME_SHADE);
-        rect(centerX - 80, rodY + 7, 160, 5, FRAME_HIGH);
-        rect(centerX - 98, rodY + 1, 14, 16, FRAME_SHADE);
-        rect(centerX + 84, rodY + 1, 14, 16, FRAME_SHADE);
-        diamond(centerX - 96, rodY + 9, 8, GOLD);
-        diamond(centerX + 96, rodY + 9, 8, GOLD);
+        rect(centerX - 82, rodY, 164, 9, INK);
+        rect(centerX - 78, rodY + 4, 156, 8, FRAME_SHADE);
+        rect(centerX - 72, rodY + 7, 144, 5, FRAME_HIGH);
+        rect(centerX - 90, rodY + 1, 14, 16, FRAME_SHADE);
+        rect(centerX + 76, rodY + 1, 14, 16, FRAME_SHADE);
+        diamond(centerX - 88, rodY + 9, 8, GOLD);
+        diamond(centerX + 88, rodY + 9, 8, GOLD);
     }
 
     private void drawBoardFrame() {
@@ -410,8 +428,8 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        drawBirdSprite(Side.BLACK, 240, 510, 5, false, 1);
-        drawBirdSprite(Side.WHITE, 1360, 504, 5, true, 1);
+        drawBirdSprite(Side.BLACK, 240, 510, 6.5f, false, 0);
+        drawBirdSprite(Side.WHITE, 1360, 504, 6.5f, true, 0);
         drawClockText(game, Side.BLACK, 650);
         drawClockText(game, Side.WHITE, 32);
     }
@@ -454,7 +472,7 @@ public final class GameRenderer implements Disposable {
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
             if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x,
-                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y, 2);
+                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y, 2, BOARD_SCALE_Y);
         }
     }
 
@@ -471,16 +489,21 @@ public final class GameRenderer implements Disposable {
         return step == 3 ? 1 : step;
     }
 
-    private void drawBirdSprite(Side side, float x, float y, int scale, boolean left, int frame) {
+    private void drawBirdSprite(Side side, float x, float y, float scale, boolean left, int frame) {
         TextureRegion sprite = sprites.bird(side, frame);
         batch.draw(sprite, snap(x + (left ? 8 : -8) * scale), snap(y - 8 * scale),
                 (left ? -16 : 16) * scale, 16 * scale);
     }
 
     private void drawPiece(Piece piece, float x, float y, int scale) {
+        drawPiece(piece, x, y, scale, 1);
+    }
+
+    private void drawPiece(Piece piece, float x, float y, float scale, float scaleY) {
         float size = 25 * scale;
+        float height = size * scaleY;
         batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - size / 2),
-                snap(y - size / 2), size, size);
+                snap(y - height / 2), size, height);
     }
 
     private void overlay(GameSession game) {
