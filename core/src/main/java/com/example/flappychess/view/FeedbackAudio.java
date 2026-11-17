@@ -28,6 +28,7 @@ final class FeedbackAudio implements Disposable {
             load(Kind.ILLEGAL_DROP, "invalid");
             load(Kind.CHECK, "check");
             load(Kind.LOW_TIME, "low-time");
+            load(Kind.BUMP, "bump");
         } catch (RuntimeException unavailable) {
             dispose();
             Gdx.app.log("Audio", "Sound effects are unavailable on this device.");

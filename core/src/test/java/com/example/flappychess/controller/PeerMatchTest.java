@@ -58,6 +58,14 @@ class PeerMatchTest {
         void press(PeerMatch match, int key) { match.keyDown(key); match.keyUp(key); flush(); }
     }
 
+    private static void assertMotionEquals(com.example.flappychess.model.Birb.Motion expected,
+            com.example.flappychess.model.Birb.Motion actual) {
+        assertEquals(expected.x(), actual.x(), 1e-7);
+        assertEquals(expected.y(), actual.y(), 1e-7);
+        assertEquals(expected.velocityX(), actual.velocityX(), 1e-7);
+        assertEquals(expected.velocityY(), actual.velocityY(), 1e-7);
+    }
+
     @Test void handshakeStartsOneSharedMatchWithFiveMinuteClocks() {
         Pair pair = new Pair();
         assertTrue(pair.host.isStarted());
@@ -336,7 +344,8 @@ class PeerMatchTest {
                     Piece.make(side, com.github.bhlangonijr.chesslib.PieceType.QUEEN),
                     Piece.make(side.flip(), com.github.bhlangonijr.chesslib.PieceType.ROOK)));
         }
-        SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(), state.whiteMillis(), state.blackMillis(),
+        SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(),
+                state.whiteStunSteps(), state.blackStunSteps(), state.bumpCooldown(), state.whiteMillis(), state.blackMillis(),
                 state.selected(), state.hidden(), state.targets(), state.promotion(), state.carrier(), moves, state.result(), state.reason(),
                 state.feedback(), state.settings(), state.initialFen(), state.series());
         JsonValue packet = packet("state");
@@ -406,5 +415,115 @@ class PeerMatchTest {
         pair.time.set(25_000_000_000L);
         pair.guest.pulse();
         assertTrue(pair.guest.isDisconnected());
+    }
+
+    @Test void hostBumpSynchronizesDroppedPieceKnockbackAndFeedbackWithGuest() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        assertEquals(Side.WHITE, pair.guest.getSession().getCarrier());
+        assertEquals(Square.E2, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        pair.advance(1);
+
+        assertNull(pair.host.getSession().getCarrier());
+        assertNull(pair.guest.getSession().getCarrier());
+        assertEquals(Square.NONE, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+        assertEquals(Piece.WHITE_PAWN, pair.guest.getSession().getBoardView().getBoard().getPiece(Square.E2));
+        assertTrue(pair.guest.getSession().getHistory().isEmpty());
+        assertEquals(-GameSession.BUMP_KNOCKBACK_X, pair.guest.getSession().getWhite().getVelocityX(), 1e-7);
+        assertTrue(pair.guest.getSession().getWhite().isStunned());
+
+        var hostEvents = pair.host.getSession().snapshot().feedback();
+        var guestEvents = pair.guest.getSession().snapshot().feedback();
+        assertEquals(GameFeedback.Kind.BUMP, hostEvents.get(hostEvents.size() - 1).kind());
+        assertEquals(hostEvents, guestEvents);
+
+        // A stale pre-bump state packet cannot restore the dropped carry or rewind feedback.
+        JsonValue stalePacket = packet("state");
+        put(stalePacket, "epoch", 1);
+        put(stalePacket, "sequence", 1);
+        put(stalePacket, "ack", 0);
+        put(stalePacket, "hostRematch", false);
+        put(stalePacket, "guestRematch", false);
+        put(stalePacket, "hostSwap", false);
+        put(stalePacket, "guestSwap", false);
+        stalePacket.addChild("state", snapshot(pair.host.getSession().snapshot()));
+        pair.guest.receive(encode(stalePacket));
+
+        int bumpCount = (int) guestEvents.stream().filter(e -> e.kind() == GameFeedback.Kind.BUMP).count();
+        assertEquals(1, bumpCount);
+        pair.advance(5);
+        assertEquals(1, pair.guest.getSession().snapshot().feedback().stream()
+                .filter(e -> e.kind() == GameFeedback.Kind.BUMP).count());
+        assertFalse(pair.guest.isDisconnected());
+    }
+
+    @Test void emptyHandedBumpSynchronizesWithoutStunningEitherBird() {
+        Pair pair = new Pair();
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+
+        pair.time.addAndGet(16_666_667);
+        pair.host.update(1f / 60);
+        pair.flush();
+
+        assertEquals(pair.host.getSession().snapshot(), pair.guest.getSession().snapshot());
+        assertEquals(-GameSession.EMPTY_BUMP_KNOCKBACK_X,
+                pair.guest.getSession().getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.EMPTY_BUMP_RECOIL_X,
+                pair.guest.getSession().getBlack().getVelocityX(), 1e-7);
+        assertFalse(pair.host.getSession().getWhite().isStunned());
+        assertFalse(pair.host.getSession().getBlack().isStunned());
+        assertFalse(pair.guest.getSession().getWhite().isStunned());
+        assertFalse(pair.guest.getSession().getBlack().isStunned());
+    }
+
+    @Test void catchUpSnapshotKeepsRemainingBumpStunAndCooldown() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+
+        pair.time.addAndGet(250_000_000);
+        pair.host.update(0.25f);
+        pair.flush();
+
+        assertEquals(4, pair.host.getSession().getWhite().getStunSteps());
+        assertEquals(22, pair.host.getSession().getBumpCooldown());
+        SessionSnapshot hostState = pair.host.getSession().snapshot();
+        SessionSnapshot guestState = pair.guest.getSession().snapshot();
+        assertEquals(hostState.fen(), guestState.fen());
+        assertMotionEquals(hostState.white(), guestState.white());
+        assertMotionEquals(hostState.black(), guestState.black());
+        assertEquals(hostState.feedback(), guestState.feedback());
+        assertEquals(4, pair.guest.getSession().getWhite().getStunSteps());
+        assertEquals(0, pair.guest.getSession().getBlack().getStunSteps());
+        assertEquals(22, pair.guest.getSession().getBumpCooldown());
+    }
+
+    @Test void edgeClampedKnockbackKeepsBumpStunAndCooldown() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(0, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(30, 425, -3.6, 0));
+
+        pair.time.addAndGet(16_666_667);
+        pair.host.update(1f / 60);
+        pair.flush();
+
+        assertEquals(0, pair.host.getSession().getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.BUMP_STUN_STEPS, pair.host.getSession().getWhite().getStunSteps());
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, pair.host.getSession().getBumpCooldown());
+        SessionSnapshot hostState = pair.host.getSession().snapshot();
+        SessionSnapshot guestState = pair.guest.getSession().snapshot();
+        assertEquals(hostState.fen(), guestState.fen());
+        assertMotionEquals(hostState.white(), guestState.white());
+        assertMotionEquals(hostState.black(), guestState.black());
+        assertEquals(hostState.feedback(), guestState.feedback());
+        assertEquals(GameSession.BUMP_STUN_STEPS, pair.guest.getSession().getWhite().getStunSteps());
+        assertEquals(0, pair.guest.getSession().getBlack().getStunSteps());
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, pair.guest.getSession().getBumpCooldown());
     }
 }

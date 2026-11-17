@@ -21,6 +21,7 @@ final class BirdPilot {
     boolean flyTo(Square square) {
         ticks++;
         Birb bird = side == Side.WHITE ? game.getWhite() : game.getBlack();
+        if (bird.isStunned()) return false;
         double x = square.getFile().ordinal() * 100 + 50;
         double y = (7 - square.getRank().ordinal()) * 100 + 50;
         if (ticks % cadence == 0) {

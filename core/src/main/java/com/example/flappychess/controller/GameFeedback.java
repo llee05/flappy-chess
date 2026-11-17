@@ -9,7 +9,7 @@ import java.util.List;
 /** Recent, numbered presentation events. Replicas replay each event at most once. */
 public final class GameFeedback {
     public static final int LIMIT = 16;
-    public enum Kind { FLAP, PICKUP, DROP, CAPTURE, CANCEL, ILLEGAL_DROP, NO_PIECE, CHECK, LOW_TIME }
+    public enum Kind { FLAP, PICKUP, DROP, CAPTURE, CANCEL, ILLEGAL_DROP, NO_PIECE, CHECK, LOW_TIME, BUMP }
     public record Event(int sequence, Kind kind, Side side, Square square) { }
 
     private final List<Event> events = new ArrayList<>();
@@ -39,6 +39,7 @@ public final class GameFeedback {
             case NO_PIECE -> "Fly over one of your pieces to pick it up.";
             case CHECK -> "Check! Protect your king.";
             case LOW_TIME -> GameSession.sideName(event.side()) + ": 30 seconds left!";
+            case BUMP -> "Midair bump!";
         };
     }
 }

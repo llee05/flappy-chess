@@ -24,6 +24,17 @@ import java.util.function.LongSupplier;
 /** Game rules and input can be tested without starting OpenGL. */
 public final class GameSession extends InputAdapter {
     private static final double STEP = 1.0 / 60.0;
+    public static final double MIN_BUMP_SPEED = 1.2;
+    public static final double BUMP_KNOCKBACK_X = 4.2;
+    public static final double BUMP_KNOCKBACK_Y = 3.2;
+    public static final double BUMP_RECOIL_X = 2.4;
+    public static final double BUMP_RECOIL_Y = 1.8;
+    public static final double EMPTY_BUMP_KNOCKBACK_X = 2.6;
+    public static final double EMPTY_BUMP_KNOCKBACK_Y = 2.0;
+    public static final double EMPTY_BUMP_RECOIL_X = 1.6;
+    public static final double EMPTY_BUMP_RECOIL_Y = 1.2;
+    public static final int BUMP_STUN_STEPS = 18;
+    public static final int BUMP_COOLDOWN_STEPS = 36;
     private final ChessBoardView boardView = new ChessBoardView();
     private final ChessController chess;
     private final ChessClock clock;
@@ -41,6 +52,9 @@ public final class GameSession extends InputAdapter {
     private final BirbController whiteControls = new BirbController(white, 800, 800);
     private final BirbController blackControls = new BirbController(black, 800, 800, Keys.LEFT, Keys.RIGHT, Keys.UP);
     private double accumulator;
+    private int bumpCooldown;
+    private Side lastBumper;
+    private Side lastBumped;
     private Side carrier;
     private String result;
     private String reason;
@@ -78,8 +92,11 @@ public final class GameSession extends InputAdapter {
         while (accumulator + 1e-9 >= STEP) {
             if (beforeStep != null) beforeStep.run();
             if (isGameOver()) { accumulator = 0; return; }
+            double prevWhiteX = white.getX(), prevWhiteY = white.getY();
+            double prevBlackX = black.getX(), prevBlackY = black.getY();
             whiteControls.update();
             blackControls.update();
+            resolveBump(prevWhiteX, prevWhiteY, prevBlackX, prevBlackY);
             accumulator -= STEP;
         }
     }
@@ -104,10 +121,10 @@ public final class GameSession extends InputAdapter {
         }
         whiteControls.handleKeyPressed(key);
         blackControls.handleKeyPressed(key);
-        if (key == Keys.SPACE) feedback.emit(FLAP, Side.WHITE, birdSquare(white));
-        if (key == Keys.UP) feedback.emit(FLAP, Side.BLACK, birdSquare(black));
-        if (key == Keys.E) toggleCarry(Side.WHITE, white);
-        if (key == Keys.ENTER) toggleCarry(Side.BLACK, black);
+        if (key == Keys.SPACE && !white.isStunned()) feedback.emit(FLAP, Side.WHITE, birdSquare(white));
+        if (key == Keys.UP && !black.isStunned()) feedback.emit(FLAP, Side.BLACK, birdSquare(black));
+        if (key == Keys.E && !white.isStunned()) toggleCarry(Side.WHITE, white);
+        if (key == Keys.ENTER && !black.isStunned()) toggleCarry(Side.BLACK, black);
         return true;
     }
 
@@ -159,6 +176,7 @@ public final class GameSession extends InputAdapter {
 
     public SessionSnapshot snapshot() {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
+                white.getStunSteps(), black.getStunSteps(), bumpCooldown,
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
                 chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen(), series);
@@ -168,6 +186,9 @@ public final class GameSession extends InputAdapter {
         chess.restoreRemote(state);
         clock.restore(state.whiteMillis(), state.blackMillis(), nanoTime.getAsLong());
         carrier = state.carrier();
+        white.stun(state.whiteStunSteps());
+        black.stun(state.blackStunSteps());
+        bumpCooldown = state.bumpCooldown();
         history.clear();
         history.addAll(state.history());
         result = state.result();
@@ -175,6 +196,79 @@ public final class GameSession extends InputAdapter {
         feedback.restore(state.feedback());
         settings = state.settings();
         series = state.series();
+    }
+
+    private void resolveBump(double prevWhiteX, double prevWhiteY, double prevBlackX, double prevBlackY) {
+        if (bumpCooldown > 0) {
+            bumpCooldown--;
+            return;
+        }
+        if (isGameOver() || chess.hasPendingPromotion() || !white.overlaps(black)) return;
+        double rvx = white.getVelocityX() - black.getVelocityX();
+        double rvy = white.getVelocityY() - black.getVelocityY();
+        if (Math.hypot(rvx, rvy) < MIN_BUMP_SPEED) return;
+        double prevDist = Math.hypot(prevWhiteX - prevBlackX, prevWhiteY - prevBlackY);
+        double dist = Math.hypot(white.getX() - black.getX(), white.getY() - black.getY());
+        if (dist > prevDist + 1e-6 && prevDist >= 10) return;
+
+        double dx = black.getX() - white.getX();
+        double dy = black.getY() - white.getY();
+        if (Math.hypot(dx, dy) < 1e-6) {
+            dx = prevBlackX - prevWhiteX;
+            dy = prevBlackY - prevWhiteY;
+        }
+        double axisDist = Math.hypot(dx, dy);
+        double whiteApproach;
+        double blackApproach;
+        if (axisDist > 1e-6) {
+            double ux = dx / axisDist;
+            double uy = dy / axisDist;
+            whiteApproach = white.getVelocityX() * ux + white.getVelocityY() * uy;
+            blackApproach = -(black.getVelocityX() * ux + black.getVelocityY() * uy);
+        } else {
+            whiteApproach = Math.hypot(white.getVelocityX(), white.getVelocityY());
+            blackApproach = Math.hypot(black.getVelocityX(), black.getVelocityY());
+        }
+
+        Side bumper;
+        if (whiteApproach > blackApproach + 1e-6) bumper = Side.WHITE;
+        else if (blackApproach > whiteApproach + 1e-6) bumper = Side.BLACK;
+        else if (carrier != null) bumper = carrier.flip();
+        else bumper = chess.getSideToMove().flip();
+        Side bumped = bumper.flip();
+
+        double pushX = Math.abs(dx) > 1e-6 ? Math.signum(dx) : Math.abs(rvx) > 1e-6 ? Math.signum(rvx) : 1;
+        double pushY = Math.abs(dy) > 1e-6 ? Math.signum(dy) : Math.abs(rvy) > 1e-6 ? Math.signum(rvy) : -1;
+
+        boolean carrying = carrier != null;
+        Side droppedSide = carrier;
+        if (carrying) {
+            chess.dropCarriedPiece();
+            carrier = null;
+        }
+
+        double bumpedVx = carrying ? BUMP_KNOCKBACK_X : EMPTY_BUMP_KNOCKBACK_X;
+        double bumpedVy = carrying ? BUMP_KNOCKBACK_Y : EMPTY_BUMP_KNOCKBACK_Y;
+        double bumperVx = carrying ? BUMP_RECOIL_X : EMPTY_BUMP_RECOIL_X;
+        double bumperVy = carrying ? BUMP_RECOIL_Y : EMPTY_BUMP_RECOIL_Y;
+
+        double whiteVx = -pushX * (bumped == Side.WHITE ? bumpedVx : bumperVx);
+        double whiteVy = -pushY * (bumped == Side.WHITE ? bumpedVy : bumperVy);
+        double blackVx = pushX * (bumped == Side.BLACK ? bumpedVx : bumperVx);
+        double blackVy = pushY * (bumped == Side.BLACK ? bumpedVy : bumperVy);
+
+        int whiteStun = carrying && (bumped == Side.WHITE || droppedSide == Side.WHITE) ? BUMP_STUN_STEPS : 0;
+        int blackStun = carrying && (bumped == Side.BLACK || droppedSide == Side.BLACK) ? BUMP_STUN_STEPS : 0;
+
+        white.applyBump(-pushX * 4, -pushY * 4, whiteVx, whiteVy, whiteStun, 800, 800);
+        black.applyBump(pushX * 4, pushY * 4, blackVx, blackVy, blackStun, 800, 800);
+
+        bumpCooldown = BUMP_COOLDOWN_STEPS;
+        lastBumper = bumper;
+        lastBumped = bumped;
+        Side feedbackSide = droppedSide != null ? droppedSide : bumped;
+        Birb feedbackBird = feedbackSide == Side.WHITE ? white : black;
+        feedback.emit(BUMP, feedbackSide, birdSquare(feedbackBird));
     }
 
     private void toggleCarry(Side side, Birb bird) {
@@ -249,5 +343,8 @@ public final class GameSession extends InputAdapter {
     public Birb getWhite() { return white; }
     public Birb getBlack() { return black; }
     public Side getCarrier() { return carrier; }
+    public int getBumpCooldown() { return bumpCooldown; }
+    public Side getLastBumper() { return lastBumper; }
+    public Side getLastBumped() { return lastBumped; }
     public List<ChessController.CompletedMove> getHistory() { return Collections.unmodifiableList(history); }
 }

@@ -124,6 +124,9 @@ public final class PeerMatch extends InputAdapter {
             throw new IllegalArgumentException("Invalid series round");
         }
         int ack = (int) number(value, "ack", 0, Integer.MAX_VALUE);
+        int previousFeedback = lastFeedbackSequence();
+        boolean bumped = state.feedback().stream()
+                .anyMatch(event -> event.sequence() > previousFeedback && event.kind() == GameFeedback.Kind.BUMP);
         boolean newMatch = epoch != nextEpoch;
         if (newMatch) {
             if (epoch > 0 && state.series().firstWhite() != (series.state().firstWhite() != ownSwap)) {
@@ -135,11 +138,15 @@ public final class PeerMatch extends InputAdapter {
             session = sessions.get();
             session.getWhite().restore(state.white());
             session.getBlack().restore(state.black());
-        } else if (ack >= inputSequence || state.result() != null) {
+        } else if (ack >= inputSequence || state.result() != null || bumped) {
             Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
             Birb.Motion motion = getOwnSide() == Side.WHITE ? state.white() : state.black();
             double distance = Math.hypot(own.getX() - motion.x(), own.getY() - motion.y());
-            own.reconcile(motion, distance > 100 || state.result() != null ? 1 : 0.25);
+            own.reconcile(motion, distance > 100 || state.result() != null || bumped ? 1 : 0.25);
+            if (bumped) {
+                Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
+                other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
+            }
         }
         epoch = nextEpoch;
         receivedState = sequence;
@@ -154,8 +161,11 @@ public final class PeerMatch extends InputAdapter {
 
     public void update(float delta) {
         if (!started || disconnected) return;
-        if (host) session.update(delta);
-        else {
+        if (host) {
+            int before = lastFeedbackSequence();
+            session.update(delta);
+            if (lastFeedbackSequence() != before) sendState();
+        } else {
             session.updateReplica(delta, getOwnSide());
             if (latest != null) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
@@ -164,6 +174,11 @@ public final class PeerMatch extends InputAdapter {
             }
         }
         pulse();
+    }
+
+    private int lastFeedbackSequence() {
+        var events = session.getFeedback().events();
+        return events.isEmpty() ? 0 : events.get(events.size() - 1).sequence();
     }
 
     /** Also called by a browser timer so clocks/heartbeats survive a hidden render loop. */

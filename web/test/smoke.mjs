@@ -43,7 +43,7 @@ await withBrowser(async browser => {
   await sleep(650);
   await press('KeyE', 'e', 69);
   await screenshot('gameplay');
-  await until(() => evaluate("Howler._howls.length === 7 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
+  await until(() => evaluate("Howler._howls.length === 8 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
   assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Sound must unlock on keyboard input');
   assert.deepEqual(await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]"), [1200, 800]);
   // Movement expectations are model-space distances. The 1600-wide HUD is

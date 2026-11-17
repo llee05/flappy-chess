@@ -117,4 +117,104 @@ class GameSessionTest {
         game.keyDown(Keys.SPACE);
         assertEquals(-5.0, game.getWhite().getVelocityY());
     }
+
+    @Test void bumpDislodgesCarriedPieceBackToOriginAndStunsCarrier() {
+        GameSession game = session(new AtomicLong());
+        press(game, Keys.E);
+        assertEquals(Side.WHITE, game.getCarrier());
+        assertEquals(Square.E2, game.getBoardView().getHiddenPieceSquare());
+
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        game.update(1f / 60);
+
+        assertNull(game.getCarrier());
+        assertEquals(Square.NONE, game.getBoardView().getHiddenPieceSquare());
+        assertEquals(Square.NONE, game.getBoardView().getSelectedSquare());
+        assertTrue(game.getBoardView().getLegalTargets().isEmpty());
+        assertEquals(Piece.WHITE_PAWN, game.getBoardView().getBoard().getPiece(Square.E2));
+        assertEquals(Piece.NONE, game.getBoardView().getBoard().getPiece(Square.E4));
+        assertTrue(game.getHistory().isEmpty());
+        assertEquals(Side.WHITE, game.getChess().getSideToMove());
+        assertEquals(Side.BLACK, game.getLastBumper());
+        assertEquals(Side.WHITE, game.getLastBumped());
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, game.getBumpCooldown());
+        assertEquals(GameSession.BUMP_STUN_STEPS, game.getWhite().getStunSteps());
+        assertFalse(game.getBlack().isStunned());
+        assertEquals(-GameSession.BUMP_KNOCKBACK_X, game.getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.BUMP_RECOIL_X, game.getBlack().getVelocityX(), 1e-7);
+        var events = game.getFeedback().events();
+        assertEquals(GameFeedback.Kind.BUMP, events.get(events.size() - 1).kind());
+        assertEquals(Side.WHITE, events.get(events.size() - 1).side());
+    }
+
+    @Test void stunAndCooldownPreventChainBumpsAndSuppressInputUntilRecovered() {
+        GameSession game = session(new AtomicLong());
+        press(game, Keys.E);
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 625, 0, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(450, 625, -3.6, 0));
+        game.update(1f / 60);
+
+        int bumpEventsAfterFirst = (int) game.getFeedback().events().stream()
+                .filter(e -> e.kind() == GameFeedback.Kind.BUMP).count();
+        assertEquals(1, bumpEventsAfterFirst);
+        assertTrue(game.getWhite().isStunned());
+
+        // While stunned, flap and pickup are ignored.
+        double vyBefore = game.getWhite().getVelocityY();
+        press(game, Keys.SPACE);
+        press(game, Keys.E);
+        assertEquals(vyBefore, game.getWhite().getVelocityY(), 1e-7);
+        assertNull(game.getCarrier());
+
+        // Even if forced back into overlap during cooldown, no second bump triggers.
+        for (int i = 0; i < GameSession.BUMP_COOLDOWN_STEPS; i++) {
+            game.getWhite().setY(625);
+            game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(game.getWhite().getX() + 10, 625, -3.6, 0));
+            game.update(1f / 60);
+        }
+        assertEquals(0, game.getBumpCooldown());
+        assertFalse(game.getWhite().isStunned());
+        assertEquals(1, game.getFeedback().events().stream().filter(e -> e.kind() == GameFeedback.Kind.BUMP).count());
+
+        // After stun expires, White can pick up on E2 again.
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 625, 0, 0));
+        press(game, Keys.E);
+        assertEquals(Side.WHITE, game.getCarrier());
+    }
+
+    @Test void emptyHandedBumpAppliesMinimalKnockbackWithoutStun() {
+        GameSession game = session(new AtomicLong());
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(395, 425, 3.6, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        game.update(1f / 60);
+
+        assertEquals(Side.WHITE, game.getLastBumper());
+        assertEquals(Side.BLACK, game.getLastBumped());
+        assertFalse(game.getWhite().isStunned());
+        assertFalse(game.getBlack().isStunned());
+        assertEquals(-GameSession.EMPTY_BUMP_RECOIL_X, game.getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.EMPTY_BUMP_KNOCKBACK_X, game.getBlack().getVelocityX(), 1e-7);
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, game.getBumpCooldown());
+        var events = game.getFeedback().events();
+        assertEquals(GameFeedback.Kind.BUMP, events.get(events.size() - 1).kind());
+        assertEquals(Side.BLACK, events.get(events.size() - 1).side());
+    }
+
+    @Test void carrierRammingDefenderStillDropsPieceAndStunsBothBirds() {
+        GameSession game = session(new AtomicLong());
+        press(game, Keys.E);
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(395, 425, 3.6, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        game.update(1f / 60);
+
+        assertNull(game.getCarrier());
+        assertEquals(Piece.WHITE_PAWN, game.getBoardView().getBoard().getPiece(Square.E2));
+        assertEquals(Side.WHITE, game.getLastBumper());
+        assertEquals(Side.BLACK, game.getLastBumped());
+        assertTrue(game.getWhite().isStunned());
+        assertTrue(game.getBlack().isStunned());
+        assertEquals(-GameSession.BUMP_RECOIL_X, game.getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.BUMP_KNOCKBACK_X, game.getBlack().getVelocityX(), 1e-7);
+    }
 }

@@ -241,7 +241,7 @@ match; **R** repeats the lesson.
 Pickups and deliveries have small pixel bursts and a brief piece animation;
 captures get a larger gold burst. Invalid drops flash the destination, with legal
 targets left visible. Quiet sound
-effects accompany flaps, pickups, deliveries, captures, invalid actions, check,
+effects accompany flaps, pickups, deliveries, captures, midair bumps, invalid actions, check,
 and the first 30-second warning for each player. The in-match sound, setup, help,
 review, and export shortcuts are disabled; Escape is the only menu-return
 shortcut. Board feedback remains visible.
@@ -254,6 +254,8 @@ Both birds move continuously, with opposite gravity. Fly the active player's
 bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original
 square cancels the pickup; an illegal destination keeps the piece carried.
+Ramming the other bird in midair knocks both birds apart and makes a carrying
+bird drop its piece back to its starting square without completing a move.
 
 In local play, layouts stay with players after color swaps. In solo and online
 play, either layout controls your own bird.

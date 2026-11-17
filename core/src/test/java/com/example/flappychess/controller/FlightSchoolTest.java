@@ -78,4 +78,28 @@ class FlightSchoolTest {
         press(school, Keys.E);
         assertEquals(BLACK_FLY, school.getStage());
     }
+
+    @Test void bumpDuringDeliveryReturnsPawnAndAllowsRecovery() {
+        FlightSchool school = new FlightSchool(() -> 0L);
+        GameSession game = school.getSession();
+        over(game.getWhite(), Square.E2);
+        school.update(0);
+        press(school, Keys.E);
+        assertEquals(WHITE_DELIVER, school.getStage());
+
+        over(game.getWhite(), Square.E3);
+        game.getBlack().restore(new Birb.Motion(455, 525, -3.6, 0));
+        school.update(1f / 60);
+
+        assertNull(game.getCarrier());
+        assertEquals(Piece.WHITE_PAWN, game.getBoardView().getBoard().getPiece(Square.E2));
+        assertEquals(WHITE_PICKUP, school.getStage());
+
+        over(game.getWhite(), Square.E2);
+        press(school, Keys.E);
+        assertEquals(WHITE_DELIVER, school.getStage());
+        over(game.getWhite(), Square.E4);
+        press(school, Keys.E);
+        assertEquals(BLACK_FLY, school.getStage());
+    }
 }

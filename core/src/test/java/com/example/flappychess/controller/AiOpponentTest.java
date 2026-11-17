@@ -140,4 +140,26 @@ class AiOpponentTest {
         for (int i = 0; i < 5000 && game.getHistory().isEmpty(); i++) game.update(1f / 60, ai::step);
         assertEquals(1, game.getHistory().size());
     }
+
+    @Test void aiRecoversAndCompletesMoveAfterBeingBumpedWhileCarrying() {
+        LocalMatch match = new LocalMatch(MatchSettings.UNTIMED,
+                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.MEDIUM));
+        GameSession session = match.getSession();
+        for (int i = 0; session.getCarrier() != Side.WHITE && i < 3000; i++) {
+            match.update(1f / 60);
+        }
+        assertEquals(Side.WHITE, session.getCarrier());
+
+        session.getBlack().restore(new com.example.flappychess.model.Birb.Motion(
+                session.getWhite().getX() + 20, session.getWhite().getY(), -3.6, 0));
+        match.update(1f / 60);
+        assertNull(session.getCarrier());
+        assertTrue(session.getWhite().isStunned());
+
+        for (int i = 0; session.getHistory().isEmpty() && i < 5000; i++) {
+            match.update(1f / 60);
+        }
+        assertEquals(1, session.getHistory().size());
+        assertEquals(Side.BLACK, session.getChess().getSideToMove());
+    }
 }
