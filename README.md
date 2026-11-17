@@ -290,7 +290,7 @@ about one square (100 pixels), reaching its peak in about 0.7 seconds. Movement
 tuning lives in `Birb`; its constants use pixels per physics step, not per frame.
 The board scales with the window while retaining its original 800x800 logical
 coordinates. Focus loss releases held controls. GPU resources are disposed on exit.
-The pixel-art presentation pairs moss-and-sand stone tiles with midnight-blue
+The pixel-art presentation pairs moss-and-sand stone tiles with slate-blue
 panels, hand-authored chess sprites, and animated birds. Gold identifies the
 white bird; blue identifies the black bird. Pixel lettering, stepped frames,
 control keycaps, and segmented clock bars carry the style through the HUD and
@@ -299,8 +299,8 @@ capture brackets, and a coral check warning keep the board readable. The active
 clock changes to a warning color in the final 30 seconds.
 
 `PixelSprites` and `PixelFont` build their small texture atlases from original
-code-defined artwork at startup. A 600x400 framebuffer is scaled with nearest
-filtering inside the 1200x800 logical fit viewport, keeping the pixel grid
+code-defined artwork at startup. An 800x400 framebuffer is scaled with nearest
+filtering inside the 1600x800 logical fit viewport, keeping the pixel grid
 consistent as the window resizes. Visual pixel snapping does not affect bird
 physics or the coordinates used for pickup/drop.
 The original JavaFX views, FXML placeholder, and JavaFX-specific view tests were

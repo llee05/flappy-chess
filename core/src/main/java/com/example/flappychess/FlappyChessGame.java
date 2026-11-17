@@ -100,18 +100,18 @@ public final class FlappyChessGame extends ApplicationAdapter {
                 Vector2 point = renderer.unproject(x, y);
                 if (setup != null) {
                     if (point.y >= 500 && point.y <= 544) {
-                        if (point.x >= 380 && point.x < 600) setup.toggleOpponent();
-                        if (point.x >= 600 && point.x <= 820) setup.changeColor();
+                        if (point.x >= 580 && point.x < 800) setup.toggleOpponent();
+                        if (point.x >= 800 && point.x <= 1020) setup.changeColor();
                     }
                     if (point.y >= 196 && point.y <= 236) {
-                        if (point.x >= 380 && point.x < 600) setup.changeChess();
-                        if (point.x >= 600 && point.x <= 820) setup.changeFlight();
+                        if (point.x >= 580 && point.x < 800) setup.changeChess();
+                        if (point.x >= 800 && point.x <= 1020) setup.changeFlight();
                     }
-                    if (point.x >= 380 && point.x <= 820) {
+                    if (point.x >= 580 && point.x <= 1020) {
                         if (point.y >= 430 && point.y <= 480) setup.changeTime(1);
                         if (point.y >= 354 && point.y <= 404) setup.changeIncrement(1);
                     }
-                    if (point.x >= 450 && point.x <= 750 && point.y >= 260 && point.y <= 320) startConfiguredMatch();
+                    if (point.x >= 650 && point.x <= 950 && point.y >= 260 && point.y <= 320) startConfiguredMatch();
                     return true;
                 }
                 if (school == null && renderer.isSwapAt(session, point)) { rematch(true); return true; }
