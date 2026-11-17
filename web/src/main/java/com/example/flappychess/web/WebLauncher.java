@@ -7,8 +7,10 @@ import com.example.flappychess.FlappyChessGame;
 import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.model.SoloSettings;
 import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.controller.ChessEngine;
 import com.example.flappychess.controller.MatchSetup;
 import com.example.flappychess.controller.PostgameReview;
+import com.example.flappychess.controller.StockfishEngine;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.xpenatan.gdx.teavm.backends.web.WebApplication;
@@ -32,7 +34,8 @@ public final class WebLauncher {
     private static void start(boolean tutorial, boolean solo) {
         showLoading();
         FlappyChessGame game = solo
-                ? new FlappyChessGame(false, WebLauncher::leaveGame, selectedSettings(), selectedSolo(), WebLauncher::exportPgn)
+                ? new FlappyChessGame(false, WebLauncher::leaveGame, selectedSettings(), selectedSolo(),
+                        WebLauncher::exportPgn, stockfish())
                 : new FlappyChessGame(false, WebLauncher::leaveGame, tutorial, selectedSettings(), WebLauncher::exportPgn);
         launch(new ApplicationAdapter() {
             @Override public void create() {
@@ -70,8 +73,21 @@ public final class WebLauncher {
 
     static MatchSettings selectedSettings() { return MatchSettings.minutes(selectedMinutes(), selectedIncrement()); }
 
+    private static ChessEngine stockfish() {
+        try {
+            return new StockfishEngine(new BrowserStockfishProcess(assetBaseUrl()
+                    + "stockfish/stockfish-19-lite-single.js"));
+        } catch (RuntimeException failure) {
+            return (fen, level) -> new ChessEngine.Request() {
+                @Override public ChessEngine.State state() { return ChessEngine.State.FAILED; }
+                @Override public String move() { return null; }
+                @Override public String failure() { return "Stockfish worker could not start"; }
+            };
+        }
+    }
+
     private static SoloSettings selectedSolo() {
-        return new SoloSettings(Side.valueOf(soloChoice("side")), SoloSettings.Level.valueOf(soloChoice("chess")),
+        return new SoloSettings(Side.valueOf(soloChoice("side")), SoloSettings.ChessLevel.valueOf(soloChoice("chess")),
                 SoloSettings.Level.valueOf(soloChoice("flight")));
     }
 

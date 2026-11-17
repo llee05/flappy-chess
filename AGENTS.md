@@ -42,10 +42,11 @@ Java packages are under `com.example.flappychess` in `core/src/main/java`:
   real-time clocks, completed moves, and game-over state.
 - `controller/LocalMatch` and `MatchSeries`: local/solo input ownership, player
   identities, scores and color-swap rematches.
-- `controller/AiOpponent`, `ChessSearch` and `BirdPilot`: bounded incremental
-  chess search on an independent board and physical delivery through normal
-  input, stepped at the session's fixed physics rate. `model/SoloSettings`
-  separates chess skill from flight reaction speed; physics stays identical.
+- `controller/AiOpponent`, `StockfishEngine`, `ChessSearch` and `BirdPilot`:
+  asynchronous browser Stockfish over UCI, bounded built-in fallback search on
+  an independent board, and physical delivery through normal input, stepped at
+  the session's fixed physics rate. `model/SoloSettings` separates eight chess
+  levels from three flight reaction speeds; physics stays identical.
 - `controller/FlightSchool`: untimed, six-step pawn-delivery lesson using the
   regular session's input and physics, with both gravity directions.
 - `controller/GameFeedback`: bounded, numbered presentation events for local

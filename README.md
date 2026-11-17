@@ -212,15 +212,25 @@ The desktop opens a **New match** setup screen. Click each choice to cycle it,
 then click **Start**. Match setup cannot be reopened from the timers-only
 in-match screen.
 
-For solo play in the browser, choose your color, chess skill and flying skill,
+For solo play in the browser, choose your color, chess level and flying skill,
 then **Play computer**. Both keyboard layouts control your bird. The computer
 must fly to a piece, pick it up and deliver it through the same physics and
-legal-move checks as a human. Easy chess chooses random legal moves; Medium
-evaluates one move ahead; Hard searches up to three plies with a bounded node
-budget. Flying skill changes reaction speed and flap spacing, while gravity,
+legal-move checks as a human. The browser runs a separately bundled,
+single-threaded Stockfish 19 WebAssembly engine in a Web Worker. Choose from
+eight chess levels: Hatchling, Beginner, Casual, Club, Challenger, Expert,
+Master, and full-strength Stockfish. Flying skill changes reaction speed and flap spacing, while gravity,
 acceleration and speed remain identical. Thinking and flying both use clock
 time. Rematches keep the difficulty settings, and **X** swaps your color with
-the computer while preserving the series score.
+the computer while preserving the series score. If the browser engine cannot
+load, returns an invalid move, or times out, play continues with the bounded
+built-in search and the solo status reports `FALLBACK`. The desktop version uses
+that built-in search for all eight mapped levels and does not bundle a native
+Stockfish executable.
+
+The browser distribution adds about 1.84 MB for the Stockfish JavaScript loader,
+WebAssembly engine, and GPLv3 licence. Stockfish remains a separate UCI program;
+its exact build, checksums, licence, and corresponding-source links are documented
+in [`web/src/main/webapp/stockfish/README.md`](web/src/main/webapp/stockfish/README.md).
 
 Choose **Flight School** in the browser for an untimed lesson. Fly to White's E2 pawn, pick it up, and
 deliver it to E3 or E4, then practice Black's reversed gravity with D7 to D6 or
