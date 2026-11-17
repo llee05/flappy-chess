@@ -14,16 +14,22 @@ public final class LocalMatch extends InputAdapter {
     private final Supplier<GameSession> sessions;
     private final MatchSeries series;
     private final SoloSettings solo;
+    private final ChessEngine engine;
     private final Set<Integer> keys = new HashSet<>();
     private GameSession session;
     private AiOpponent opponent;
 
-    public LocalMatch(MatchSettings settings) { this(() -> new GameSession(settings)); }
-    public LocalMatch(MatchSettings settings, SoloSettings solo) { this(() -> new GameSession(settings), solo); }
-    LocalMatch(Supplier<GameSession> sessions) { this(sessions, null); }
-    LocalMatch(Supplier<GameSession> sessions, SoloSettings solo) {
+    public LocalMatch(MatchSettings settings) { this(() -> new GameSession(settings), null, null); }
+    public LocalMatch(MatchSettings settings, SoloSettings solo) { this(() -> new GameSession(settings), solo, null); }
+    public LocalMatch(MatchSettings settings, SoloSettings solo, ChessEngine engine) {
+        this(() -> new GameSession(settings), solo, engine);
+    }
+    LocalMatch(Supplier<GameSession> sessions) { this(sessions, null, null); }
+    LocalMatch(Supplier<GameSession> sessions, SoloSettings solo) { this(sessions, solo, null); }
+    LocalMatch(Supplier<GameSession> sessions, SoloSettings solo, ChessEngine engine) {
         this.sessions = sessions;
         this.solo = solo;
+        this.engine = engine;
         series = new MatchSeries(solo == null ? MatchSeries.Players.LOCAL : MatchSeries.Players.SOLO,
                 solo == null || solo.humanSide() == Side.WHITE);
         newSession();
@@ -33,7 +39,7 @@ public final class LocalMatch extends InputAdapter {
         session = sessions.get();
         series.observe(session);
         session.setSoloSettings(solo);
-        opponent = solo == null ? null : new AiOpponent(session, series.state().sideFor(false), solo);
+        opponent = solo == null ? null : new AiOpponent(session, series.state().sideFor(false), solo, engine);
     }
 
     public void update(float delta) {

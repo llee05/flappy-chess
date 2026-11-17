@@ -4,6 +4,7 @@ import com.badlogic.gdx.Input.Keys;
 import com.example.flappychess.model.ChessGameModel;
 import com.example.flappychess.model.MatchSettings;
 import com.example.flappychess.model.SoloSettings;
+import com.example.flappychess.model.SoloSettings.ChessLevel;
 import com.example.flappychess.model.SoloSettings.Level;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Side;
@@ -32,7 +33,7 @@ class AiOpponentTest {
         Board board = new Board();
         board.loadFromFen("7k/8/5KQ1/8/8/8/8/8 w - - 0 1");
         String before = board.getFen();
-        for (Level level : Level.values()) {
+        for (ChessLevel level : ChessLevel.values()) {
             ChessSearch search = new ChessSearch(before, level, new Random(1));
             int calls = 0;
             while (!search.isDone() && calls++ < 2000) search.step();
@@ -40,7 +41,7 @@ class AiOpponentTest {
             assertTrue(search.nodes() <= 3000);
             assertTrue(board.legalMoves().contains(search.choice()));
             assertEquals(before, board.getFen());
-            if (level != Level.EASY) {
+            if (level.fallbackDepth() > 0) {
                 board.doMove(search.choice());
                 assertTrue(board.isMated(), search.choice().toString());
                 board.undoMove();
@@ -49,8 +50,9 @@ class AiOpponentTest {
     }
 
     @Test void aiPhysicallyPicksUpAndDeliversWhileBothLayoutsBelongToHuman() {
-        for (Level level : Level.values()) {
-            LocalMatch match = new LocalMatch(MatchSettings.UNTIMED, new SoloSettings(Side.BLACK, level, level));
+        for (ChessLevel level : ChessLevel.values()) {
+            LocalMatch match = new LocalMatch(MatchSettings.UNTIMED,
+                    new SoloSettings(Side.BLACK, level, Level.MEDIUM));
             match.keyDown(Keys.E);
             match.keyUp(Keys.E);
             assertNull(match.getSession().getCarrier());
@@ -75,7 +77,7 @@ class AiOpponentTest {
         ChessGameModel model = new ChessGameModel();
         model.restorePosition("7k/P7/8/8/8/8/8/7K w - - 0 1");
         LocalMatch match = new LocalMatch(() -> new GameSession(model, MatchSettings.UNTIMED, () -> 0),
-                new SoloSettings(Side.BLACK, Level.MEDIUM, Level.HARD));
+                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
         for (int i = 0; match.getSession().getHistory().isEmpty() && i < 5000; i++) match.update(1f / 60);
         assertEquals(1, match.getSession().getHistory().size());
         assertTrue(match.getSession().getHistory().get(0).coordinate().startsWith("a7a8"));
@@ -112,13 +114,30 @@ class AiOpponentTest {
     }
 
     @Test void flightAndThinkingUseFixedStepsAtDifferentRenderRates() {
-        LocalMatch slow = new LocalMatch(MatchSettings.UNTIMED, new SoloSettings(Side.BLACK, Level.MEDIUM, Level.HARD));
-        LocalMatch fast = new LocalMatch(MatchSettings.UNTIMED, new SoloSettings(Side.BLACK, Level.MEDIUM, Level.HARD));
+        LocalMatch slow = new LocalMatch(MatchSettings.UNTIMED,
+                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
+        LocalMatch fast = new LocalMatch(MatchSettings.UNTIMED,
+                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
         for (int i = 0; i < 300; i++) {
             slow.update(1f / 30);
             for (int j = 0; j < 4; j++) fast.update(1f / 120);
         }
         assertEquals(slow.getSession().getWhite().snapshot(), fast.getSession().getWhite().snapshot());
         assertEquals(slow.getSession().getHistory(), fast.getSession().getHistory());
+    }
+
+    @Test void failedEngineIsVisibleAndFallsBackWithoutFreezing() {
+        ChessEngine failed = (fen, level) -> new ChessEngine.Request() {
+            @Override public ChessEngine.State state() { return ChessEngine.State.FAILED; }
+            @Override public String move() { return null; }
+            @Override public String failure() { return "test failure"; }
+        };
+        GameSession game = new GameSession(MatchSettings.UNTIMED);
+        AiOpponent ai = new AiOpponent(game, Side.WHITE, SoloSettings.DEFAULT, failed);
+        ai.step();
+        assertTrue(ai.usedFallback());
+        assertTrue(ai.phase().startsWith("FALLBACK:"));
+        for (int i = 0; i < 5000 && game.getHistory().isEmpty(); i++) game.update(1f / 60, ai::step);
+        assertEquals(1, game.getHistory().size());
     }
 }

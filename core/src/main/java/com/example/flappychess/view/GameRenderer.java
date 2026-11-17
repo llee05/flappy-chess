@@ -575,7 +575,7 @@ public final class GameRenderer implements Disposable {
         centered(setup.incrementLabel(), 800, 388, 2, BLUE);
         centered("CLICK TO CHANGE", 800, 348, 2, MUTED);
         centered("START", 800, 298, 2, INK);
-        centered("CHESS " + setup.chessLabel(), 688, 224, 2, CREAM);
+        centered("CHESS " + setup.chessLabel(), 688, 224, setup.chessLabel().length() > 7 ? 1 : 2, CREAM);
         centered("FLIGHT " + setup.flightLabel(), 912, 224, 2, CREAM);
         centered("CLICK A CHOICE TO CHANGE IT", 800, 184, 2, MUTED);
         batch.end();
