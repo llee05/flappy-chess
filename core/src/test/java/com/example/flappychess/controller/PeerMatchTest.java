@@ -58,6 +58,14 @@ class PeerMatchTest {
         void press(PeerMatch match, int key) { match.keyDown(key); match.keyUp(key); flush(); }
     }
 
+    private static void assertMotionEquals(com.example.flappychess.model.Birb.Motion expected,
+            com.example.flappychess.model.Birb.Motion actual) {
+        assertEquals(expected.x(), actual.x(), 1e-7);
+        assertEquals(expected.y(), actual.y(), 1e-7);
+        assertEquals(expected.velocityX(), actual.velocityX(), 1e-7);
+        assertEquals(expected.velocityY(), actual.velocityY(), 1e-7);
+    }
+
     @Test void handshakeStartsOneSharedMatchWithFiveMinuteClocks() {
         Pair pair = new Pair();
         assertTrue(pair.host.isStarted());
@@ -336,7 +344,8 @@ class PeerMatchTest {
                     Piece.make(side, com.github.bhlangonijr.chesslib.PieceType.QUEEN),
                     Piece.make(side.flip(), com.github.bhlangonijr.chesslib.PieceType.ROOK)));
         }
-        SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(), state.whiteMillis(), state.blackMillis(),
+        SessionSnapshot full = new SessionSnapshot(state.fen(), state.white(), state.black(),
+                state.whiteStunSteps(), state.blackStunSteps(), state.bumpCooldown(), state.whiteMillis(), state.blackMillis(),
                 state.selected(), state.hidden(), state.targets(), state.promotion(), state.carrier(), moves, state.result(), state.reason(),
                 state.feedback(), state.settings(), state.initialFen(), state.series());
         JsonValue packet = packet("state");
@@ -469,5 +478,52 @@ class PeerMatchTest {
         assertFalse(pair.host.getSession().getBlack().isStunned());
         assertFalse(pair.guest.getSession().getWhite().isStunned());
         assertFalse(pair.guest.getSession().getBlack().isStunned());
+    }
+
+    @Test void catchUpSnapshotKeepsRemainingBumpStunAndCooldown() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+
+        pair.time.addAndGet(250_000_000);
+        pair.host.update(0.25f);
+        pair.flush();
+
+        assertEquals(4, pair.host.getSession().getWhite().getStunSteps());
+        assertEquals(22, pair.host.getSession().getBumpCooldown());
+        SessionSnapshot hostState = pair.host.getSession().snapshot();
+        SessionSnapshot guestState = pair.guest.getSession().snapshot();
+        assertEquals(hostState.fen(), guestState.fen());
+        assertMotionEquals(hostState.white(), guestState.white());
+        assertMotionEquals(hostState.black(), guestState.black());
+        assertEquals(hostState.feedback(), guestState.feedback());
+        assertEquals(4, pair.guest.getSession().getWhite().getStunSteps());
+        assertEquals(0, pair.guest.getSession().getBlack().getStunSteps());
+        assertEquals(22, pair.guest.getSession().getBumpCooldown());
+    }
+
+    @Test void edgeClampedKnockbackKeepsBumpStunAndCooldown() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(0, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(30, 425, -3.6, 0));
+
+        pair.time.addAndGet(16_666_667);
+        pair.host.update(1f / 60);
+        pair.flush();
+
+        assertEquals(0, pair.host.getSession().getWhite().getVelocityX(), 1e-7);
+        assertEquals(GameSession.BUMP_STUN_STEPS, pair.host.getSession().getWhite().getStunSteps());
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, pair.host.getSession().getBumpCooldown());
+        SessionSnapshot hostState = pair.host.getSession().snapshot();
+        SessionSnapshot guestState = pair.guest.getSession().snapshot();
+        assertEquals(hostState.fen(), guestState.fen());
+        assertMotionEquals(hostState.white(), guestState.white());
+        assertMotionEquals(hostState.black(), guestState.black());
+        assertEquals(hostState.feedback(), guestState.feedback());
+        assertEquals(GameSession.BUMP_STUN_STEPS, pair.guest.getSession().getWhite().getStunSteps());
+        assertEquals(0, pair.guest.getSession().getBlack().getStunSteps());
+        assertEquals(GameSession.BUMP_COOLDOWN_STEPS, pair.guest.getSession().getBumpCooldown());
     }
 }

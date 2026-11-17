@@ -17,7 +17,7 @@ import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 5;
+    static final int VERSION = 6;
     static final int MAX_MESSAGE = 262_144;
 
     static JsonValue packet(String type) {
@@ -75,6 +75,9 @@ final class PeerProtocol {
         put(value, "initialFen", state.initialFen());
         value.addChild("white", motion(state.white()));
         value.addChild("black", motion(state.black()));
+        put(value, "whiteStunSteps", state.whiteStunSteps());
+        put(value, "blackStunSteps", state.blackStunSteps());
+        put(value, "bumpCooldown", state.bumpCooldown());
         put(value, "whiteMillis", state.whiteMillis());
         put(value, "blackMillis", state.blackMillis());
         put(value, "initialMillis", state.settings().initialMillis());
@@ -188,6 +191,9 @@ final class PeerProtocol {
                 (int) number(series, "firstPoints", 0, 2_000_000), (int) number(series, "secondPoints", 0, 2_000_000),
                 bool(series, "firstWhite"), MatchSeries.Players.valueOf(string(series, "players", 6)));
         return new SessionSnapshot(fen, motion(value.require("white")), motion(value.require("black")),
+                (int) number(value, "whiteStunSteps", 0, GameSession.BUMP_STUN_STEPS),
+                (int) number(value, "blackStunSteps", 0, GameSession.BUMP_STUN_STEPS),
+                (int) number(value, "bumpCooldown", 0, GameSession.BUMP_COOLDOWN_STEPS),
                 number(value, "whiteMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 number(value, "blackMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),

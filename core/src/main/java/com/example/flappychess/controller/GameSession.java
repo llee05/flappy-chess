@@ -176,16 +176,19 @@ public final class GameSession extends InputAdapter {
 
     public SessionSnapshot snapshot() {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
+                white.getStunSteps(), black.getStunSteps(), bumpCooldown,
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
                 chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen(), series);
     }
 
     public void restoreReplica(SessionSnapshot state) {
-        int prevSeq = feedback.events().isEmpty() ? 0 : feedback.events().get(feedback.events().size() - 1).sequence();
         chess.restoreRemote(state);
         clock.restore(state.whiteMillis(), state.blackMillis(), nanoTime.getAsLong());
         carrier = state.carrier();
+        white.stun(state.whiteStunSteps());
+        black.stun(state.blackStunSteps());
+        bumpCooldown = state.bumpCooldown();
         history.clear();
         history.addAll(state.history());
         result = state.result();
@@ -193,21 +196,6 @@ public final class GameSession extends InputAdapter {
         feedback.restore(state.feedback());
         settings = state.settings();
         series = state.series();
-        for (GameFeedback.Event event : state.feedback()) {
-            if (event.sequence() > prevSeq && event.kind() == BUMP) {
-                bumpCooldown = BUMP_COOLDOWN_STEPS;
-                boolean carryingBump = Math.abs(state.white().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
-                        || Math.abs(state.black().velocityX()) >= BUMP_KNOCKBACK_X - 0.1;
-                if (carryingBump && (Math.abs(state.white().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
-                        || event.side() == Side.WHITE && Math.abs(state.white().velocityX()) >= BUMP_RECOIL_X - 0.1)) {
-                    white.stun(BUMP_STUN_STEPS);
-                }
-                if (carryingBump && (Math.abs(state.black().velocityX()) >= BUMP_KNOCKBACK_X - 0.1
-                        || event.side() == Side.BLACK && Math.abs(state.black().velocityX()) >= BUMP_RECOIL_X - 0.1)) {
-                    black.stun(BUMP_STUN_STEPS);
-                }
-            }
-        }
     }
 
     private void resolveBump(double prevWhiteX, double prevWhiteY, double prevBlackX, double prevBlackY) {
