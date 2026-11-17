@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.math.Vector2;
 import com.example.flappychess.controller.GameSession;
+import com.example.flappychess.controller.ChessEngine;
 import com.example.flappychess.controller.FlightSchool;
 import com.example.flappychess.controller.MatchSetup;
 import com.example.flappychess.controller.LocalMatch;
@@ -27,6 +28,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private int frames;
     private MatchSettings settings;
     private SoloSettings solo;
+    private ChessEngine chessEngine;
     private MatchSetup setup;
     private boolean waitingToStart;
     private final Function<String, String> pgnExporter;
@@ -59,8 +61,14 @@ public final class FlappyChessGame extends ApplicationAdapter {
 
     public FlappyChessGame(boolean smokeTest, Runnable exitAction, MatchSettings settings,
             SoloSettings solo, Function<String, String> pgnExporter) {
+        this(smokeTest, exitAction, settings, solo, pgnExporter, null);
+    }
+
+    public FlappyChessGame(boolean smokeTest, Runnable exitAction, MatchSettings settings,
+            SoloSettings solo, Function<String, String> pgnExporter, ChessEngine chessEngine) {
         this(smokeTest, exitAction, false, settings, pgnExporter);
         this.solo = solo;
+        this.chessEngine = chessEngine;
     }
 
     @Override public void create() {
@@ -72,7 +80,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     private void restart(boolean tutorial) {
         if (session != null) session.releaseInput();
         school = tutorial ? new FlightSchool() : null;
-        match = tutorial ? null : new LocalMatch(settings, solo);
+        match = tutorial ? null : new LocalMatch(settings, solo, chessEngine);
         session = tutorial ? school.getSession() : match.getSession();
         installInput();
     }
@@ -162,5 +170,8 @@ public final class FlappyChessGame extends ApplicationAdapter {
         if (match != null) match.releaseInput();
         else if (session != null) session.releaseInput();
     }
-    @Override public void dispose() { if (renderer != null) renderer.dispose(); }
+    @Override public void dispose() {
+        if (renderer != null) renderer.dispose();
+        if (chessEngine != null) chessEngine.close();
+    }
 }

@@ -1,6 +1,6 @@
 package com.example.flappychess.controller;
 
-import com.example.flappychess.model.SoloSettings.Level;
+import com.example.flappychess.model.SoloSettings.ChessLevel;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.PieceType;
@@ -33,13 +33,13 @@ final class ChessSearch {
     private boolean done;
     private Move choice;
 
-    ChessSearch(String fen, Level level, Random random) {
+    ChessSearch(String fen, ChessLevel level, Random random) {
         board.loadFromFen(fen);
         List<Move> legal = board.legalMoves();
         choice = legal.isEmpty() ? null : legal.get(random.nextInt(legal.size()));
-        maxDepth = level == Level.HARD ? 3 : 1;
-        maxNodes = level == Level.HARD ? 3000 : 256;
-        done = level == Level.EASY || choice == null;
+        maxDepth = level.fallbackDepth();
+        maxNodes = level.fallbackNodes();
+        done = maxDepth == 0 || choice == null;
         if (!done) stack.push(new Node(null, depth, -INF, INF));
     }
 
