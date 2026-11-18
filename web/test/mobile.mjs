@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { sleep } from './browser.mjs';
 import { touchControls } from './touch.mjs';
-import { touchBird } from './flight.mjs';
+import { flyToRank, touchBird } from './flight.mjs';
 
 export async function checkMobile(browser) {
   const page = await browser.page();
@@ -128,6 +128,8 @@ async function checkTouchLesson(browser) {
   const page = await browser.page();
   const { send, evaluate, until, screenshot } = page;
   const touch = touchControls(page);
+  const fly = (white, top, bottom, label) => flyToRank(page, { birdY: async () => (await touchBird(page, white))?.y ?? null,
+    flap: () => touch.tap(white ? '[data-hold="SPACE"]' : '[data-hold="UP"]'), white, top, bottom, label });
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   await send('Page.navigate', { url: browser.url });
@@ -145,8 +147,7 @@ async function checkTouchLesson(browser) {
   await stage('WHITE_PICKUP');
   await touch.tap('[data-hold="E"]');
   await stage('WHITE_DELIVER');
-  await touch.tap('[data-hold="SPACE"]');
-  await sleep(620);
+  await fly(true, 400, 600, 'touch lesson: flying to E3 or E4');
   await touch.tap('[data-hold="E"]');
   await stage('BLACK_FLY');
   await screenshot('mobile-flight-school');
@@ -158,8 +159,7 @@ async function checkTouchLesson(browser) {
   await stage('BLACK_PICKUP');
   await touch.tap('[data-hold="ENTER"]');
   await stage('BLACK_DELIVER');
-  await touch.tap('[data-hold="UP"]');
-  await sleep(620);
+  await fly(false, 200, 400, 'touch lesson: flying to D6 or D5');
   await touch.tap('[data-hold="ENTER"]');
   await stage('COMPLETE');
   await screenshot('mobile-flight-school-complete');
