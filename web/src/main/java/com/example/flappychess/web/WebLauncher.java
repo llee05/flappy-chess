@@ -102,7 +102,7 @@ public final class WebLauncher {
                 game.getCarrier() == null ? "" : game.getCarrier().name());
     }
 
-    @JSBody(params = {"enabled", "side", "chess", "flight", "phase", "carrier"}, script = "const el = document.getElementById('solo-summary'); el.dataset.side = side; el.dataset.chess = chess; el.dataset.flight = flight; el.dataset.phase = phase; el.dataset.carrier = carrier; if (enabled) document.body.dataset.mode = 'solo'; const text = enabled ? 'Computer plays ' + side + '. Chess ' + chess + ', flying ' + flight + '. ' + phase + '. Either keyboard layout controls your bird.' : ''; if (el.textContent !== text) el.textContent = text;")
+    @JSBody(params = {"enabled", "side", "chess", "flight", "phase", "carrier"}, script = "const el = document.getElementById('solo-summary'); el.dataset.side = side; el.dataset.chess = chess; el.dataset.flight = flight; el.dataset.phase = phase; el.dataset.carrier = carrier; const note = document.getElementById('solo-fallback-note'); if (!enabled) { delete el.dataset.fallback; if (note) note.hidden = true; } else if (phase.startsWith('FALLBACK')) { el.dataset.fallback = 'true'; if (note) note.hidden = false; } if (enabled) document.body.dataset.mode = 'solo'; const fallback = el.dataset.fallback === 'true'; const text = enabled ? 'Computer plays ' + side + '. Chess ' + chess + ', flying ' + flight + '. ' + phase + (fallback ? ' (Backup AI)' : '') + '. Either keyboard layout controls your bird.' : ''; if (el.textContent !== text) el.textContent = text;")
     private static native void soloSummary(boolean enabled, String side, String chess, String flight, String phase, String carrier);
 
     @JSBody(script = "return window.FlappySettings.read().minutes;")
@@ -194,7 +194,7 @@ public final class WebLauncher {
     @JSBody(script = "document.getElementById('play').disabled = true; document.getElementById('tutorial').disabled = true; document.getElementById('solo').disabled = true; document.getElementById('matchmake').disabled = true; document.getElementById('host').disabled = true; document.getElementById('join').disabled = true; document.getElementById('status').textContent = 'Preparing the board...';")
     private static native void showLoading();
 
-    @JSBody(params = "tutorial", script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready'; document.body.dataset.mode = tutorial ? 'tutorial' : 'local';")
+    @JSBody(params = "tutorial", script = "document.getElementById('welcome').hidden = true; document.getElementById('canvas').focus(); document.body.dataset.game = 'ready'; document.body.dataset.mode = tutorial ? 'tutorial' : 'local'; const note = document.getElementById('solo-fallback-note'); if (note) note.hidden = true; const solo = document.getElementById('solo-summary'); if (solo) delete solo.dataset.fallback;")
     private static native void ready(boolean tutorial);
 
     @JSBody(params = {"stage", "text"}, script = "const summary = document.getElementById('lesson-summary'); summary.dataset.stage = stage; if (summary.textContent !== text) summary.textContent = text; document.body.dataset.mode = stage ? 'tutorial' : 'local';")
@@ -203,7 +203,7 @@ public final class WebLauncher {
     @JSBody(params = {"text", "sound"}, script = "const summary = document.getElementById('action-feedback'); if (summary.textContent !== text) summary.textContent = text; document.body.dataset.sound = sound ? 'on' : 'off';")
     static native void describeFeedback(String text, boolean sound);
 
-    @JSBody(script = "window.FlappyNetwork.leave();")
+    @JSBody(script = "const note = document.getElementById('solo-fallback-note'); if (note) note.hidden = true; const solo = document.getElementById('solo-summary'); if (solo) delete solo.dataset.fallback; window.FlappyNetwork.leave();")
     static native void leaveGame();
 
     @JSBody(script = "return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);")

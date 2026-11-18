@@ -27,12 +27,18 @@ export async function checkSolo(browser) {
   assert.equal(await evaluate("JSON.parse(localStorage.getItem('flappy-chess-solo')).chess"), 'EAGLE', 'Picker choice persists');
   assert.equal((await solo()).flight, 'EASY');
   let carried = false;
+  let sawStockfish = false;
   await until(async () => {
     const state = await solo();
     carried ||= state.carrier === 'WHITE';
+    if (state.phase?.startsWith('STOCKFISH')) sawStockfish = true;
+    assert(!state.phase?.startsWith('FALLBACK'), `AI must use Stockfish, not fallback; phase was ${state.phase}`);
     return evaluate("document.getElementById('history-summary').dataset.moves === '1'");
   }, 'computer flying, picking up, and completing its move', 45000);
+  assert.equal(sawStockfish, true, 'AI must enter the STOCKFISH phase');
   assert.equal(carried, true, 'AI must visibly carry the piece');
+  assert.equal(await evaluate("document.getElementById('solo-fallback-note')?.hidden ?? true"), true,
+    'Backup AI note must remain hidden when Stockfish succeeds');
   await screenshot('solo-ai-move');
   assert.equal(await evaluate("document.getElementById('canvas').getContext('webgl').getError()"), 0);
   await press('Escape', 'Escape', 27);

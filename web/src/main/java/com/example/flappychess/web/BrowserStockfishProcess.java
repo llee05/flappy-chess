@@ -2,6 +2,7 @@ package com.example.flappychess.web;
 
 import com.example.flappychess.controller.UciProcess;
 import java.util.function.Consumer;
+import org.teavm.jso.core.JSString;
 import org.teavm.jso.workers.Worker;
 
 /** Runs the separately distributed single-threaded Stockfish build in a Web Worker. */
@@ -22,6 +23,6 @@ final class BrowserStockfishProcess implements UciProcess {
         this.failure = failure;
     }
 
-    @Override public void send(String command) { worker.postMessage(command); }
+    @Override public void send(String command) { worker.postMessage(JSString.valueOf(command)); }
     @Override public void close() { worker.terminate(); }
 }

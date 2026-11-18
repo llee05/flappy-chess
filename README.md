@@ -225,9 +225,9 @@ acceleration and speed remain identical. Thinking and flying both use clock
 time. Rematches keep the difficulty settings, and **X** swaps your color with
 the computer while preserving the series score. If the browser engine cannot
 load, returns an invalid move, or times out, play continues with the bounded
-built-in search and the solo status reports `FALLBACK`. The desktop version uses
-that built-in search for all eight mapped levels and does not bundle a native
-Stockfish executable.
+built-in search, a **Backup AI** badge appears, and the accessible solo status
+reports `FALLBACK`. The desktop version uses that built-in search for all eight
+mapped levels and does not bundle a native Stockfish executable.
 
 The browser distribution adds about 1.84 MB for the Stockfish JavaScript loader,
 WebAssembly engine, and GPLv3 licence. Stockfish remains a separate UCI program;
