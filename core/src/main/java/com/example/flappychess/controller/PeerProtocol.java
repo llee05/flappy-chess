@@ -17,7 +17,7 @@ import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
 final class PeerProtocol {
-    static final int VERSION = 6;
+    static final int VERSION = 7;
     static final int MAX_MESSAGE = 262_144;
 
     static JsonValue packet(String type) {
@@ -42,6 +42,7 @@ final class PeerProtocol {
         object.addChild(key, value == null ? new JsonValue(ValueType.nullValue) : new JsonValue(value));
     }
     static void put(JsonValue object, String key, long value) { object.addChild(key, new JsonValue(value)); }
+    static void put(JsonValue object, String key, double value) { object.addChild(key, new JsonValue(value)); }
     static void put(JsonValue object, String key, boolean value) { object.addChild(key, new JsonValue(value)); }
 
     static long number(JsonValue object, String key, long min, long max) {
@@ -51,6 +52,16 @@ final class PeerProtocol {
             throw new IllegalArgumentException("Invalid " + key);
         }
         return (long) n;
+    }
+
+    static double decimal(JsonValue object, String key, double min, double max) {
+        JsonValue value = object.require(key);
+        if (!value.isNumber()) throw new IllegalArgumentException("Invalid " + key);
+        double n = value.asDouble();
+        if (!Double.isFinite(n) || n < min || n > max) {
+            throw new IllegalArgumentException("Invalid " + key);
+        }
+        return n;
     }
 
     static String string(JsonValue object, String key, int max) {
@@ -78,6 +89,27 @@ final class PeerProtocol {
         put(value, "whiteStunSteps", state.whiteStunSteps());
         put(value, "blackStunSteps", state.blackStunSteps());
         put(value, "bumpCooldown", state.bumpCooldown());
+        put(value, "hitStopSteps", state.hitStopSteps());
+        JsonValue dropReturn = new JsonValue(ValueType.nullValue);
+        if (state.dropReturn() != null) {
+            dropReturn = new JsonValue(ValueType.object);
+            put(dropReturn, "piece", state.dropReturn().piece().name());
+            put(dropReturn, "origin", state.dropReturn().origin().name());
+            put(dropReturn, "fromX", state.dropReturn().fromX());
+            put(dropReturn, "fromY", state.dropReturn().fromY());
+            put(dropReturn, "steps", state.dropReturn().stepsRemaining());
+        }
+        value.addChild("dropReturn", dropReturn);
+        JsonValue lastBump = new JsonValue(ValueType.nullValue);
+        if (state.lastBump() != null) {
+            lastBump = new JsonValue(ValueType.object);
+            put(lastBump, "sequence", state.lastBump().sequence());
+            put(lastBump, "x", state.lastBump().x());
+            put(lastBump, "y", state.lastBump().y());
+            put(lastBump, "speed", state.lastBump().speed());
+            put(lastBump, "dropped", state.lastBump().dropped());
+        }
+        value.addChild("lastBump", lastBump);
         put(value, "whiteMillis", state.whiteMillis());
         put(value, "blackMillis", state.blackMillis());
         put(value, "initialMillis", state.settings().initialMillis());
@@ -190,10 +222,35 @@ final class PeerProtocol {
         MatchSeries.State seriesState = new MatchSeries.State((int) number(series, "round", 1, 1_000_000),
                 (int) number(series, "firstPoints", 0, 2_000_000), (int) number(series, "secondPoints", 0, 2_000_000),
                 bool(series, "firstWhite"), MatchSeries.Players.valueOf(string(series, "players", 6)));
+        JsonValue dropReturnJson = value.require("dropReturn");
+        GameSession.DropReturn dropReturn = null;
+        if (!dropReturnJson.isNull()) {
+            if (!dropReturnJson.isObject()) throw new IllegalArgumentException("Invalid dropReturn");
+            Piece piece = Piece.valueOf(string(dropReturnJson, "piece", 16));
+            Square origin = Square.valueOf(string(dropReturnJson, "origin", 2));
+            if (piece == Piece.NONE || origin == Square.NONE) throw new IllegalArgumentException("Invalid dropReturn piece");
+            dropReturn = new GameSession.DropReturn(piece, origin,
+                    decimal(dropReturnJson, "fromX", 0, 800),
+                    decimal(dropReturnJson, "fromY", 0, 800),
+                    (int) number(dropReturnJson, "steps", 1, GameSession.DROP_RETURN_STEPS));
+        }
+        JsonValue lastBumpJson = value.require("lastBump");
+        GameSession.BumpImpact lastBump = null;
+        if (!lastBumpJson.isNull()) {
+            if (!lastBumpJson.isObject()) throw new IllegalArgumentException("Invalid lastBump");
+            lastBump = new GameSession.BumpImpact(
+                    (int) number(lastBumpJson, "sequence", 1, Integer.MAX_VALUE),
+                    decimal(lastBumpJson, "x", 0, 800),
+                    decimal(lastBumpJson, "y", 0, 800),
+                    decimal(lastBumpJson, "speed", GameSession.MIN_BUMP_SPEED, 30.0),
+                    bool(lastBumpJson, "dropped"));
+        }
         return new SessionSnapshot(fen, motion(value.require("white")), motion(value.require("black")),
                 (int) number(value, "whiteStunSteps", 0, GameSession.BUMP_STUN_STEPS),
                 (int) number(value, "blackStunSteps", 0, GameSession.BUMP_STUN_STEPS),
                 (int) number(value, "bumpCooldown", 0, GameSession.BUMP_COOLDOWN_STEPS),
+                (int) number(value, "hitStopSteps", 0, GameSession.CARRY_HIT_STOP_STEPS),
+                dropReturn, lastBump,
                 number(value, "whiteMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 number(value, "blackMillis", 0, MatchSettings.MAX_REMAINING_MILLIS),
                 Square.valueOf(string(value, "selected", 4)), Square.valueOf(string(value, "hidden", 4)),

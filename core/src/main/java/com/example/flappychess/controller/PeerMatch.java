@@ -126,7 +126,8 @@ public final class PeerMatch extends InputAdapter {
         int ack = (int) number(value, "ack", 0, Integer.MAX_VALUE);
         int previousFeedback = lastFeedbackSequence();
         boolean bumped = state.feedback().stream()
-                .anyMatch(event -> event.sequence() > previousFeedback && event.kind() == GameFeedback.Kind.BUMP);
+                .anyMatch(event -> event.sequence() > previousFeedback
+                        && (event.kind() == GameFeedback.Kind.BUMP || event.kind() == GameFeedback.Kind.BUMP_DROP));
         boolean newMatch = epoch != nextEpoch;
         if (newMatch) {
             if (epoch > 0 && state.series().firstWhite() != (series.state().firstWhite() != ownSwap)) {

@@ -48,6 +48,7 @@ final class PeerGame extends ApplicationAdapter {
     @Override public void render() {
         MobileControls.resizeCanvas();
         renderer.setBoardOnly(MobileControls.isMobile());
+        renderer.setReducedMotion(WebLauncher.prefersReducedMotion());
         // The backend delays initial rendering; start the handshake once the board can be shown.
         match.open();
         match.update(Gdx.graphics.getDeltaTime());

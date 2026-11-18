@@ -8,7 +8,8 @@ import java.util.List;
 
 /** Complete presentation state; only the host applies chess rules or declares outcomes. */
 public record SessionSnapshot(String fen, Birb.Motion white, Birb.Motion black,
-        int whiteStunSteps, int blackStunSteps, int bumpCooldown,
+        int whiteStunSteps, int blackStunSteps, int bumpCooldown, int hitStopSteps,
+        GameSession.DropReturn dropReturn, GameSession.BumpImpact lastBump,
         long whiteMillis, long blackMillis, Square selected, Square hidden,
         List<Square> targets, ChessController.PromotionRequest promotion, Side carrier,
         List<ChessController.CompletedMove> history, String result, String reason,

@@ -95,6 +95,7 @@ class FlightSchoolTest {
         assertEquals(Piece.WHITE_PAWN, game.getBoardView().getBoard().getPiece(Square.E2));
         assertEquals(WHITE_PICKUP, school.getStage());
 
+        for (int i = 0; i < GameSession.CARRY_HIT_STOP_STEPS; i++) school.update(1f / 60);
         over(game.getWhite(), Square.E2);
         press(school, Keys.E);
         assertEquals(WHITE_DELIVER, school.getStage());
