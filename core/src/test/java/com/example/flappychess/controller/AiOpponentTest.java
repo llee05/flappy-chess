@@ -77,7 +77,7 @@ class AiOpponentTest {
         ChessGameModel model = new ChessGameModel();
         model.restorePosition("7k/P7/8/8/8/8/8/7K w - - 0 1");
         LocalMatch match = new LocalMatch(() -> new GameSession(model, MatchSettings.UNTIMED, () -> 0),
-                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
+                new SoloSettings(Side.BLACK, ChessLevel.PIGEON, Level.HARD));
         for (int i = 0; match.getSession().getHistory().isEmpty() && i < 5000; i++) match.update(1f / 60);
         assertEquals(1, match.getSession().getHistory().size());
         assertTrue(match.getSession().getHistory().get(0).coordinate().startsWith("a7a8"));
@@ -115,9 +115,9 @@ class AiOpponentTest {
 
     @Test void flightAndThinkingUseFixedStepsAtDifferentRenderRates() {
         LocalMatch slow = new LocalMatch(MatchSettings.UNTIMED,
-                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
+                new SoloSettings(Side.BLACK, ChessLevel.PIGEON, Level.HARD));
         LocalMatch fast = new LocalMatch(MatchSettings.UNTIMED,
-                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.HARD));
+                new SoloSettings(Side.BLACK, ChessLevel.PIGEON, Level.HARD));
         for (int i = 0; i < 300; i++) {
             slow.update(1f / 30);
             for (int j = 0; j < 4; j++) fast.update(1f / 120);
@@ -143,7 +143,7 @@ class AiOpponentTest {
 
     @Test void aiRecoversAndCompletesMoveAfterBeingBumpedWhileCarrying() {
         LocalMatch match = new LocalMatch(MatchSettings.UNTIMED,
-                new SoloSettings(Side.BLACK, ChessLevel.CLUB, Level.MEDIUM));
+                new SoloSettings(Side.BLACK, ChessLevel.PIGEON, Level.MEDIUM));
         GameSession session = match.getSession();
         for (int i = 0; session.getCarrier() != Side.WHITE && i < 3000; i++) {
             match.update(1f / 60);

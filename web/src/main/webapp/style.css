@@ -1233,6 +1233,80 @@ body[data-room-state="searching"] .lobby-menu-card { visibility: hidden; }
   white-space: nowrap;
 }
 
+/* VS AI level picker: covers the mode buttons inside the menu art. */
+.level-panel {
+  position: absolute;
+  z-index: 5;
+  top: 15.5%;
+  left: 11%;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 8px;
+  width: 78%;
+  min-height: 60%;
+  margin: 0;
+  padding: 12px;
+  border: 3px solid #f0b05c;
+  background: #32172ff2;
+  box-shadow: 5px 6px 0 #211329;
+}
+.level-panel[hidden] { display: none; }
+.level-panel h2 {
+  margin: 0;
+  color: #fff2a2;
+  font: 700 clamp(11px, 1.6vw, 18px)/1.1 'Lobby Pixel', monospace;
+  letter-spacing: .06em;
+  text-align: center;
+  text-shadow: 0 2px 0 #24122b;
+}
+.level-choices {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+}
+#welcome .level-choice,
+#welcome .level-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 34px;
+  margin: 0;
+  padding: 6px 8px;
+  border: 2px solid #e3aa62;
+  border-radius: 0;
+  color: #fff0be;
+  background: #75424c;
+  box-shadow: 0 3px 0 #25142b;
+  font: 700 clamp(11px, 1.3vw, 16px)/1 'Lobby Pixel', monospace;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#welcome .level-choice small {
+  min-width: 1.6em;
+  padding: 2px 0;
+  color: #32172f;
+  background: #f0b05c;
+  font-size: .8em;
+  text-align: center;
+}
+#welcome .level-choice.current {
+  border-color: #fff4ba;
+  background: #965557;
+  box-shadow: 0 3px 0 #25142b, inset 0 0 0 2px #ffd467;
+}
+#welcome .level-choice:hover,
+#welcome .level-back:hover { background: #965557; transform: translateY(-1px); }
+#welcome .level-choice:active,
+#welcome .level-back:active { transform: translateY(2px); box-shadow: 0 1px 0 #25142b; }
+#welcome .level-back {
+  justify-self: center;
+  min-width: 40%;
+  border-color: #a86c69;
+  color: #eacda5;
+  background: #4d2b43;
+}
+
 @media (max-width: 720px) {
   #welcome .lobby-page {
     min-height: 100%;
@@ -1250,6 +1324,8 @@ body[data-room-state="searching"] .lobby-menu-card { visibility: hidden; }
   #welcome .secondary-button { min-height: 0; padding: 0; }
   #welcome .mode-button { font-size: 0; }
   .challenge-panel { left: 9%; width: 82%; }
+  .level-panel { top: 12%; left: 6%; width: 88%; padding: 9px; gap: 6px; }
+  #welcome .level-choice, #welcome .level-back { min-height: 40px; font-size: 11px; }
   #welcome > .lobby-foreground { display: none; }
 }
 

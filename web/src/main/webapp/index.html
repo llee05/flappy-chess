@@ -72,7 +72,7 @@
         <img class="menu-panel-art" src="./art/menu-box-reference.png" alt="" width="1410" height="1116">
         <section class="lobby-actions" aria-label="Choose a game mode">
           <button id="matchmake" class="mode-button" type="button" disabled><span class="sr-only">Play</span></button>
-          <button id="solo" class="mode-button" type="button" disabled><span class="sr-only">VS AI</span></button>
+          <button id="solo" class="mode-button" type="button" aria-expanded="false" aria-controls="level-panel" disabled><span class="sr-only">VS AI</span></button>
           <button id="play" class="mode-button" type="button" disabled><span class="sr-only">Local</span></button>
           <button id="challenge" class="mode-button" type="button" aria-expanded="false" aria-controls="challenge-panel" disabled><span class="sr-only">Challenge a friend</span></button>
         </section>
@@ -85,6 +85,12 @@
             <input id="room" type="text" autocomplete="off" spellcheck="false" placeholder="Room code or invite link" maxlength="2048">
             <button id="join" class="secondary-button" type="submit" disabled>JOIN</button>
           </form>
+        </section>
+
+        <section id="level-panel" class="level-panel" role="dialog" aria-labelledby="level-title" hidden>
+          <h2 id="level-title">CHOOSE YOUR OPPONENT</h2>
+          <div id="level-choices" class="level-choices" role="group" aria-labelledby="level-title"></div>
+          <button id="level-back" class="level-back" type="button">BACK</button>
         </section>
 
         <nav class="lobby-secondary" aria-label="More ways to play and lobby controls">
@@ -140,7 +146,7 @@
             <legend>Solo opponent · same flight physics</legend>
             <div class="setting-controls solo-controls">
               <label>Your color<select id="solo-side"><option value="WHITE">White · falls down</option><option value="BLACK">Black · falls up</option></select></label>
-              <label>Chess level<select id="solo-chess"><option>HATCHLING</option><option>BEGINNER</option><option>CASUAL</option><option selected>CLUB</option><option>CHALLENGER</option><option>EXPERT</option><option>MASTER</option><option>STOCKFISH</option></select></label>
+              <label>Chess level<select id="solo-chess"><option value="EGG">Egg</option><option value="HATCHLING">Hatchling</option><option value="SPARROW">Sparrow</option><option value="PIGEON" selected>Pigeon</option><option value="RAVEN">Raven</option><option value="HAWK">Hawk</option><option value="EAGLE">Eagle</option><option value="PHOENIX">Phoenix</option></select></label>
               <label>Flying skill<select id="solo-flight"><option>EASY</option><option selected>MEDIUM</option><option>HARD</option></select></label>
             </div>
           </fieldset>
@@ -230,6 +236,7 @@
       const welcome = document.getElementById('welcome');
       const panel = document.getElementById('challenge-panel');
       const button = document.getElementById('challenge');
+      if (open) window.setLobbyLevelOpen?.(false, false);
       panel.hidden = !open;
       welcome.classList.toggle('challenge-open', open);
       button.setAttribute('aria-expanded', String(open));
