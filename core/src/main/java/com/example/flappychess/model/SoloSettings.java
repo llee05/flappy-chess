@@ -7,14 +7,15 @@ import java.util.Objects;
 public record SoloSettings(Side humanSide, ChessLevel chess, Level flight) {
     /** Stockfish settings plus bounded built-in-search settings used by the desktop/failure fallback. */
     public enum ChessLevel {
-        HATCHLING(0, 1320, 50, 0, 0),
-        BEGINNER(2, 1400, 75, 1, 64),
-        CASUAL(5, 1550, 100, 1, 128),
-        CLUB(8, 1700, 150, 2, 256),
-        CHALLENGER(11, 1900, 225, 2, 512),
-        EXPERT(14, 2100, 350, 2, 1000),
-        MASTER(17, 2400, 550, 3, 2000),
-        STOCKFISH(20, 0, 1000, 3, 3000);
+        EGG(0, 1320, 50, 0, 0),
+        HATCHLING(2, 1400, 75, 1, 64),
+        SPARROW(5, 1550, 100, 1, 128),
+        PIGEON(8, 1700, 150, 2, 256),
+        RAVEN(11, 1900, 225, 2, 512),
+        HAWK(14, 2100, 350, 2, 1000),
+        EAGLE(17, 2400, 550, 3, 2000),
+        /** Full-strength Stockfish. */
+        PHOENIX(20, 0, 1000, 3, 3000);
 
         private final int skill, elo, moveTimeMillis, fallbackDepth, fallbackNodes;
 
@@ -39,6 +40,6 @@ public record SoloSettings(Side humanSide, ChessLevel chess, Level flight) {
     public enum Level { EASY, MEDIUM, HARD;
         public Level next() { return values()[(ordinal() + 1) % values().length]; }
     }
-    public static final SoloSettings DEFAULT = new SoloSettings(Side.WHITE, ChessLevel.CLUB, Level.MEDIUM);
+    public static final SoloSettings DEFAULT = new SoloSettings(Side.WHITE, ChessLevel.PIGEON, Level.MEDIUM);
     public SoloSettings { Objects.requireNonNull(humanSide); Objects.requireNonNull(chess); Objects.requireNonNull(flight); }
 }

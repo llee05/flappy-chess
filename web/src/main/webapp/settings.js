@@ -25,15 +25,19 @@
   update();
   const soloFields = ['side', 'chess', 'flight'];
   const solo = () => Object.fromEntries(soloFields.map(name => [name, document.getElementById('solo-' + name).value]));
+  // Levels were renamed to birds; keep a saved pre-rename choice at the same strength.
+  const renamedLevels = { HATCHLING: 'EGG', BEGINNER: 'HATCHLING', CASUAL: 'SPARROW', CLUB: 'PIGEON',
+    CHALLENGER: 'RAVEN', EXPERT: 'HAWK', MASTER: 'EAGLE', STOCKFISH: 'PHOENIX' };
   try {
     const saved = JSON.parse(localStorage.getItem('flappy-chess-solo'));
+    if (saved && !saved.levelNames && renamedLevels[saved.chess]) saved.chess = renamedLevels[saved.chess];
     for (const name of soloFields) {
       const field = document.getElementById('solo-' + name);
       if (saved && [...field.options].some(option => option.value === saved[name])) field.value = saved[name];
     }
   } catch { /* Preferences are optional. */ }
   for (const name of soloFields) document.getElementById('solo-' + name).addEventListener('change', () => {
-    try { localStorage.setItem('flappy-chess-solo', JSON.stringify(solo())); } catch { /* Optional storage. */ }
+    try { localStorage.setItem('flappy-chess-solo', JSON.stringify({ ...solo(), levelNames: 'birds' })); } catch { /* Optional storage. */ }
   });
   window.FlappySettings = { read, solo };
 })();

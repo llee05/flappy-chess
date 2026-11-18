@@ -217,8 +217,8 @@ then **Play computer**. Both keyboard layouts control your bird. The computer
 must fly to a piece, pick it up and deliver it through the same physics and
 legal-move checks as a human. The browser runs a separately bundled,
 single-threaded Stockfish 19 WebAssembly engine in a Web Worker. Choose from
-eight chess levels: Hatchling, Beginner, Casual, Club, Challenger, Expert,
-Master, and full-strength Stockfish. Flying skill changes reaction speed and flap spacing, while gravity,
+eight chess levels, weakest to strongest: Egg, Hatchling, Sparrow, Pigeon,
+Raven, Hawk, Eagle, and Phoenix (full-strength Stockfish). Flying skill changes reaction speed and flap spacing, while gravity,
 acceleration and speed remain identical. Thinking and flying both use clock
 time. Rematches keep the difficulty settings, and **X** swaps your color with
 the computer while preserving the series score. If the browser engine cannot

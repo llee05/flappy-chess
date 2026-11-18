@@ -1,5 +1,7 @@
 package com.example.flappychess.controller;
 
+import com.example.flappychess.model.MatchSettings;
+import com.example.flappychess.model.SoloSettings;
 import com.example.flappychess.model.SoloSettings.ChessLevel;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +19,7 @@ class StockfishEngineTest {
             assertTrue(level.moveTimeMillis() > lastTime, level.toString());
             assertTrue(level.fallbackDepth() >= 0 && level.fallbackDepth() <= 3);
             assertTrue(level.fallbackNodes() >= 0 && level.fallbackNodes() <= 3000);
-            if (level != ChessLevel.STOCKFISH) {
+            if (level != ChessLevel.PHOENIX) {
                 assertTrue(level.elo() > lastElo, level.toString());
                 lastElo = level.elo();
             } else assertEquals(0, level.elo(), "Full strength disables Elo limiting");
@@ -26,12 +28,46 @@ class StockfishEngineTest {
         }
     }
 
+    @Test void birdNamedLevelsKeepTheirStockfishAndFallbackSettings() {
+        // name, skill, Elo, think time, fallback depth, fallback nodes; weakest first.
+        Object[][] expected = {
+                {"EGG", 0, 1320, 50, 0, 0},
+                {"HATCHLING", 2, 1400, 75, 1, 64},
+                {"SPARROW", 5, 1550, 100, 1, 128},
+                {"PIGEON", 8, 1700, 150, 2, 256},
+                {"RAVEN", 11, 1900, 225, 2, 512},
+                {"HAWK", 14, 2100, 350, 2, 1000},
+                {"EAGLE", 17, 2400, 550, 3, 2000},
+                {"PHOENIX", 20, 0, 1000, 3, 3000},
+        };
+        ChessLevel[] levels = ChessLevel.values();
+        assertEquals(expected.length, levels.length);
+        for (int i = 0; i < levels.length; i++) {
+            ChessLevel level = levels[i];
+            assertEquals(expected[i][0], level.name());
+            assertEquals(List.of(expected[i]).subList(1, 6), List.of(level.skill(), level.elo(),
+                    level.moveTimeMillis(), level.fallbackDepth(), level.fallbackNodes()), level.name());
+        }
+    }
+
+    @Test void desktopSetupCyclesBirdLevelsFromTheDefault() {
+        MatchSetup setup = new MatchSetup(MatchSettings.DEFAULT, SoloSettings.DEFAULT);
+        assertEquals("PIGEON", setup.chessLabel());
+        List<String> labels = new ArrayList<>();
+        for (int i = 0; i < ChessLevel.values().length; i++) {
+            setup.changeChess();
+            labels.add(setup.chessLabel());
+        }
+        assertEquals(List.of("RAVEN", "HAWK", "EAGLE", "PHOENIX", "EGG", "HATCHLING", "SPARROW", "PIGEON"), labels);
+        assertEquals(ChessLevel.PIGEON, setup.soloSettings().chess());
+    }
+
     @Test void uciConversationWaitsForReadinessAndReturnsBestMove() {
         FakeProcess process = new FakeProcess();
         StockfishEngine engine = new StockfishEngine(process, () -> 100);
         assertEquals(List.of("uci"), process.commands);
 
-        ChessEngine.Request request = engine.choose("test fen", ChessLevel.CLUB);
+        ChessEngine.Request request = engine.choose("test fen", ChessLevel.PIGEON);
         assertEquals(ChessEngine.State.THINKING, request.state());
         process.output("id name Stockfish\nuciok");
         assertTrue(process.commands.contains("setoption name Skill Level value 8"));
@@ -52,7 +88,7 @@ class StockfishEngineTest {
         AtomicLong clock = new AtomicLong();
         FakeProcess process = new FakeProcess();
         StockfishEngine engine = new StockfishEngine(process, clock::get);
-        ChessEngine.Request request = engine.choose("fen", ChessLevel.STOCKFISH);
+        ChessEngine.Request request = engine.choose("fen", ChessLevel.PHOENIX);
         process.output("uciok");
         assertTrue(process.commands.contains("setoption name UCI_LimitStrength value false"));
         assertFalse(process.commands.stream().anyMatch(command -> command.startsWith("setoption name UCI_Elo")));
@@ -65,11 +101,11 @@ class StockfishEngineTest {
     @Test void workerFailureFailsCurrentAndFutureRequests() {
         FakeProcess process = new FakeProcess();
         StockfishEngine engine = new StockfishEngine(process, () -> 0);
-        ChessEngine.Request first = engine.choose("fen", ChessLevel.BEGINNER);
+        ChessEngine.Request first = engine.choose("fen", ChessLevel.HATCHLING);
         process.failure("load failed");
         assertEquals(ChessEngine.State.FAILED, first.state());
         assertEquals("load failed", first.failure());
-        ChessEngine.Request second = engine.choose("fen", ChessLevel.MASTER);
+        ChessEngine.Request second = engine.choose("fen", ChessLevel.EAGLE);
         assertEquals(ChessEngine.State.FAILED, second.state());
         assertEquals("load failed", second.failure());
     }
