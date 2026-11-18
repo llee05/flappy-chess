@@ -344,6 +344,10 @@ Noto Sans Symbols 2 remains bundled under the SIL Open Font License; see
 `assets/fonts/OFL.txt`. No new license is assigned to the original game or images.
 Liberation Sans remains bundled under the SIL Open Font License;
 see `assets/fonts/Liberation-LICENSE.txt` for its copyright and license.
+The browser lobby uses small WOFF2 subsets of Liberation Mono Bold (renamed
+Lobby Pixel, as its Reserved Font Name requires) and Noto Sans Symbols 2 in
+`web/src/main/webapp/fonts`, with both licenses; rebuild them with
+`python3 tools/subset-web-fonts.py` (requires `fonttools` and `brotli`).
 PeerJS 1.5.5 is vendored under the MIT License; see
 `web/src/main/webapp/vendor/PeerJS-LICENSE.txt` and the adjacent provenance note.
 Sound effects are original synthesized tones with no third-party samples; see

@@ -10,6 +10,7 @@
   <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="48x48" href="./favicon-48x48.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <link rel="preload" href="./fonts/LobbyPixel-Bold.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -65,12 +66,18 @@
       <section class="lobby-hero" aria-labelledby="lobby-title">
         <div class="title-lockup">
           <h1 id="lobby-title" class="sr-only">Flappy Chess</h1>
-          <img class="title-logo" src="./art/title-logo.webp" alt="" width="2166" height="728">
+          <picture>
+            <source srcset="./art/title-logo.avif" type="image/avif">
+            <img class="title-logo" src="./art/title-logo.webp" alt="" width="2166" height="728" fetchpriority="high">
+          </picture>
         </div>
       </section>
 
       <section class="lobby-menu-card" aria-label="Main menu">
-        <img class="menu-panel-art" src="./art/menu-box-reference.png" alt="" width="1410" height="1116">
+        <picture>
+          <source srcset="./art/menu-box-reference.avif" type="image/avif">
+          <img class="menu-panel-art" src="./art/menu-box-reference.webp" alt="" width="1410" height="1116" fetchpriority="high">
+        </picture>
         <section class="lobby-actions" aria-label="Choose a game mode">
           <button id="matchmake" class="mode-button" type="button" disabled><span class="sr-only">Play</span></button>
           <button id="solo" class="mode-button" type="button" aria-expanded="false" aria-controls="level-panel" disabled><span class="sr-only">VS AI</span></button>
@@ -164,7 +171,7 @@
       <noscript>Enable JavaScript to play Flappy Chess.</noscript>
     </article>
     <div class="lobby-foreground" aria-hidden="true">
-      <img class="lobby-table-art" src="./art/lobby-table-redesign.webp" alt="" width="1200" height="800">
+      <img class="lobby-table-art" src="./art/lobby-table-redesign.webp" alt="" width="1200" height="800" loading="lazy">
       <div class="lobby-board-scene">
         <span class="lobby-piece black" style="--x:26.484%;--y:16.469%;--depth:0.063">♜</span>
         <span class="lobby-piece black" style="--x:40.004%;--y:16.469%;--depth:0.063">♝</span>
