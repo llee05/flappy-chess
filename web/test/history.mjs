@@ -1,34 +1,12 @@
 import assert from 'node:assert/strict';
 import { sleep } from './browser.mjs';
+import { desktopBirdY } from './flight.mjs';
 
 export async function checkHistory(browser) {
   const page = await browser.page();
   const { send, evaluate, key, press, until, screenshot } = page;
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
-  const birdY = white => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
-    const canvas = document.getElementById('canvas');
-    const context = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
-    context.drawImage(canvas, 0, 0);
-    const scale = Math.min(canvas.width / 1600, canvas.height / 800);
-    const boardLeft = Math.round((canvas.width - 1600 * scale) / 2 + 400 * scale);
-    const boardWidth = Math.round(800 * scale);
-    const pixels = context.getImageData(boardLeft, 0, boardWidth, canvas.height).data;
-    const rgb = ${white ? '[255,229,161]' : '[198,240,231]'};
-    let total = 0, count = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) {
-        total += Math.floor(i / 4 / boardWidth);
-        count++;
-      }
-    }
-    if (!count) { resolve(null); return; }
-    const renderedY = total / count;
-    const viewportTop = (canvas.height - 800 * scale) / 2;
-    const worldY = 800 - (renderedY - viewportTop) / scale;
-    // Undo the inset board presentation so the existing rank thresholds keep
-    // their legacy 800px-board meaning, including the sprite's 25px offset.
-    resolve(800 - (worldY - 36) / 0.91);
-  }))`);
+  const birdY = white => desktopBirdY(page, white);
   const reachRank = async (white, top, bottom) => {
     let lastFlap = 0;
     await until(async () => {

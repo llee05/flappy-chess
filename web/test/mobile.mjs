@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { sleep } from './browser.mjs';
 import { touchControls } from './touch.mjs';
+import { touchBird } from './flight.mjs';
 
 export async function checkMobile(browser) {
   const page = await browser.page();
@@ -22,21 +23,7 @@ export async function checkMobile(browser) {
   assert.match(await evaluate("document.getElementById('white-time').textContent"), /^(1:00|0:[0-5]\d)$/);
   assert.equal(await evaluate("document.getElementById('black-time').textContent"), '1:00', 'The waiting player must retain their full minute');
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
-  const bird = (white = true) => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
-    const canvas = document.getElementById('canvas');
-    const edge = Math.min(canvas.width, canvas.height);
-    const context = new OffscreenCanvas(800, 800).getContext('2d');
-    context.drawImage(canvas, (canvas.width - edge) / 2, (canvas.height - edge) / 2, edge, edge, 0, 0, 800, 800);
-    const pixels = context.getImageData(0, 0, 800, 800).data;
-    const rgb = ${white ? '[255,229,161]' : '[198,240,231]'};
-    let x = 0, y = 0, count = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) {
-        x += (i / 4) % 800; y += Math.floor(i / 4 / 800); count++;
-      }
-    }
-    resolve(count ? {x: x / count, y: y / count} : null);
-  }))`);
+  const bird = (white = true) => touchBird(page, white);
   const layoutFits = async () => {
     const rects = await evaluate(`['canvas', 'mobile-hud', 'touch-controls'].map(id => {
       const rect = document.getElementById(id).getBoundingClientRect();

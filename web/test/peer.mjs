@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { withBrowser, sleep } from './browser.mjs';
 import { touchControls } from './touch.mjs';
+import { desktopBirdY, flyToRank } from './flight.mjs';
 
 await withBrowser(async browser => {
   const host = await browser.page();
@@ -93,15 +94,15 @@ await withBrowser(async browser => {
   await guest.until(async () => (await summary(guest)).carrier === 'White', 'synchronizing pickup');
   await guest.until(() => guest.evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'synchronizing pickup feedback');
   // Drop at the back rank after falling: the pawn must stay carried on both peers.
-  await sleep(1000);
+  // The host simulates both birds, so its canvas shows where each drop lands.
+  const hostBirdY = white => () => desktopBirdY(host, white);
+  await host.until(async () => (await hostBirdY(true)()) >= 712, 'White falling to the back rank');
   await host.press('KeyE', 'e', 69);
   await guest.until(() => guest.evaluate("document.getElementById('action-feedback').textContent.startsWith('Illegal drop')"), 'synchronizing invalid-drop feedback');
   assert.equal((await summary(guest)).carrier, 'White');
   await guest.screenshot('online-illegal-drop');
-  await host.press('Space', ' ', 32);
-  await sleep(650);
-  await host.press('Space', ' ', 32);
-  await sleep(650);
+  await flyToRank(host, { birdY: hostBirdY(true), flap: () => host.press('Space', ' ', 32),
+    white: true, top: 500, bottom: 600, label: 'flying White to e3' });
   await host.press('KeyE', 'e', 69);
   await guest.until(async () => (await summary(guest)).lastMove === 'e3', 'synchronizing White move');
   assert.equal((await summary(host)).turn, 'Black');
@@ -113,12 +114,13 @@ await withBrowser(async browser => {
   // then flap to e6 using the phone guest's single touch pad.
   assert.equal(await guest.evaluate("document.getElementById('touch-second').hidden"), true);
   assert.equal(await guest.evaluate("document.getElementById('touch-first').dataset.side"), 'BLACK');
-  await touch.tap('[data-hold="SPACE"]');
-  await sleep(650);
+  const guestFlap = () => touch.tap('[data-hold="SPACE"]');
+  await flyToRank(host, { birdY: hostBirdY(false), flap: guestFlap,
+    white: false, top: 100, bottom: 200, label: 'flying Black to e7' });
   await touch.tap('[data-hold="E"]');
   await host.until(async () => (await summary(host)).carrier === 'Black', 'synchronizing guest pickup');
-  await touch.tap('[data-hold="SPACE"]');
-  await sleep(650);
+  await flyToRank(host, { birdY: hostBirdY(false), flap: guestFlap,
+    white: false, top: 200, bottom: 300, label: 'flying Black to e6' });
   await touch.tap('[data-hold="E"]');
   await host.until(async () => (await summary(host)).lastMove === 'e6', 'validating guest move on host');
   await guest.until(async () => (await summary(guest)).lastMove === 'e6', 'synchronizing Black move');
@@ -166,10 +168,10 @@ await withBrowser(async browser => {
   }
   assert.equal(await guest.evaluate("document.getElementById('touch-first').dataset.side"), 'WHITE');
   await touch.tap('[data-hold="E"]');
-  await advance(100);
-  await sleep(200);
-  await advance(100);
-  assert.equal((await summary(host)).carrier, 'White', 'Guest owns White after swapping');
+  await host.until(async () => {
+    await advance(100);
+    return (await summary(host)).carrier === 'White';
+  }, 'Guest owns White after swapping: synchronizing guest pickup');
   await guest.screenshot('online-swapped');
 
   const pumpUntil = (page, expression, message) => page.until(async () => {
