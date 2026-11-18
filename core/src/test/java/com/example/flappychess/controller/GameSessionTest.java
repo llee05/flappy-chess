@@ -139,13 +139,23 @@ class GameSessionTest {
         assertEquals(Side.BLACK, game.getLastBumper());
         assertEquals(Side.WHITE, game.getLastBumped());
         assertEquals(GameSession.BUMP_COOLDOWN_STEPS, game.getBumpCooldown());
+        assertEquals(GameSession.CARRY_HIT_STOP_STEPS, game.getHitStopSteps());
         assertEquals(GameSession.BUMP_STUN_STEPS, game.getWhite().getStunSteps());
         assertFalse(game.getBlack().isStunned());
         assertEquals(-GameSession.BUMP_KNOCKBACK_X, game.getWhite().getVelocityX(), 1e-7);
         assertEquals(GameSession.BUMP_RECOIL_X, game.getBlack().getVelocityX(), 1e-7);
+        assertNotNull(game.getDropReturn());
+        assertEquals(Piece.WHITE_PAWN, game.getDropReturn().piece());
+        assertEquals(Square.E2, game.getDropReturn().origin());
+        assertEquals(GameSession.DROP_RETURN_STEPS, game.getDropReturn().stepsRemaining());
+        assertNotNull(game.getLastBump());
+        assertTrue(game.getLastBump().dropped());
+        assertTrue(game.getLastBump().speed() >= GameSession.MIN_BUMP_SPEED);
         var events = game.getFeedback().events();
-        assertEquals(GameFeedback.Kind.BUMP, events.get(events.size() - 1).kind());
+        assertEquals(GameFeedback.Kind.BUMP_DROP, events.get(events.size() - 1).kind());
         assertEquals(Side.WHITE, events.get(events.size() - 1).side());
+        assertEquals(Square.E2, events.get(events.size() - 1).square());
+        assertEquals(events.get(events.size() - 1).sequence(), game.getLastBump().sequence());
     }
 
     @Test void stunAndCooldownPreventChainBumpsAndSuppressInputUntilRecovered() {
@@ -156,9 +166,22 @@ class GameSessionTest {
         game.update(1f / 60);
 
         int bumpEventsAfterFirst = (int) game.getFeedback().events().stream()
-                .filter(e -> e.kind() == GameFeedback.Kind.BUMP).count();
+                .filter(e -> e.kind() == GameFeedback.Kind.BUMP_DROP).count();
         assertEquals(1, bumpEventsAfterFirst);
         assertTrue(game.getWhite().isStunned());
+        assertEquals(GameSession.CARRY_HIT_STOP_STEPS, game.getHitStopSteps());
+
+        // Hit-stop freezes bird movement, stun countdown, and dropped-piece arc until it finishes.
+        double frozenWhiteX = game.getWhite().getX();
+        double frozenBlackX = game.getBlack().getX();
+        for (int i = 0; i < GameSession.CARRY_HIT_STOP_STEPS; i++) {
+            game.update(1f / 60);
+            assertEquals(frozenWhiteX, game.getWhite().getX(), 1e-7);
+            assertEquals(frozenBlackX, game.getBlack().getX(), 1e-7);
+            assertEquals(GameSession.BUMP_STUN_STEPS, game.getWhite().getStunSteps());
+            assertEquals(GameSession.DROP_RETURN_STEPS, game.getDropReturn().stepsRemaining());
+        }
+        assertEquals(0, game.getHitStopSteps());
 
         // While stunned, flap and pickup are ignored.
         double vyBefore = game.getWhite().getVelocityY();
@@ -175,7 +198,9 @@ class GameSessionTest {
         }
         assertEquals(0, game.getBumpCooldown());
         assertFalse(game.getWhite().isStunned());
-        assertEquals(1, game.getFeedback().events().stream().filter(e -> e.kind() == GameFeedback.Kind.BUMP).count());
+        assertNull(game.getDropReturn());
+        assertEquals(1, game.getFeedback().events().stream()
+                .filter(e -> e.kind() == GameFeedback.Kind.BUMP || e.kind() == GameFeedback.Kind.BUMP_DROP).count());
 
         // After stun expires, White can pick up on E2 again.
         game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 625, 0, 0));
@@ -196,9 +221,22 @@ class GameSessionTest {
         assertEquals(-GameSession.EMPTY_BUMP_RECOIL_X, game.getWhite().getVelocityX(), 1e-7);
         assertEquals(GameSession.EMPTY_BUMP_KNOCKBACK_X, game.getBlack().getVelocityX(), 1e-7);
         assertEquals(GameSession.BUMP_COOLDOWN_STEPS, game.getBumpCooldown());
+        assertEquals(GameSession.EMPTY_HIT_STOP_STEPS, game.getHitStopSteps());
+        assertNull(game.getDropReturn());
+        assertNotNull(game.getLastBump());
+        assertFalse(game.getLastBump().dropped());
         var events = game.getFeedback().events();
         assertEquals(GameFeedback.Kind.BUMP, events.get(events.size() - 1).kind());
         assertEquals(Side.BLACK, events.get(events.size() - 1).side());
+
+        // Empty-handed hit-stop is shorter and releases motion after EMPTY_HIT_STOP_STEPS.
+        double frozenX = game.getBlack().getX();
+        for (int i = 0; i < GameSession.EMPTY_HIT_STOP_STEPS; i++) {
+            game.update(1f / 60);
+            assertEquals(frozenX, game.getBlack().getX(), 1e-7);
+        }
+        game.update(1f / 60);
+        assertTrue(game.getBlack().getX() > frozenX);
     }
 
     @Test void carrierRammingDefenderStillDropsPieceAndStunsBothBirds() {
@@ -214,7 +252,28 @@ class GameSessionTest {
         assertEquals(Side.BLACK, game.getLastBumped());
         assertTrue(game.getWhite().isStunned());
         assertTrue(game.getBlack().isStunned());
+        assertEquals(GameSession.CARRY_HIT_STOP_STEPS, game.getHitStopSteps());
+        assertNotNull(game.getDropReturn());
         assertEquals(-GameSession.BUMP_RECOIL_X, game.getWhite().getVelocityX(), 1e-7);
         assertEquals(GameSession.BUMP_KNOCKBACK_X, game.getBlack().getVelocityX(), 1e-7);
+    }
+
+    @Test void hitStopIgnoresFlapAndCarryWhilePreservingDirectionalHoldAndClockTime() {
+        AtomicLong time = new AtomicLong();
+        GameSession game = session(time);
+        press(game, Keys.E);
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        game.update(1f / 60);
+        assertEquals(GameSession.CARRY_HIT_STOP_STEPS, game.getHitStopSteps());
+
+        // Non-stunned Black bird cannot flap during hit-stop, and clock still advances in real time.
+        double blackVy = game.getBlack().getVelocityY();
+        press(game, Keys.UP);
+        assertEquals(blackVy, game.getBlack().getVelocityY(), 1e-7);
+        time.addAndGet(Duration.ofSeconds(2).toNanos());
+        game.update(1f / 60);
+        assertEquals(298, game.getClock().getRemainingSeconds(Side.WHITE));
+        assertEquals(GameSession.CARRY_HIT_STOP_STEPS - 1, game.getHitStopSteps());
     }
 }

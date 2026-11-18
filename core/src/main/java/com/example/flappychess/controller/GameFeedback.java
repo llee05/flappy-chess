@@ -9,15 +9,17 @@ import java.util.List;
 /** Recent, numbered presentation events. Replicas replay each event at most once. */
 public final class GameFeedback {
     public static final int LIMIT = 16;
-    public enum Kind { FLAP, PICKUP, DROP, CAPTURE, CANCEL, ILLEGAL_DROP, NO_PIECE, CHECK, LOW_TIME, BUMP }
+    public enum Kind { FLAP, PICKUP, DROP, CAPTURE, CANCEL, ILLEGAL_DROP, NO_PIECE, CHECK, LOW_TIME, BUMP, BUMP_DROP }
     public record Event(int sequence, Kind kind, Side side, Square square) { }
 
     private final List<Event> events = new ArrayList<>();
     private int sequence;
 
-    void emit(Kind kind, Side side, Square square) {
-        events.add(new Event(++sequence, kind, side, square));
+    int emit(Kind kind, Side side, Square square) {
+        int next = ++sequence;
+        events.add(new Event(next, kind, side, square));
         if (events.size() > LIMIT) events.remove(0);
+        return next;
     }
 
     void restore(List<Event> recent) {
@@ -40,6 +42,7 @@ public final class GameFeedback {
             case CHECK -> "Check! Protect your king.";
             case LOW_TIME -> GameSession.sideName(event.side()) + ": 30 seconds left!";
             case BUMP -> "Midair bump!";
+            case BUMP_DROP -> "Bumped! Piece dropped!";
         };
     }
 }

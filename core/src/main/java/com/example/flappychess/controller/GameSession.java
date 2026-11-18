@@ -25,16 +25,28 @@ import java.util.function.LongSupplier;
 public final class GameSession extends InputAdapter {
     private static final double STEP = 1.0 / 60.0;
     public static final double MIN_BUMP_SPEED = 1.2;
-    public static final double BUMP_KNOCKBACK_X = 4.2;
-    public static final double BUMP_KNOCKBACK_Y = 3.2;
-    public static final double BUMP_RECOIL_X = 2.4;
-    public static final double BUMP_RECOIL_Y = 1.8;
+    public static final double BUMP_KNOCKBACK_X = 4.8;
+    public static final double BUMP_KNOCKBACK_Y = 3.6;
+    public static final double BUMP_RECOIL_X = 2.7;
+    public static final double BUMP_RECOIL_Y = 2.0;
     public static final double EMPTY_BUMP_KNOCKBACK_X = 2.6;
     public static final double EMPTY_BUMP_KNOCKBACK_Y = 2.0;
     public static final double EMPTY_BUMP_RECOIL_X = 1.6;
     public static final double EMPTY_BUMP_RECOIL_Y = 1.2;
-    public static final int BUMP_STUN_STEPS = 18;
+    public static final int BUMP_STUN_STEPS = 24;
     public static final int BUMP_COOLDOWN_STEPS = 36;
+    public static final int CARRY_HIT_STOP_STEPS = 4;
+    public static final int EMPTY_HIT_STOP_STEPS = 2;
+    public static final int DROP_RETURN_STEPS = 20;
+
+    public record DropReturn(Piece piece, Square origin, double fromX, double fromY, int stepsRemaining) {
+        DropReturn withStepsRemaining(int steps) {
+            return new DropReturn(piece, origin, fromX, fromY, steps);
+        }
+    }
+
+    public record BumpImpact(int sequence, double x, double y, double speed, boolean dropped) { }
+
     private final ChessBoardView boardView = new ChessBoardView();
     private final ChessController chess;
     private final ChessClock clock;
@@ -53,6 +65,9 @@ public final class GameSession extends InputAdapter {
     private final BirbController blackControls = new BirbController(black, 800, 800, Keys.LEFT, Keys.RIGHT, Keys.UP);
     private double accumulator;
     private int bumpCooldown;
+    private int hitStopSteps;
+    private DropReturn dropReturn;
+    private BumpImpact lastBump;
     private Side lastBumper;
     private Side lastBumped;
     private Side carrier;
@@ -90,8 +105,14 @@ public final class GameSession extends InputAdapter {
         // Bound catch-up after a suspended window; the chess clock still uses real time.
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
+            if (hitStopSteps > 0) {
+                hitStopSteps--;
+                accumulator -= STEP;
+                continue;
+            }
             if (beforeStep != null) beforeStep.run();
             if (isGameOver()) { accumulator = 0; return; }
+            advanceDropReturn();
             double prevWhiteX = white.getX(), prevWhiteY = white.getY();
             double prevBlackX = black.getX(), prevBlackY = black.getY();
             whiteControls.update();
@@ -117,6 +138,11 @@ public final class GameSession extends InputAdapter {
                 Square destination = chess.getPromotionRequest().to();
                 finishMove(chess.choosePromotion(type), destination);
             }
+            return true;
+        }
+        if (hitStopSteps > 0) {
+            if (key == Keys.A || key == Keys.D) whiteControls.handleKeyPressed(key);
+            if (key == Keys.LEFT || key == Keys.RIGHT) blackControls.handleKeyPressed(key);
             return true;
         }
         whiteControls.handleKeyPressed(key);
@@ -159,6 +185,7 @@ public final class GameSession extends InputAdapter {
     /** Predict movement only; guest pickup, promotion, and outcomes wait for the host. */
     public void predict(Side side, GameAction action, boolean down) {
         if (!action.isMovement() || down && (isGameOver() || chess.hasPendingPromotion())) return;
+        if (down && hitStopSteps > 0 && action == GameAction.FLAP) return;
         BirbController controls = side == Side.WHITE ? whiteControls : blackControls;
         if (down) controls.handleKeyPressed(action.keyFor(side));
         else controls.handleKeyReleased(action.keyFor(side));
@@ -169,6 +196,12 @@ public final class GameSession extends InputAdapter {
         if (isTimed()) clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
+            if (hitStopSteps > 0) {
+                hitStopSteps--;
+                accumulator -= STEP;
+                continue;
+            }
+            advanceDropReturn();
             (ownSide == Side.WHITE ? whiteControls : blackControls).update();
             accumulator -= STEP;
         }
@@ -176,7 +209,7 @@ public final class GameSession extends InputAdapter {
 
     public SessionSnapshot snapshot() {
         return new SessionSnapshot(boardView.getBoard().getFen(), white.snapshot(), black.snapshot(),
-                white.getStunSteps(), black.getStunSteps(), bumpCooldown,
+                white.getStunSteps(), black.getStunSteps(), bumpCooldown, hitStopSteps, dropReturn, lastBump,
                 clock.getRemainingMillis(Side.WHITE), clock.getRemainingMillis(Side.BLACK),
                 boardView.getSelectedSquare(), boardView.getHiddenPieceSquare(), boardView.getLegalTargets(),
                 chess.getPromotionRequest(), carrier, history, result, reason, feedback.events(), settings, chess.getInitialFen(), series);
@@ -189,6 +222,9 @@ public final class GameSession extends InputAdapter {
         white.stun(state.whiteStunSteps());
         black.stun(state.blackStunSteps());
         bumpCooldown = state.bumpCooldown();
+        hitStopSteps = state.hitStopSteps();
+        dropReturn = state.dropReturn();
+        lastBump = state.lastBump();
         history.clear();
         history.addAll(state.history());
         result = state.result();
@@ -196,6 +232,12 @@ public final class GameSession extends InputAdapter {
         feedback.restore(state.feedback());
         settings = state.settings();
         series = state.series();
+    }
+
+    private void advanceDropReturn() {
+        if (dropReturn == null) return;
+        int remaining = dropReturn.stepsRemaining() - 1;
+        dropReturn = remaining > 0 ? dropReturn.withStepsRemaining(remaining) : null;
     }
 
     private void resolveBump(double prevWhiteX, double prevWhiteY, double prevBlackX, double prevBlackY) {
@@ -206,10 +248,14 @@ public final class GameSession extends InputAdapter {
         if (isGameOver() || chess.hasPendingPromotion() || !white.overlaps(black)) return;
         double rvx = white.getVelocityX() - black.getVelocityX();
         double rvy = white.getVelocityY() - black.getVelocityY();
-        if (Math.hypot(rvx, rvy) < MIN_BUMP_SPEED) return;
+        double impactSpeed = Math.hypot(rvx, rvy);
+        if (impactSpeed < MIN_BUMP_SPEED) return;
         double prevDist = Math.hypot(prevWhiteX - prevBlackX, prevWhiteY - prevBlackY);
         double dist = Math.hypot(white.getX() - black.getX(), white.getY() - black.getY());
         if (dist > prevDist + 1e-6 && prevDist >= 10) return;
+
+        double impactX = clamp((white.getX() + black.getX()) / 2.0 + 25.0, 0, 800);
+        double impactY = clamp((white.getY() + black.getY()) / 2.0 + 25.0, 0, 800);
 
         double dx = black.getX() - white.getX();
         double dy = black.getY() - white.getY();
@@ -242,9 +288,17 @@ public final class GameSession extends InputAdapter {
 
         boolean carrying = carrier != null;
         Side droppedSide = carrier;
+        Square droppedOrigin = Square.NONE;
         if (carrying) {
-            chess.dropCarriedPiece();
+            Birb carrierBird = droppedSide == Side.WHITE ? white : black;
+            double dropFromX = clamp(carrierBird.getX() + 25.0, 24, 776);
+            double dropFromY = clamp(carrierBird.getY() + 25.0 + (droppedSide == Side.WHITE ? 32.0 : -32.0), 24, 776);
+            droppedOrigin = chess.dropCarriedPiece();
+            Piece droppedPiece = droppedOrigin != Square.NONE ? boardView.getBoard().getPiece(droppedOrigin) : Piece.NONE;
             carrier = null;
+            if (droppedOrigin != Square.NONE && droppedPiece != Piece.NONE) {
+                dropReturn = new DropReturn(droppedPiece, droppedOrigin, dropFromX, dropFromY, DROP_RETURN_STEPS);
+            }
         }
 
         double bumpedVx = carrying ? BUMP_KNOCKBACK_X : EMPTY_BUMP_KNOCKBACK_X;
@@ -264,11 +318,18 @@ public final class GameSession extends InputAdapter {
         black.applyBump(pushX * 4, pushY * 4, blackVx, blackVy, blackStun, 800, 800);
 
         bumpCooldown = BUMP_COOLDOWN_STEPS;
+        hitStopSteps = carrying ? CARRY_HIT_STOP_STEPS : EMPTY_HIT_STOP_STEPS;
         lastBumper = bumper;
         lastBumped = bumped;
         Side feedbackSide = droppedSide != null ? droppedSide : bumped;
         Birb feedbackBird = feedbackSide == Side.WHITE ? white : black;
-        feedback.emit(BUMP, feedbackSide, birdSquare(feedbackBird));
+        Square eventSquare = carrying && droppedOrigin != Square.NONE ? droppedOrigin : birdSquare(feedbackBird);
+        int eventSequence = feedback.emit(carrying ? BUMP_DROP : BUMP, feedbackSide, eventSquare);
+        lastBump = new BumpImpact(eventSequence, impactX, impactY, impactSpeed, carrying);
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     private void toggleCarry(Side side, Birb bird) {
@@ -277,6 +338,7 @@ public final class GameSession extends InputAdapter {
         Square from = boardView.getHiddenPieceSquare();
         String symbol = chess.toggleCarryAt(square);
         carrier = symbol == null ? null : side;
+        if (carrier != null) dropReturn = null;
         var move = chess.consumeCompletedMove();
         if (move != null) finishMove(move, square);
         else if (from == Square.NONE) feedback.emit(carrier == null ? NO_PIECE : PICKUP, side, square);
@@ -291,6 +353,7 @@ public final class GameSession extends InputAdapter {
     private void finishMove(ChessController.CompletedMove move, Square destination) {
         if (move == null) return;
         carrier = null;
+        dropReturn = null;
         history.add(move);
         if (isTimed()) clock.addIncrement(move.side(), settings.incrementMillis());
         feedback.emit(move.captured() != Piece.NONE ? CAPTURE : DROP, move.side(), destination);
@@ -344,6 +407,10 @@ public final class GameSession extends InputAdapter {
     public Birb getBlack() { return black; }
     public Side getCarrier() { return carrier; }
     public int getBumpCooldown() { return bumpCooldown; }
+    public int getHitStopSteps() { return hitStopSteps; }
+    public boolean isInHitStop() { return hitStopSteps > 0; }
+    public DropReturn getDropReturn() { return dropReturn; }
+    public BumpImpact getLastBump() { return lastBump; }
     public Side getLastBumper() { return lastBumper; }
     public Side getLastBumped() { return lastBumped; }
     public List<ChessController.CompletedMove> getHistory() { return Collections.unmodifiableList(history); }
