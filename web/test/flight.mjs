@@ -46,20 +46,22 @@ export const touchBird = (page, white = true) => page.evaluate(`new Promise(reso
   resolve(count ? {x: x / count, y: y / count} : null);
 }))`);
 
-// A flap from rest climbs about 100px (Birb.JUMP_SPEED and GRAVITY); a flap
-// replaces the current vertical velocity, so its apex is about this far from
-// where the bird is when it flaps.
+// A flap climbs about 100px (Birb.JUMP_SPEED and GRAVITY). It replaces the
+// current vertical velocity, so its peak is at most this far from where the
+// bird is when the flap lands.
 const FLAP_HEIGHT = 100;
 // Wing animation moves the sampled pixels slightly; smaller changes are not motion.
 const MOTION = 3;
 
 /**
- * Flaps until the bird climbs past the center of the band [top, bottom] (board
- * y, 100px per rank) on a flap aimed at or beyond that center, then returns so
- * the caller can pick up or drop. The bird is still rising at that point, so the
- * remaining climb and the fall back through the band absorb input latency.
- * Flaps that would overshoot the band are held until gravity brings the bird
- * back; flaps that fall short are repeated from the top of the climb.
+ * Flaps until the bird is rising at least 20px into the band [top, bottom]
+ * (board y, 100px per rank), then returns so the caller can pick up or drop.
+ * The rest of the climb and the fall back through the band absorb input latency.
+ *
+ * Decisions use only observed positions, so slow frames or late inputs just
+ * cost another flap. A flap is sent whenever the bird is not climbing and a
+ * full flap from there cannot overshoot the band, so it never relies on the
+ * timing of a flap sent mid-fall.
  *
  * `birdY` reads the authoritative bird's board y (or null when not visible);
  * `flap` sends one flap through the normal controls.
@@ -67,19 +69,17 @@ const MOTION = 3;
 export async function flyToRank(page, { birdY, flap, white, top, bottom, label, timeout = 30000 }) {
   // Progress runs in the flap direction: White flaps toward smaller y, Black toward larger y.
   const [low, high] = white ? [-bottom, -top] : [top, bottom];
-  const center = (low + high) / 2;
-  let previous = null, apex = -Infinity, lastFlap = 0;
+  let previous = null, lastFlap = 0;
   await page.until(async () => {
     const y = await birdY();
     if (y === null) return false;
     const progress = white ? -y : y;
     const rising = previous !== null && progress > previous + MOTION;
     if (previous === null || Math.abs(progress - previous) > MOTION) previous = progress;
-    if (rising && apex >= center - 15 && progress >= center - 5 && progress <= high - 12) return true;
+    if (rising && progress >= low + 20 && progress <= high - 12) return true;
     if (rising || Date.now() - lastFlap < 400 || progress + FLAP_HEIGHT > high - 10) return false;
     await flap();
     lastFlap = Date.now();
-    apex = progress + FLAP_HEIGHT;
     previous = progress;
     return false;
   }, label, timeout);
