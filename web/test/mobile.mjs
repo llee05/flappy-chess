@@ -123,13 +123,18 @@ export async function checkMobile(browser) {
   assert.match(await evaluate("document.querySelector('#touch-first .flap').textContent"), /↓/);
   await press('Escape', 'Escape', 27);
   await until(async () => { await frame(); return evaluate("document.getElementById('solo')?.disabled === false && !document.body?.dataset.game"); }, 'leaving mobile play with Escape');
-  await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('solo-side').value = 'BLACK'; document.getElementById('solo').click()");
+  await evaluate("document.getElementById('match-minutes').value = '0'; document.getElementById('match-minutes').dispatchEvent(new Event('change')); document.getElementById('solo-side').value = 'BLACK'; document.getElementById('solo-side').dispatchEvent(new Event('change')); document.getElementById('solo').click()");
+  await until(() => evaluate("!document.getElementById('level-panel').hidden"), 'opening the mobile level picker');
+  await screenshot('mobile-level-picker');
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true, 'Level picker must fit a phone');
+  await touch.tap('#level-choices [data-level="SPARROW"]');
   await until(async () => { await frame(); return evaluate("document.body.dataset.mode === 'solo'"); }, 'starting mobile solo as Black');
   assert.equal(await evaluate("document.getElementById('touch-second').hidden"), true);
   assert.equal(await evaluate("document.getElementById('touch-first').dataset.side"), 'BLACK');
+  assert.equal(await evaluate("document.getElementById('solo-summary').dataset.chess"), 'SPARROW', 'Touch picks the solo level');
   await screenshot('mobile-solo-black');
   await checkTouchLesson(browser);
-  console.log('Mobile checks passed: responsive layouts, multi-touch, single flaps, cancellation, focus, delivery, swaps, Escape, and solo ownership.');
+  console.log('Mobile checks passed: responsive layouts, multi-touch, single flaps, cancellation, focus, delivery, swaps, Escape, the touch level picker, and solo ownership.');
 }
 
 async function checkTouchLesson(browser) {

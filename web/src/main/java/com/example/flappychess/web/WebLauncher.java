@@ -22,7 +22,7 @@ public final class WebLauncher {
     public static void main(String[] args) {
         Window.current().getDocument().getElementById("play").addEventListener("click", event -> start(false));
         Window.current().getDocument().getElementById("tutorial").addEventListener("click", event -> start(true));
-        Window.current().getDocument().getElementById("solo").addEventListener("click", event -> start(false, true));
+        Window.current().getDocument().getElementById("level-panel").addEventListener("flappy-solo-start", event -> start(false, true));
         PeerNetwork.install(WebLauncher::startPeer);
         enablePlay();
     }

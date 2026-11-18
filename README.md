@@ -212,8 +212,10 @@ The desktop opens a **New match** setup screen. Click each choice to cycle it,
 then click **Start**. Match setup cannot be reopened from the timers-only
 in-match screen.
 
-For solo play in the browser, choose your color, chess level and flying skill,
-then **Play computer**. Both keyboard layouts control your bird. The computer
+For solo play in the browser, choose **VS AI**, then pick a chess level; the game
+starts straight away. The picker preselects your last level, and **Back** or
+Escape returns to the menu. The level, your color and flying skill are also in
+**Settings → Solo opponent**, which stays in sync with the picker. Both keyboard layouts control your bird. The computer
 must fly to a piece, pick it up and deliver it through the same physics and
 legal-move checks as a human. The browser runs a separately bundled,
 single-threaded Stockfish 19 WebAssembly engine in a Web Worker. Choose from
