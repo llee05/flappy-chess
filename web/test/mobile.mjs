@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { sleep } from './browser.mjs';
 import { touchControls } from './touch.mjs';
+import { flyToRank, touchBird } from './flight.mjs';
 
 export async function checkMobile(browser) {
   const page = await browser.page();
@@ -22,21 +23,7 @@ export async function checkMobile(browser) {
   assert.match(await evaluate("document.getElementById('white-time').textContent"), /^(1:00|0:[0-5]\d)$/);
   assert.equal(await evaluate("document.getElementById('black-time').textContent"), '1:00', 'The waiting player must retain their full minute');
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
-  const bird = (white = true) => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
-    const canvas = document.getElementById('canvas');
-    const edge = Math.min(canvas.width, canvas.height);
-    const context = new OffscreenCanvas(800, 800).getContext('2d');
-    context.drawImage(canvas, (canvas.width - edge) / 2, (canvas.height - edge) / 2, edge, edge, 0, 0, 800, 800);
-    const pixels = context.getImageData(0, 0, 800, 800).data;
-    const rgb = ${white ? '[255,229,161]' : '[198,240,231]'};
-    let x = 0, y = 0, count = 0;
-    for (let i = 0; i < pixels.length; i += 4) {
-      if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) {
-        x += (i / 4) % 800; y += Math.floor(i / 4 / 800); count++;
-      }
-    }
-    resolve(count ? {x: x / count, y: y / count} : null);
-  }))`);
+  const bird = (white = true) => touchBird(page, white);
   const layoutFits = async () => {
     const rects = await evaluate(`['canvas', 'mobile-hud', 'touch-controls'].map(id => {
       const rect = document.getElementById(id).getBoundingClientRect();
@@ -141,6 +128,8 @@ async function checkTouchLesson(browser) {
   const page = await browser.page();
   const { send, evaluate, until, screenshot } = page;
   const touch = touchControls(page);
+  const fly = (white, top, bottom, label) => flyToRank(page, { birdY: async () => (await touchBird(page, white))?.y ?? null,
+    flap: () => touch.tap(white ? '[data-hold="SPACE"]' : '[data-hold="UP"]'), white, top, bottom, label });
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
   await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   await send('Page.navigate', { url: browser.url });
@@ -158,8 +147,7 @@ async function checkTouchLesson(browser) {
   await stage('WHITE_PICKUP');
   await touch.tap('[data-hold="E"]');
   await stage('WHITE_DELIVER');
-  await touch.tap('[data-hold="SPACE"]');
-  await sleep(620);
+  await fly(true, 400, 600, 'touch lesson: flying to E3 or E4');
   await touch.tap('[data-hold="E"]');
   await stage('BLACK_FLY');
   await screenshot('mobile-flight-school');
@@ -171,8 +159,7 @@ async function checkTouchLesson(browser) {
   await stage('BLACK_PICKUP');
   await touch.tap('[data-hold="ENTER"]');
   await stage('BLACK_DELIVER');
-  await touch.tap('[data-hold="UP"]');
-  await sleep(620);
+  await fly(false, 200, 400, 'touch lesson: flying to D6 or D5');
   await touch.tap('[data-hold="ENTER"]');
   await stage('COMPLETE');
   await screenshot('mobile-flight-school-complete');

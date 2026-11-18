@@ -3,9 +3,15 @@ import { withBrowser, sleep } from './browser.mjs';
 import { checkHistory } from './history.mjs';
 import { checkSolo } from './solo.mjs';
 import { checkMobile } from './mobile.mjs';
+import { desktopBirdY, flyToRank } from './flight.mjs';
 
 await withBrowser(async browser => {
-  const { send, evaluate, key, press, screenshot, until } = await browser.page();
+  const page = await browser.page();
+  const { send, evaluate, key, press, screenshot, until } = page;
+  const flyWhite = (top, bottom, label) => flyToRank(page, { birdY: () => desktopBirdY(page, true),
+    flap: () => press('Space', ' ', 32), white: true, top, bottom, label });
+  const flyBlack = (top, bottom, label) => flyToRank(page, { birdY: () => desktopBirdY(page, false),
+    flap: () => press('ArrowUp', 'ArrowUp', 38), white: false, top, bottom, label });
   const birdX = (releaseFocus = false) => evaluate(`new Promise(resolve => requestAnimationFrame(() => {
     ${releaseFocus ? "window.dispatchEvent(new Event('blur'));" : ''}
     const canvas = document.getElementById('canvas');
@@ -37,10 +43,7 @@ await withBrowser(async browser => {
   await press('KeyE', 'e', 69);
   await until(() => evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'showing pickup feedback');
   await until(() => evaluate('window.effectPlays > 0'), 'playing a sound effect');
-  await press('Space', ' ', 32);
-  await sleep(650);
-  await press('Space', ' ', 32);
-  await sleep(650);
+  await flyWhite(500, 600, 'flying the carried pawn to e3');
   await press('KeyE', 'e', 69);
   await screenshot('gameplay');
   await until(() => evaluate("Howler._howls.length === 9 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
@@ -89,8 +92,7 @@ await withBrowser(async browser => {
   await stage('WHITE_PICKUP');
   await press('KeyE', 'e', 69);
   await stage('WHITE_DELIVER');
-  await press('Space', ' ', 32);
-  await sleep(620);
+  await flyWhite(400, 600, 'lesson: flying to E3 or E4');
   await press('KeyE', 'e', 69);
   await stage('BLACK_FLY');
   await screenshot('flight-school-black');
@@ -102,8 +104,7 @@ await withBrowser(async browser => {
   await stage('BLACK_PICKUP');
   await press('Enter', 'Enter', 13);
   await stage('BLACK_DELIVER');
-  await press('ArrowUp', 'ArrowUp', 38);
-  await sleep(620);
+  await flyBlack(200, 400, 'lesson: flying to D6 or D5');
   await press('Enter', 'Enter', 13);
   await stage('COMPLETE');
   await screenshot('flight-school-complete');
