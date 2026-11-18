@@ -48,6 +48,7 @@ public final class WebLauncher {
             @Override public void render() {
                 MobileControls.resizeCanvas();
                 game.setBoardOnly(MobileControls.isMobile());
+                game.setReducedMotion(prefersReducedMotion());
                 game.render();
                 var school = game.getFlightSchool();
                 describeLesson(school == null ? "" : school.getStage().name(),
@@ -204,4 +205,7 @@ public final class WebLauncher {
 
     @JSBody(script = "window.FlappyNetwork.leave();")
     static native void leaveGame();
+
+    @JSBody(script = "return Boolean(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);")
+    static native boolean prefersReducedMotion();
 }

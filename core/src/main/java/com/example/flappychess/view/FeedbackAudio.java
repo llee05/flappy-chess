@@ -29,6 +29,7 @@ final class FeedbackAudio implements Disposable {
             load(Kind.CHECK, "check");
             load(Kind.LOW_TIME, "low-time");
             load(Kind.BUMP, "bump");
+            load(Kind.BUMP_DROP, "bump-drop");
         } catch (RuntimeException unavailable) {
             dispose();
             Gdx.app.log("Audio", "Sound effects are unavailable on this device.");
@@ -43,7 +44,13 @@ final class FeedbackAudio implements Disposable {
         if (!enabled) return;
         Kind sample = kind == Kind.CANCEL ? Kind.DROP : kind == Kind.NO_PIECE ? Kind.ILLEGAL_DROP : kind;
         Sound sound = sounds.get(sample);
-        if (sound != null) sound.play(kind == Kind.FLAP ? 0.14f : 0.35f);
+        if (sound != null) {
+            float volume = kind == Kind.FLAP ? 0.14f
+                    : kind == Kind.BUMP_DROP ? 0.52f
+                    : kind == Kind.BUMP ? 0.38f
+                    : 0.35f;
+            sound.play(volume);
+        }
     }
 
     void toggle() {

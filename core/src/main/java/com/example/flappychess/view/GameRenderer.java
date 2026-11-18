@@ -51,6 +51,7 @@ public final class GameRenderer implements Disposable {
     private static final Color CREAM = Color.valueOf("e4cd9f");
     private static final Color MINT = Color.valueOf("add2b2");
     private static final Color GOLD = Color.valueOf("efb95b");
+    private static final Color GOLD_BRIGHT = Color.valueOf("ffe5a1");
     private static final Color BLUE = Color.valueOf("78c4d0");
     private static final Color SKY_HIGH = Color.valueOf("1c2e48");
     private static final Color SKY_MID = Color.valueOf("2c4559");
@@ -87,6 +88,7 @@ public final class GameRenderer implements Disposable {
     private FlightSchool school;
     private ChessBoardView displayBoard;
     private boolean boardOnly;
+    private boolean reducedMotion;
 
     public GameRenderer() { this(false); }
 
@@ -108,6 +110,10 @@ public final class GameRenderer implements Disposable {
         this.boardOnly = boardOnly;
         viewport.setWorldSize(boardOnly ? 800 : WORLD_WIDTH, boardOnly ? 800 : WORLD_HEIGHT);
         resize(Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+    }
+    public void setReducedMotion(boolean reducedMotion) {
+        this.reducedMotion = reducedMotion;
+        feedback.setReducedMotion(reducedMotion);
     }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
     public void toggleSound() { feedback.toggleSound(); }
@@ -147,15 +153,20 @@ public final class GameRenderer implements Disposable {
         drawSkyBackdrop();
         drawBoard(game);
         drawPanels(game);
-        if (!review.isActive()) drawBirdMarkers(game);
+        if (!review.isActive()) {
+            drawDropReturnMarkers(game);
+            drawBirdMarkers(game);
+        }
         shapes.end();
 
         batch.begin();
         drawCoordinates();
         ChessBoardView board = displayBoard;
+        GameSession.DropReturn dropReturn = !review.isActive() ? game.getDropReturn() : null;
         for (Square square : Square.values()) {
             if (square == Square.NONE || square == board.getHiddenPieceSquare()) continue;
             Piece piece = board.getBoard().getPiece(square);
+            if (dropReturn != null && square == dropReturn.origin() && piece == dropReturn.piece()) continue;
             if (piece != Piece.NONE) drawPiece(piece, squareX(square) + SQUARE_WIDTH / 2,
                     squareY(square) + SQUARE_HEIGHT / 2 + feedback.dropOffset(square) * BOARD_SCALE_Y,
                     4, BOARD_SCALE_Y);
@@ -163,12 +174,23 @@ public final class GameRenderer implements Disposable {
         if (!review.isActive()) {
             drawBird(game.getWhite(), Side.WHITE, game);
             drawBird(game.getBlack(), Side.BLACK, game);
+            if (dropReturn != null) drawDropReturnPiece(dropReturn);
         }
         drawPanelText(game);
         batch.end();
         beginShapes();
-        if (!review.isActive()) feedback.drawShapes(shapes);
+        if (!review.isActive()) {
+            drawStunIndicators(game);
+            feedback.drawBoardFlash(shapes);
+            feedback.drawShapes(shapes);
+            feedback.drawCalloutShapes(shapes);
+        }
         shapes.end();
+        if (!review.isActive() && feedback.hasCallout()) {
+            batch.begin();
+            feedback.drawCalloutText(batch, font);
+            batch.end();
+        }
         if (!boardOnly) {
             if (game.isGameOver() && !review.isActive() || game.getChess().hasPendingPromotion() || school != null && school.isComplete()) overlay(game);
             if (setup != null) setupOverlay(setup);
@@ -178,9 +200,11 @@ public final class GameRenderer implements Disposable {
         ScreenUtils.clear(SKY_HIGH);
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
+        float shakeX = review.isActive() ? 0 : feedback.shakeX();
+        float shakeY = review.isActive() ? 0 : feedback.shakeY();
         batch.begin();
         batch.setColor(Color.WHITE);
-        batch.draw(canvasImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        batch.draw(canvasImage, shakeX, shakeY, WORLD_WIDTH, WORLD_HEIGHT);
         batch.end();
     }
 
@@ -214,7 +238,9 @@ public final class GameRenderer implements Disposable {
                     corners(x + bx(6), y + by(6), bx(88), by(88), by(18), by(4), GOLD);
                 }
                 Piece piece = board.getBoard().getPiece(square);
-                if (piece != Piece.NONE && square != board.getHiddenPieceSquare()) {
+                GameSession.DropReturn drop = !review.isActive() ? game.getDropReturn() : null;
+                boolean returningHere = drop != null && square == drop.origin() && piece == drop.piece();
+                if (piece != Piece.NONE && square != board.getHiddenPieceSquare() && !returningHere) {
                     rect(x + bx(26), y + by(10), bx(48), by(6), SHADOW);
                     rect(x + bx(32), y + by(8), bx(36), by(2), SHADOW);
                 }
@@ -468,12 +494,98 @@ public final class GameRenderer implements Disposable {
 
     private void drawBird(Birb bird, Side side, GameSession game) {
         float x = birdX(bird), y = birdY(bird);
-        drawBirdSprite(side, x, y, 4, bird.getVelocityX() < -0.1, game.isGameOver() ? 1 : frame());
+        int birdFrame = game.isGameOver() ? 1 : bird.isStunned() ? 2 : frame();
+        if (bird.isStunned() && !reducedMotion && bird.getStunSteps() > GameSession.BUMP_STUN_STEPS / 2) {
+            x += (bird.getStunSteps() % 2 == 0 ? 2 : -2);
+        }
+        drawBirdSprite(side, x, y, 4, bird.getVelocityX() < -0.1, birdFrame);
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
             if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x,
                     carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y, 2, BOARD_SCALE_Y);
         }
+    }
+
+    private void drawStunIndicators(GameSession game) {
+        for (Side side : Side.values()) {
+            Birb bird = side == Side.WHITE ? game.getWhite() : game.getBlack();
+            if (!bird.isStunned()) continue;
+            float cx = birdX(bird);
+            float cy = Math.min(BOARD_Y + BOARD_HEIGHT - 16, birdY(bird) + 32);
+            // Brief impact brackets right after the collision hits.
+            if (bird.getStunSteps() > GameSession.BUMP_STUN_STEPS - 6) {
+                float left = Math.max(BOARD_X + 2, cx - 26);
+                float bottom = Math.max(BOARD_Y + 2, birdY(bird) - 24);
+                float width = Math.min(52, BOARD_X + BOARD_WIDTH - left - 2);
+                float height = Math.min(48, BOARD_Y + BOARD_HEIGHT - bottom - 2);
+                if (width > 16 && height > 16) {
+                    corners(left, bottom, width, height, 10, 4,
+                            bird.getStunSteps() % 2 == 0 ? GOLD_BRIGHT : DANGER);
+                }
+            }
+            double baseAngle = reducedMotion
+                    ? 0.35 + (side == Side.WHITE ? 0 : Math.PI)
+                    : animationTime * 7.5 + (side == Side.WHITE ? 0 : Math.PI);
+            for (int i = 0; i < 3; i++) {
+                double angle = baseAngle + i * (Math.PI * 2 / 3);
+                float sx = cx + (float) Math.cos(angle) * 26f;
+                float sy = cy + (float) Math.sin(angle) * 9f;
+                if (sx < BOARD_X + 8 || sx > BOARD_X + BOARD_WIDTH - 8
+                        || sy < BOARD_Y + 8 || sy > BOARD_Y + BOARD_HEIGHT - 8) continue;
+                rect(sx - 6, sy - 2, 14, 6, INK);
+                rect(sx - 2, sy - 6, 6, 14, INK);
+                star(sx, sy, 4, i == 0 ? GOLD_BRIGHT : GOLD);
+            }
+        }
+    }
+
+    private void drawDropReturnMarkers(GameSession game) {
+        GameSession.DropReturn drop = game.getDropReturn();
+        if (drop == null) return;
+        Square origin = drop.origin();
+        float ox = squareX(origin), oy = squareY(origin);
+        boolean bright = (drop.stepsRemaining() / 3) % 2 == 0;
+        corners(ox + bx(6), oy + by(6), bx(88), by(88), by(20), by(6), bright ? GOLD_BRIGHT : DANGER);
+        float progress = 1f - (float) drop.stepsRemaining() / GameSession.DROP_RETURN_STEPS;
+        float shadowW = bx(22 + 26 * progress);
+        rect(ox + (SQUARE_WIDTH - shadowW) / 2, oy + by(10), shadowW, by(6), SHADOW);
+        // Trailing pixel pips along the parabolic return path.
+        for (int i = 1; i <= 3; i++) {
+            float trailT = progress - i * 0.09f;
+            if (trailT < 0) continue;
+            float tx = dropReturnX(drop, trailT);
+            float ty = dropReturnY(drop, trailT);
+            if (tx >= BOARD_X + 4 && tx <= BOARD_X + BOARD_WIDTH - 8
+                    && ty >= BOARD_Y + 4 && ty <= BOARD_Y + BOARD_HEIGHT - 8) {
+                float size = i == 1 ? 6 : 4;
+                rect(tx - size / 2, ty - size / 2, size, size, i == 1 ? GOLD_BRIGHT : GOLD);
+            }
+        }
+    }
+
+    private void drawDropReturnPiece(GameSession.DropReturn drop) {
+        float t = 1f - (float) drop.stepsRemaining() / GameSession.DROP_RETURN_STEPS;
+        float eased = 1f - (1f - t) * (1f - t);
+        float px = dropReturnX(drop, t);
+        float py = dropReturnY(drop, t);
+        float scale = 2.2f + 1.8f * eased;
+        drawPiece(drop.piece(), px, py, scale, BOARD_SCALE_Y);
+    }
+
+    private static float dropReturnX(GameSession.DropReturn drop, float t) {
+        float eased = 1f - (1f - t) * (1f - t);
+        float startX = BOARD_X + (float) drop.fromX() * BOARD_SCALE_X;
+        float endX = squareX(drop.origin()) + SQUARE_WIDTH / 2f;
+        return startX + (endX - startX) * eased;
+    }
+
+    private static float dropReturnY(GameSession.DropReturn drop, float t) {
+        float eased = 1f - (1f - t) * (1f - t);
+        float startY = BOARD_Y + (800f - (float) drop.fromY()) * BOARD_SCALE_Y;
+        float endY = squareY(drop.origin()) + SQUARE_HEIGHT / 2f;
+        float arc = 58f * 4f * t * (1f - t);
+        return Math.max(BOARD_Y + by(24), Math.min(BOARD_Y + BOARD_HEIGHT - by(24),
+                startY + (endY - startY) * eased + arc));
     }
 
     private static float carriedY(float birdY, Side side) {

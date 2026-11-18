@@ -159,6 +159,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
     public String feedbackMessage() { return renderer.feedbackMessage(); }
     public PostgameReview getReview() { return renderer.getReview(); }
     public void setBoardOnly(boolean boardOnly) { renderer.setBoardOnly(boardOnly); }
+    public void setReducedMotion(boolean reducedMotion) { renderer.setReducedMotion(reducedMotion); }
     private static String savePgn(String pgn) {
         String path = "exports/flappy-chess-" + System.currentTimeMillis() + ".pgn";
         Gdx.files.local(path).writeString(pgn, false, "UTF-8");
