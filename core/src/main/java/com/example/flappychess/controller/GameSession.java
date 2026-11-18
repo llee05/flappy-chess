@@ -223,7 +223,7 @@ public final class GameSession extends InputAdapter {
         black.stun(state.blackStunSteps());
         bumpCooldown = state.bumpCooldown();
         hitStopSteps = state.hitStopSteps();
-        dropReturn = state.dropReturn();
+        dropReturn = state.result() == null ? state.dropReturn() : null;
         lastBump = state.lastBump();
         history.clear();
         history.addAll(state.history());
@@ -384,6 +384,7 @@ public final class GameSession extends InputAdapter {
     private void end(String title, String reason) {
         result = title;
         this.reason = reason;
+        dropReturn = null;
         releaseInput();
     }
 

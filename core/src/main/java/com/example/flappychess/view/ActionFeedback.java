@@ -24,8 +24,7 @@ final class ActionFeedback implements Disposable {
     static final float EMPTY_SHAKE_MAX = 6f;
     static final float BOARD_FLASH_DURATION = 0.09f;
     static final float CALLOUT_DURATION = 0.78f;
-    static final float DROP_LANDING_TIME = (GameSession.CARRY_HIT_STOP_STEPS + GameSession.DROP_RETURN_STEPS) / 60f;
-    private static final float BURST_MAX_AGE = 0.68f;
+    private static final float DROP_LANDING_DURATION = 0.24f;
     private static final Color GOLD = Color.valueOf("efb95b");
     private static final Color GOLD_BRIGHT = Color.valueOf("ffe5a1");
     private static final Color TEAL = Color.valueOf("78c4d0");
@@ -42,6 +41,7 @@ final class ActionFeedback implements Disposable {
         final float x, y;
         final float impactScale;
         float age;
+        float landingAge = -1;
         Burst(Event event, float x, float y, float impactScale) {
             this.event = event;
             this.x = x;
@@ -95,8 +95,16 @@ final class ActionFeedback implements Disposable {
             calloutAge = CALLOUT_DURATION;
         }
         float step = Math.max(0, delta);
-        for (Burst burst : bursts) burst.age += step;
-        bursts.removeIf(burst -> burst.age >= (burst.event.kind() == Kind.BUMP_DROP ? BURST_MAX_AGE : 0.55f));
+        for (Burst burst : bursts) {
+            burst.age += step;
+            if (burst.event.kind() == Kind.BUMP_DROP) {
+                if (burst.landingAge >= 0) burst.landingAge += step;
+                else if (game.getDropReturn() == null && !game.isGameOver()) burst.landingAge = step;
+            }
+        }
+        bursts.removeIf(burst -> burst.event.kind() == Kind.BUMP_DROP
+                ? game.isGameOver() || burst.landingAge >= DROP_LANDING_DURATION
+                : burst.age >= 0.55f);
         messageTime = Math.max(0, messageTime - step);
         if (shakeDuration > 0) {
             shakeTime += step;
@@ -343,8 +351,8 @@ final class ActionFeedback implements Disposable {
         }
 
         // 4. Landing dust puff on the origin square when the dropped piece touches down.
-        if (age >= DROP_LANDING_TIME && age < DROP_LANDING_TIME + 0.24f) {
-            float landAge = age - DROP_LANDING_TIME;
+        if (burst.landingAge >= 0 && burst.landingAge < DROP_LANDING_DURATION) {
+            float landAge = burst.landingAge;
             float sx = GameRenderer.BOARD_X + (burst.event.square().getFile().ordinal() * 100 + 50) * GameRenderer.BOARD_SCALE_X;
             float sy = GameRenderer.BOARD_Y + (burst.event.square().getRank().ordinal() * 100 + 50) * GameRenderer.BOARD_SCALE_Y;
             float r = 14f + landAge * 135f;
@@ -470,8 +478,8 @@ final class ActionFeedback implements Disposable {
                 return (float) Math.sin(burst.age / 0.32f * Math.PI) * 12;
             }
             if (kind == Kind.BUMP_DROP && burst.event.square() == square
-                    && burst.age >= DROP_LANDING_TIME && burst.age < DROP_LANDING_TIME + 0.24f) {
-                float t = (burst.age - DROP_LANDING_TIME) / 0.24f;
+                    && burst.landingAge >= 0 && burst.landingAge < DROP_LANDING_DURATION) {
+                float t = burst.landingAge / DROP_LANDING_DURATION;
                 return (float) Math.sin(t * Math.PI) * 14f;
             }
         }

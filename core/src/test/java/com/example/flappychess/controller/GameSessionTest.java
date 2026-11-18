@@ -105,6 +105,23 @@ class GameSessionTest {
         assertNull(game.getCarrier());
     }
 
+    @Test void timeoutCompletesDroppedPieceReturnPresentation() {
+        AtomicLong time = new AtomicLong();
+        GameSession game = new GameSession(new ChessGameModel(), Duration.ofMillis(50), time::get);
+        press(game, Keys.E);
+        game.getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        game.getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        game.update(1f / 60);
+        assertNotNull(game.getDropReturn());
+
+        time.set(Duration.ofMillis(50).toNanos());
+        game.update(0);
+
+        assertTrue(game.isGameOver());
+        assertNull(game.getDropReturn());
+        assertEquals(Piece.WHITE_PAWN, game.getBoardView().getBoard().getPiece(Square.E2));
+    }
+
     @Test void focusLossReleasesHeldKeys() {
         GameSession game = session(new AtomicLong());
         game.keyDown(Keys.D);

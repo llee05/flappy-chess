@@ -85,7 +85,13 @@ class ActionFeedbackTest {
         feedback.update(game, 0);
 
         assertEquals(0, feedback.dropOffset(Square.E2), 1e-6);
-        feedback.update(game, ActionFeedback.DROP_LANDING_TIME + 0.10f);
+        int steps = 0;
+        while (game.getDropReturn() != null) {
+            assertEquals(0, feedback.dropOffset(Square.E2), 1e-6);
+            game.update(1f / 60);
+            feedback.update(game, 1f / 60);
+            assertTrue(++steps < 60, "Dropped piece did not return within one second");
+        }
         assertTrue(feedback.dropOffset(Square.E2) > 0);
 
         // Once callout and shake expire, repeated updates without new events do not re-trigger them.
