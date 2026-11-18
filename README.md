@@ -257,10 +257,10 @@ bird over a piece, pick it up, then carry it to a highlighted legal destination.
 The bird's center determines its board square. Dropping back on the original
 square cancels the pickup; an illegal destination keeps the piece carried.
 Ramming the other bird in midair triggers a brief impact freeze, screen shake
-(disabled when reduced motion is preferred), feather bursts, and layered bump
-audio; knocking a carrying bird loose adds a bigger shockwave, circling stun
-stars, a `DROPPED!` callout, and returns the piece in a visible arc back to its
-starting square without completing a move.
+(in the browser, disabled when reduced motion is preferred), feather bursts,
+and layered bump audio; knocking a carrying bird loose adds a bigger shockwave,
+circling stun stars, a `DROPPED!` callout, and returns the piece in a visible
+arc back to its starting square without completing a move.
 
 In local play, layouts stay with players after color swaps. In solo and online
 play, either layout controls your own bird.
