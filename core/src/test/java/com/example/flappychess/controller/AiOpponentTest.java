@@ -141,6 +141,32 @@ class AiOpponentTest {
         assertEquals(1, game.getHistory().size());
     }
 
+    @Test void successfulEngineSetsStockfishPhaseAndDoesNotUseFallback() {
+        ChessEngine working = (fen, level) -> new ChessEngine.Request() {
+            @Override public ChessEngine.State state() { return ChessEngine.State.READY; }
+            @Override public String move() { return "e2e4"; }
+            @Override public String failure() { return ""; }
+        };
+        GameSession game = new GameSession(MatchSettings.UNTIMED);
+        AiOpponent ai = new AiOpponent(game, Side.WHITE, SoloSettings.DEFAULT, working);
+        ai.step();
+        assertFalse(ai.usedFallback());
+        assertFalse(ai.phase().startsWith("FALLBACK:"));
+    }
+
+    @Test void thinkingEngineSetsStockfishThinkingPhase() {
+        ChessEngine thinking = (fen, level) -> new ChessEngine.Request() {
+            @Override public ChessEngine.State state() { return ChessEngine.State.THINKING; }
+            @Override public String move() { return null; }
+            @Override public String failure() { return ""; }
+        };
+        GameSession game = new GameSession(MatchSettings.UNTIMED);
+        AiOpponent ai = new AiOpponent(game, Side.WHITE, SoloSettings.DEFAULT, thinking);
+        ai.step();
+        assertFalse(ai.usedFallback());
+        assertEquals("STOCKFISH: THINKING", ai.phase());
+    }
+
     @Test void aiRecoversAndCompletesMoveAfterBeingBumpedWhileCarrying() {
         LocalMatch match = new LocalMatch(MatchSettings.UNTIMED,
                 new SoloSettings(Side.BLACK, ChessLevel.PIGEON, Level.MEDIUM));

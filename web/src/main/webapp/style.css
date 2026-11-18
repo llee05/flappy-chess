@@ -74,6 +74,8 @@ body.online #canvas { height: 100dvh; margin-top: 0; }
 #connection-failure { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #141b2de8; }
 #failure-title { font-size: clamp(18px, 5vw, 26px); color: #ed8c78; }
 #status { min-height: 24px; color: #add2b2; font-size: 14px; }
+#solo-fallback-note { position: absolute; top: 10px; right: 14px; z-index: 2; padding: 3px 8px; border: 1px solid #46516a; border-radius: 4px; background: #20283cf0; color: #ed8c78; font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; pointer-events: none; }
+.mobile #solo-fallback-note { top: 6px; right: 6px; font-size: 10px; padding: 2px 5px; }
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding-top: 4px; border-top: 2px solid #46516a; font-size: 12px; color: #b6c2d0; }
 .controls strong { color: #efb95b; }
 .controls p + p strong { color: #78c4d0; }
