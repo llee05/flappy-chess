@@ -1,6 +1,7 @@
 package com.example.flappychess.view;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input.Keys;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
@@ -118,6 +119,7 @@ public final class GameRenderer implements Disposable {
     }
     public Vector2 unproject(int x, int y) { return viewport.unproject(new Vector2(x, y)); }
     public void toggleSound() { feedback.toggleSound(); }
+    public void setSoundEnabled(boolean enabled) { feedback.setSoundEnabled(enabled); }
     public boolean isSoundEnabled() { return feedback.isSoundEnabled(); }
     public String feedbackMessage() { return feedback.message(); }
     public PostgameReview getReview() { return review; }
@@ -126,6 +128,14 @@ public final class GameRenderer implements Disposable {
     }
     public boolean isSwapAt(GameSession game, Vector2 point) {
         return game.isGameOver() && inside(point, 808, 260, 208, 60);
+    }
+    public static int promotionKeyAt(Vector2 point) {
+        if (point.y < 278 || point.y > 396) return Keys.UNKNOWN;
+        int[] keys = {Keys.Q, Keys.R, Keys.B, Keys.N};
+        for (int i = 0; i < keys.length; i++) {
+            if (inside(point, 584 + i * 112, 278, 96, 118)) return keys[i];
+        }
+        return Keys.UNKNOWN;
     }
     private static boolean inside(Vector2 point, float x, float y, float width, float height) {
         return point.x >= x && point.x <= x + width && point.y >= y && point.y <= y + height;
@@ -660,7 +670,7 @@ public final class GameRenderer implements Disposable {
             }
         } else {
             PieceType[] options = {PieceType.QUEEN, PieceType.ROOK, PieceType.BISHOP, PieceType.KNIGHT};
-            String[] labels = {"QUEEN", "ROOK", "BISHOP", "KNIGHT"};
+            String[] labels = {"Q QUEEN", "R ROOK", "B BISHOP", "N KNIGHT"};
             for (int i = 0; i < options.length; i++) {
                 drawPiece(Piece.make(game.getChess().getSideToMove(), options[i]), 632 + i * 112, 352, 4);
                 centered(labels[i], 632 + i * 112, 306, 2, GOLD);

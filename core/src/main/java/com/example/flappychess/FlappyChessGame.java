@@ -95,6 +95,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
                 if (key == Keys.ESCAPE) { exitAction.run(); return true; }
+                if (key == Keys.M) { renderer.toggleSound(); return true; }
                 if (setup != null) return true;
                 if (school != null && school.isComplete()) {
                     if (key == Keys.ENTER) restart(false);
@@ -121,6 +122,14 @@ public final class FlappyChessGame extends ApplicationAdapter {
                     }
                     if (point.x >= 650 && point.x <= 950 && point.y >= 260 && point.y <= 320) startConfiguredMatch();
                     return true;
+                }
+                if (session.getChess().hasPendingPromotion()) {
+                    int key = GameRenderer.promotionKeyAt(point);
+                    if (key != Keys.UNKNOWN) {
+                        match.keyDown(key);
+                        match.keyUp(key);
+                        return true;
+                    }
                 }
                 if (school == null && renderer.isSwapAt(session, point)) { rematch(true); return true; }
                 if ((session.isGameOver() || school != null && school.isComplete()) && renderer.isPlayAgainAt(point)) {
@@ -156,6 +165,7 @@ public final class FlappyChessGame extends ApplicationAdapter {
         restart(false);
     }
     public boolean isSoundEnabled() { return renderer.isSoundEnabled(); }
+    public void setSoundEnabled(boolean enabled) { renderer.setSoundEnabled(enabled); }
     public String feedbackMessage() { return renderer.feedbackMessage(); }
     public PostgameReview getReview() { return renderer.getReview(); }
     public void setBoardOnly(boolean boardOnly) { renderer.setBoardOnly(boardOnly); }

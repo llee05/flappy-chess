@@ -41,6 +41,22 @@
   });
   window.FlappySettings = { read, solo };
 
+  const soundButton = document.getElementById('lobby-sound');
+  let sound = true;
+  try {
+    const saved = localStorage.getItem('flappy-chess-sound');
+    if (saved !== null) sound = saved !== 'false';
+  } catch { /* Preferences are optional. */ }
+  const syncSound = enabled => {
+    sound = enabled;
+    soundButton.setAttribute('aria-pressed', String(enabled));
+    soundButton.setAttribute('aria-label', enabled ? 'Mute sound' : 'Turn sound on');
+    try { localStorage.setItem('flappy-chess-sound', String(enabled)); } catch { /* Optional storage. */ }
+  };
+  syncSound(sound);
+  soundButton.addEventListener('click', () => syncSound(!sound));
+  window.FlappySound = { enabled: () => sound, sync: syncSound };
+
   // VS AI opens this picker; choosing a level updates Settings and asks the launcher to start.
   const chess = document.getElementById('solo-chess');
   const panel = document.getElementById('level-panel');

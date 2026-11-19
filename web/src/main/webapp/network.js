@@ -552,7 +552,8 @@
     },
     renderStatus(text, host, playing, side) {
       if (ended) return;
-      byId('player-role').textContent = (host ? 'P1 · HOST · ' : 'P2 · GUEST · ') + side;
+      byId('player-role').textContent = `YOU · ${side === 'WHITE' ? 'WHITE ↓' : 'BLACK ↑'}`;
+      byId('player-role').title = host ? 'You are the room creator' : 'You are the room guest';
       document.body.dataset.side = side;
       if (byId('network-status').textContent !== text) byId('network-status').textContent = text;
       if (playing) {
@@ -581,6 +582,7 @@
     },
     fail,
     leave() {
+      window.FlappyMobile?.release();
       ended = true;
       searching = false;
       clearInterval(timer);

@@ -78,6 +78,7 @@
   };
   window.FlappyMobile = {
     bind(key, releaseInput) { sendKey = key; releaseGame = releaseInput; },
+    release,
     present(state) {
       if (!media.matches) return;
       const history = byId('history-summary').dataset;

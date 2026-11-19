@@ -23,15 +23,24 @@ final class PeerGame extends ApplicationAdapter {
 
     @Override public void create() {
         renderer = new GameRenderer(true);
+        renderer.setSoundEnabled(WebLauncher.soundEnabled());
         match = new PeerMatch(host, PeerNetwork::send, System::nanoTime, settings);
         Gdx.input.setInputProcessor(new InputMultiplexer(new InputAdapter() {
             @Override public boolean keyDown(int key) {
-                if (key != Keys.ESCAPE) return false;
-                WebLauncher.leaveGame();
-                return true;
+                if (key == Keys.ESCAPE) { WebLauncher.leaveGame(); return true; }
+                if (key == Keys.M) { renderer.toggleSound(); return true; }
+                return false;
             }
             @Override public boolean touchDown(int x, int y, int pointer, int button) {
                 Vector2 point = renderer.unproject(x, y);
+                if (match.getSession().getChess().hasPendingPromotion()) {
+                    int key = GameRenderer.promotionKeyAt(point);
+                    if (key != Keys.UNKNOWN) {
+                        match.keyDown(key);
+                        match.keyUp(key);
+                        return true;
+                    }
+                }
                 if (renderer.isSwapAt(match.getSession(), point)) { match.requestRematch(true); return true; }
                 if (match.getSession().isGameOver() && renderer.isPlayAgainAt(point)) {
                     match.requestRematch();
