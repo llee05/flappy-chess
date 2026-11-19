@@ -287,6 +287,11 @@ public final class GameSession extends InputAdapter {
         }
     }
 
+    /** Consumes hit-stop that already elapsed on the host while a snapshot was in transit. */
+    void elapseReplicaHitStop(long steps) {
+        hitStopSteps = (int) Math.max(0, hitStopSteps - Math.max(0, steps));
+    }
+
     private void advanceDropReturn() {
         if (dropReturn == null) return;
         int remaining = dropReturn.stepsRemaining() - 1;

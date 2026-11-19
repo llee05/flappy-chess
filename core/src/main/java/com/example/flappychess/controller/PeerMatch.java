@@ -26,7 +26,7 @@ public final class PeerMatch extends InputAdapter {
             boolean down,
             BirbController.InputState stateAfter) { }
 
-    private record ReplayResult(Birb.Motion motion, int stunSteps) { }
+    private record ReplayResult(Birb.Motion motion, int stunSteps, int hitStopSteps) { }
 
     private record ScheduledInput(int sequence, long dueAt, GameAction action, boolean down) { }
 
@@ -240,6 +240,7 @@ public final class PeerMatch extends InputAdapter {
             throw new IllegalArgumentException("Unagreed color swap");
         }
         if (resetInput) interruptLocalInput();
+        boolean generationChanged = generation != simulationGeneration;
         simulationGeneration = generation;
         remoteInterrupted = interrupted;
         staleHost = false;
@@ -263,22 +264,38 @@ public final class PeerMatch extends InputAdapter {
         } else if (state.result() != null || bumped || resetInput) {
             session.restoreReplica(state, stateAgeNanos);
             Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
-            Birb.Motion motion = getOwnSide() == Side.WHITE ? state.white() : state.black();
-            own.reconcile(motion, 1);
-            own.stun(getOwnSide() == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps());
+            // Guest step at which the host acknowledged input; result snapshots are frozen.
+            long ackedStep = session.getSimulationSteps() - ackSteps;
+            if (state.result() == null && !interrupted) {
+                // Flight continued on the host while this snapshot was in transit: adopt the
+                // authoritative collision or recovery state where it is now, not where it was.
+                long snapshotStep = snapshotStep(ack, ackSteps, resetInput);
+                // Re-anchor so later snapshots map onto the same projected timeline.
+                ackedStep = snapshotStep - ackSteps - stateAgeSteps();
+                ReplayResult projected = projectOwnBird(state, ack, generation, snapshotStep, generationChanged);
+                own.restore(projected.motion());
+                own.stun(projected.stunSteps());
+                session.elapseReplicaHitStop(state.hitStopSteps() - projected.hitStopSteps());
+            } else {
+                // Results and interruptions freeze flight, so the snapshot is still current.
+                own.reconcile(getOwnSide() == Side.WHITE ? state.white() : state.black(), 1);
+                own.stun(getOwnSide() == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps());
+            }
             if (state.result() != null || bumped) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
                 other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
                 other.stun(getOwnSide() == Side.WHITE ? state.blackStunSteps() : state.whiteStunSteps());
             }
             if (bumped && state.result() == null && !resetInput) {
-                rebasePredictionHistory(state, ack, ackSteps, generation);
+                rebasePredictionHistory(state, ack, generation, snapshotStep(ack, ackSteps, false));
             } else {
-                resetPredictionHistory(ack, session.getSimulationSteps() - ackSteps);
+                resetPredictionHistory(ack, ackedStep);
             }
         } else {
             session.restoreReplica(state, stateAgeNanos);
             scheduleOrReconcileOwnBird(state, ack, ackSteps, generation);
+            // Hit-stop that ran out on the host while the snapshot travelled must not replay late.
+            session.elapseReplicaHitStop(session.getSimulationSteps() - lastMappedAuthStep);
         }
         remoteRematch = bool(value, "hostRematch");
         remoteSwap = bool(value, "hostSwap");
@@ -345,9 +362,12 @@ public final class PeerMatch extends InputAdapter {
 
     private long computeAuthStep(int ack, long ackSteps) {
         long hostStep = (ack == 0 ? 0L : lastAckedGuestStep) + ackSteps;
+        return hostStep + (ack == 0 ? 0 : stateAgeSteps());
+    }
+
+    private long stateAgeSteps() {
         long physicsAgeNanos = Math.min(lastStateAgeNanos, MAX_SIMULATION_GAP);
-        long stateAgeSteps = Math.round(physicsAgeNanos * 60.0 / 1_000_000_000.0);
-        return hostStep + (ack == 0 ? 0 : stateAgeSteps);
+        return Math.round(physicsAgeNanos * 60.0 / 1_000_000_000.0);
     }
 
     private void advanceReplicaByAge(long stateAgeNanos) {
@@ -398,8 +418,43 @@ public final class PeerMatch extends InputAdapter {
         }
         if (usingPredictionBase && currentStep - startStep > MAX_REPLAY_STEPS) {
             Birb own = ownSide == Side.WHITE ? session.getWhite() : session.getBlack();
-            return new ReplayResult(own.snapshot(), own.getStunSteps());
+            return new ReplayResult(own.snapshot(), own.getStunSteps(), session.getHitStopSteps());
         }
+        return simulateOwnBird(replayState, replayInputState, startStep, currentStep, generation);
+    }
+
+    /**
+     * Guest step at which an active-flight snapshot was authoritative: its measured age before
+     * now. During recovery the guest's own steps stopped while it waited, so only that age
+     * locates the snapshot. Otherwise the acknowledgement mapping of normal reconciliation can
+     * show the snapshot is older (for example before timing samples exist), and the older wins.
+     */
+    private long snapshotStep(int ack, long ackSteps, boolean recovering) {
+        long currentStep = session.getSimulationSteps();
+        long step = currentStep - stateAgeSteps();
+        if (!recovering) step = Math.min(step, computeAuthStep(ack, ackSteps));
+        return Math.max(currentStep - MAX_REPLAY_STEPS, Math.min(step, currentStep));
+    }
+
+    /**
+     * Projects an authoritative active-flight snapshot forward to the guest's present,
+     * replaying only input the host had not applied when it sent the snapshot.
+     */
+    private ReplayResult projectOwnBird(SessionSnapshot state, int ack, int generation, long snapshotStep,
+            boolean generationChanged) {
+        pruneAcknowledgedInputs(ack, generation);
+        while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
+            pendingInputs.removeFirst();
+        }
+        // A new simulation generation starts with every held input released on the host.
+        BirbController.InputState inputState = generationChanged
+                ? new BirbController.InputState(false, false, false) : lastAckedInputState;
+        return simulateOwnBird(state, inputState, snapshotStep, session.getSimulationSteps(), generation);
+    }
+
+    private ReplayResult simulateOwnBird(SessionSnapshot replayState, BirbController.InputState replayInputState,
+            long startStep, long currentStep, int generation) {
+        Side ownSide = getOwnSide();
         Birb.Motion baseMotion = ownSide == Side.WHITE ? replayState.white() : replayState.black();
         int baseStun = ownSide == Side.WHITE ? replayState.whiteStunSteps() : replayState.blackStunSteps();
         int replayHitStop = replayState.hitStopSteps();
@@ -438,7 +493,7 @@ public final class PeerMatch extends InputAdapter {
                 }
             }
         }
-        return new ReplayResult(scratchBird.snapshot(), scratchBird.getStunSteps());
+        return new ReplayResult(scratchBird.snapshot(), scratchBird.getStunSteps(), Math.max(0, replayHitStop));
     }
 
     private static void applyReplayInput(BirbController controls, Side ownSide, SessionSnapshot state,
@@ -488,12 +543,12 @@ public final class PeerMatch extends InputAdapter {
         reconcileErrorX = reconcileErrorY = 0;
     }
 
-    private void rebasePredictionHistory(SessionSnapshot state, int ack, long ackSteps, int generation) {
+    private void rebasePredictionHistory(SessionSnapshot state, int ack, int generation, long baseStep) {
         pruneAcknowledgedInputs(ack, generation);
         while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
             pendingInputs.removeFirst();
         }
-        lastMappedAuthStep = Math.min(computeAuthStep(ack, ackSteps), session.getSimulationSteps());
+        lastMappedAuthStep = Math.min(baseStep, session.getSimulationSteps());
         if (pendingInputs.isEmpty()) {
             predictionBaseState = null;
             predictionBaseInputState = null;
