@@ -105,6 +105,24 @@ class PeerMatchTest {
         assertFalse(timed.guest.getSession().isGameOver());
     }
 
+    @Test void resultSnapshotImmediatelyRestoresBothAuthoritativeBirds() {
+        Pair pair = new Pair(Duration.ofSeconds(1), null);
+        var hostWhite = new com.example.flappychess.model.Birb.Motion(125, 225, 2.5, -1.5);
+        var hostBlack = new com.example.flappychess.model.Birb.Motion(525, 325, -2.5, 1.5);
+        pair.host.getSession().getWhite().restore(hostWhite);
+        pair.host.getSession().getBlack().restore(hostBlack);
+        pair.guest.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(700, 700, 0, 0));
+        pair.guest.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(25, 25, 0, 0));
+
+        pair.time.addAndGet(1_000_000_001L);
+        pair.host.update(0);
+        pair.flush();
+
+        assertTrue(pair.guest.getSession().isGameOver());
+        assertMotionEquals(hostWhite, pair.guest.getSession().getWhite().snapshot());
+        assertMotionEquals(hostBlack, pair.guest.getSession().getBlack().snapshot());
+    }
+
     @Test void eachKeyboardControlsOnlyItsOwnBirdAndGuestPredictsImmediately() {
         Pair pair = new Pair();
         pair.host.keyDown(Keys.RIGHT); // Host may use arrows, but controls White.
