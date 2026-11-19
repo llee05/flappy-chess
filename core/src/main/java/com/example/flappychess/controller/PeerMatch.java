@@ -234,7 +234,11 @@ public final class PeerMatch extends InputAdapter {
                 other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
                 other.stun(getOwnSide() == Side.WHITE ? state.blackStunSteps() : state.whiteStunSteps());
             }
-            resetPredictionHistory(ack, session.getSimulationSteps() - ackSteps);
+            if (bumped && state.result() == null && !resetInput) {
+                rebasePredictionHistory(state, ack, ackSteps, generation);
+            } else {
+                resetPredictionHistory(ack, session.getSimulationSteps() - ackSteps);
+            }
         } else {
             session.restoreReplica(state, stateAgeNanos);
             scheduleOrReconcileOwnBird(state, ack, ackSteps, generation);
@@ -441,6 +445,25 @@ public final class PeerMatch extends InputAdapter {
         lastAckedInputState = session.getControls(getOwnSide()).snapshotInput();
         predictionBaseState = null;
         predictionBaseInputState = null;
+        hasPendingReconcile = false;
+        reconcileTarget = null;
+        reconcileErrorX = reconcileErrorY = 0;
+    }
+
+    private void rebasePredictionHistory(SessionSnapshot state, int ack, long ackSteps, int generation) {
+        pruneAcknowledgedInputs(ack, generation);
+        while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
+            pendingInputs.removeFirst();
+        }
+        lastMappedAuthStep = Math.min(computeAuthStep(ack, ackSteps), session.getSimulationSteps());
+        if (pendingInputs.isEmpty()) {
+            predictionBaseState = null;
+            predictionBaseInputState = null;
+        } else {
+            predictionBaseState = state;
+            predictionBaseStep = lastMappedAuthStep;
+            predictionBaseInputState = lastAckedInputState;
+        }
         hasPendingReconcile = false;
         reconcileTarget = null;
         reconcileErrorX = reconcileErrorY = 0;

@@ -755,6 +755,31 @@ class PeerMatchTest {
         assertEquals(GameSession.CARRY_HIT_STOP_STEPS, pair.guest.getSession().getHitStopSteps());
     }
 
+    @Test void collisionRetainsNewerUnacknowledgedFlapForReplay() {
+        Pair pair = new Pair();
+        pair.host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        pair.host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        pair.time.addAndGet(16_666_667L);
+        pair.host.update(1f / 60);
+        String collision = pair.toGuest.removeLast();
+        pair.toGuest.clear();
+
+        pair.guest.update(0.05f);
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.keyUp(Keys.SPACE);
+        pair.guest.receive(collision);
+        pair.time.addAndGet(50_000_000L);
+        pair.host.pulse();
+        String followingState = pair.toGuest.removeLast();
+        pair.toGuest.clear();
+
+        pair.guest.receive(followingState);
+        pair.guest.update(0);
+
+        assertTrue(pair.guest.getSession().getBlack().getVelocityY() > 4.5);
+        assertFalse(pair.toHost.isEmpty());
+    }
+
     @Test void incompatibleProtocolVersionDisconnectsWithReloadMessage() {
         Pair pair = new Pair();
         pair.host.keyDown(Keys.D);
