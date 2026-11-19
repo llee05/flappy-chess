@@ -88,16 +88,9 @@ export async function checkMobile(browser) {
   await until(() => evaluate("document.body.dataset.game === 'ready' && document.getElementById('white-clock').classList.contains('active')"), 'starting a fresh mobile match');
   await touch.tap('[data-hold="E"]');
   await until(() => evaluate("document.getElementById('action-feedback').textContent.startsWith('Picked up')"), 'picking up with touch');
-  let lastFlap = 0;
-  await until(async () => {
-    const position = await bird();
-    if (position.y >= 512 && position.y <= 588) return true;
-    if (position.y > 588 && Date.now() - lastFlap > 550) {
-      await touch.tap('[data-hold="SPACE"]');
-      lastFlap = Date.now();
-    }
-    return false;
-  }, 'flying to e3 by touch', 15000);
+  await flyToRank(page, { birdY: async () => (await bird())?.y ?? null,
+    flap: () => touch.tap('[data-hold="SPACE"]'), white: true,
+    top: 500, bottom: 600, label: 'flying to e3 by touch', timeout: 15000 });
   await touch.tap('[data-hold="E"]');
   await until(async () => (await history()).last === 'e2e3', 'completing a legal move with touch');
   await screenshot('mobile-delivery');
