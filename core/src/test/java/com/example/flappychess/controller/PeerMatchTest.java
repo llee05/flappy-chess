@@ -750,5 +750,21 @@ class PeerMatchTest {
     @Test void protocolVersionMatchesExpectedVersion() {
         assertEquals(8, PeerMatch.protocolVersion());
         assertEquals(PeerProtocol.VERSION, PeerMatch.protocolVersion());
+
+    @Test void timeoutAgainstLoneKingResultsInDrawOnBothPeers() {
+        Pair pair = new Pair(Duration.ofMillis(1000), "7k/8/8/8/8/8/R7/K7 w - - 0 1");
+        pair.time.addAndGet(1_100_000_000L);
+        pair.host.pulse();
+        pair.guest.pulse();
+        pair.flush();
+
+        assertEquals("Draw", pair.host.getSession().getResult());
+        assertEquals("Draw", pair.guest.getSession().getResult());
+        assertEquals("White ran out of time", pair.host.getSession().getReason());
+        assertEquals("White ran out of time", pair.guest.getSession().getReason());
+        assertEquals(1, pair.host.getSession().getSeries().firstHalfPoints());
+        assertEquals(1, pair.host.getSession().getSeries().secondHalfPoints());
+        assertEquals(1, pair.guest.getSession().getSeries().firstHalfPoints());
+        assertEquals(1, pair.guest.getSession().getSeries().secondHalfPoints());
     }
 }

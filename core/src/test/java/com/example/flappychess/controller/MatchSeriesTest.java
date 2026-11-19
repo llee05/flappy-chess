@@ -51,4 +51,24 @@ class MatchSeriesTest {
         series.observe(game);
         assertEquals("P1 0.5-0.5 P2", series.state().score());
     }
+
+    @Test void timeoutAgainstLoneKingAwardsHalfPointToEachPlayerInSeries() {
+        AtomicLong time = new AtomicLong();
+        LocalMatch match = new LocalMatch(() -> {
+            ChessGameModel model = new ChessGameModel();
+            model.restorePosition("7k/8/8/8/8/8/R7/K7 w - - 0 1");
+            return new GameSession(model, new MatchSettings(1000, 0), time::get);
+        });
+        time.set(1_100_000_000L);
+        match.update(0);
+        assertEquals("Draw", match.getSession().getResult());
+        assertEquals(1, match.getSession().getSeries().firstHalfPoints());
+        assertEquals(1, match.getSession().getSeries().secondHalfPoints());
+        assertEquals("P1 0.5-0.5 P2", match.getSession().getSeries().score());
+        match.nextRound(true);
+        assertEquals(2, match.getSession().getSeries().round());
+        assertFalse(match.getSession().getSeries().firstWhite());
+        assertEquals(1, match.getSession().getSeries().firstHalfPoints());
+        assertEquals(1, match.getSession().getSeries().secondHalfPoints());
+    }
 }

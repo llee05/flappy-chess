@@ -159,4 +159,136 @@ class ChessGameModelTest {
         assertEquals(ChessGameModel.GameStatus.STALEMATE, model.getGameStatus());
         assertNull(model.getWinner());
     }
+
+    @Test
+    void loneKingHasInsufficientMatingMaterial() {
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("7k/8/8/8/8/8/R7/K7 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        model.restorePosition("k7/7r/8/8/8/8/8/K7 b - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+    }
+
+    @Test
+    void knightMatingMaterialAdjudication() {
+        ChessGameModel model = new ChessGameModel();
+
+        // K+N vs K: cannot mate bare king
+        model.restorePosition("8/8/8/8/8/4k3/4N3/4K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N vs K+Q: cannot mate K+Q
+        model.restorePosition("8/8/8/8/8/4k3/4q3/4K1N1 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N vs K+P: helpmate possible
+        model.restorePosition("7k/7p/8/8/8/8/5N2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N vs K+N: helpmate possible
+        model.restorePosition("7k/7n/8/8/8/8/5N2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N vs K+B: helpmate possible
+        model.restorePosition("7k/7b/8/8/8/8/5N2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N vs K+R: helpmate possible
+        model.restorePosition("7k/7r/8/8/8/8/5N2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N+N vs K: helpmate possible
+        model.restorePosition("7k/8/8/8/8/8/4NN2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+N+B vs K: forced mate possible
+        model.restorePosition("7k/8/8/8/8/8/4NB2/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+    }
+
+    @Test
+    void bishopMatingMaterialAdjudication() {
+        ChessGameModel model = new ChessGameModel();
+
+        // K+B vs K: cannot mate bare king
+        model.restorePosition("8/8/8/8/8/4k3/4B3/4K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+B same color (both dark): cannot mate
+        model.restorePosition("5b1k/8/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+B opposite color (c1 dark, e8 light): helpmate possible
+        model.restorePosition("4b2k/8/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+N: helpmate possible
+        model.restorePosition("7k/7n/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+P: helpmate possible
+        model.restorePosition("7k/7p/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+R: cannot mate
+        model.restorePosition("7k/7r/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B vs K+Q: cannot mate
+        model.restorePosition("7k/7q/8/8/8/8/8/2B1K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B+B opposite color vs K: forced mate possible
+        model.restorePosition("7k/8/8/8/8/8/8/1BB1K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // K+B+B same color vs K: cannot mate bare king
+        model.restorePosition("7k/8/8/8/8/4B3/8/2B1K3 w - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+    }
+
+    @Test
+    void majorPiecesAndPawnsAlwaysHaveSufficientMaterial() {
+        ChessGameModel model = new ChessGameModel();
+
+        // Pawns can promote
+        model.restorePosition("7k/8/8/8/8/8/4P3/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // Black pawn can promote
+        model.restorePosition("4k3/4p3/8/8/8/8/8/7K b - - 0 1");
+        assertFalse(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertTrue(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // Rooks can force mate
+        model.restorePosition("7k/8/8/8/8/8/4R3/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+
+        // Queens can force mate
+        model.restorePosition("7k/8/8/8/8/8/4Q3/4K3 w - - 0 1");
+        assertTrue(model.hasSufficientMatingMaterial(Side.WHITE));
+        assertFalse(model.hasSufficientMatingMaterial(Side.BLACK));
+    }
 }
