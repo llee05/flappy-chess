@@ -809,6 +809,7 @@ class PeerMatchTest {
             host.open();
             guest.open();
             double[] maxSingleCorrection = {0};
+            double maxGuestX = 0;
             long maxGuestClockAhead = 0;
             boolean commanded = false;
             int timer = 0;
@@ -829,6 +830,7 @@ class PeerMatchTest {
                     host.update(1f / 60);
                     guest.update(1f / 60);
                     if (commanded) {
+                        maxGuestX = Math.max(maxGuestX, guest.getSession().getBlack().getX());
                         long clockLead = guest.getSession().snapshot().whiteMillis()
                                 - host.getSession().snapshot().whiteMillis();
                         maxGuestClockAhead = Math.max(maxGuestClockAhead, clockLead);
@@ -841,8 +843,10 @@ class PeerMatchTest {
             assertFalse(host.isDisconnected());
             assertFalse(guest.isDisconnected());
             assertEquals(0L, maxGuestClockAhead, "delay=" + delayMillis + "ms");
-            assertTrue(maxSingleCorrection[0] <= 12.0,
+            assertTrue(maxSingleCorrection[0] <= 12.0 + 1e-6,
                     "delay=" + delayMillis + "ms maxSingleCorrection=" + maxSingleCorrection[0]);
+            assertTrue(maxGuestX <= 585.0 + 12.0,
+                    "delay=" + delayMillis + "ms maxGuestX=" + maxGuestX);
             assertEquals(585.0, host.getSession().getBlack().getX(), 0.1);
             assertEquals(585.0, guest.getSession().getBlack().getX(), 0.1);
             assertEquals(delayMillis * 2L, guest.getRttMillis(), 20L);
@@ -904,7 +908,7 @@ class PeerMatchTest {
         }
         assertFalse(host.isDisconnected());
         assertFalse(guest.isDisconnected());
-        assertTrue(maxSingleCorrection[0] <= 12.0, "maxSingleCorrection=" + maxSingleCorrection[0]);
+        assertTrue(maxSingleCorrection[0] <= 12.0 + 1e-6, "maxSingleCorrection=" + maxSingleCorrection[0]);
         assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 1.0);
     }
 
@@ -972,7 +976,7 @@ class PeerMatchTest {
         }
         assertTrue(pickedUp);
         assertTrue(dropped);
-        assertTrue(maxSingleCorrection[0] <= 12.0, "maxSingleCorrection=" + maxSingleCorrection[0]);
+        assertTrue(maxSingleCorrection[0] <= 12.0 + 1e-6, "maxSingleCorrection=" + maxSingleCorrection[0]);
         assertEquals(2, host.getSession().getHistory().size());
         assertEquals("e6", host.getSession().getHistory().get(1).notation());
         assertEquals("e6", guest.getSession().getHistory().get(1).notation());

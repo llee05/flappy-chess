@@ -287,9 +287,8 @@ public final class PeerMatch extends InputAdapter {
 
     private long computeAuthStep(int ack, long ackSteps) {
         long hostStep = (ack == 0 ? 0L : lastAckedGuestStep) + ackSteps;
-        return !pendingInputs.isEmpty()
-                ? Math.min(pendingInputs.peekFirst().guestStep(), hostStep)
-                : hostStep;
+        long stateAgeSteps = Math.round(lastStateAgeNanos * 60.0 / 1_000_000_000.0);
+        return hostStep + stateAgeSteps;
     }
 
     private void reconcileOwnBird(SessionSnapshot state, int ack, long ackSteps, int generation) {
