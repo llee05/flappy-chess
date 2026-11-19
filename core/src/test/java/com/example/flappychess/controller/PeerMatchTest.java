@@ -812,6 +812,44 @@ class PeerMatchTest {
         }
     }
 
+    @Test void preAckSteeringReplaysFromItsAuthoritativePredictionBase() {
+        Pair pair = new Pair();
+        pair.advance(20);
+        pair.guest.keyDown(Keys.D);
+        for (int step = 0; step < 60; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.update(1f / 60);
+            pair.guest.update(1f / 60);
+        }
+        double predictedX = pair.guest.getSession().getBlack().getX();
+
+        while (!pair.toGuest.isEmpty()) pair.guest.receive(pair.toGuest.remove());
+        assertEquals(predictedX, pair.guest.getSession().getBlack().getX(), 1e-7);
+        pair.guest.update(0);
+
+        assertTrue(pair.guest.getSession().getBlack().getX() >= predictedX - 1e-7);
+        assertFalse(pair.toHost.isEmpty());
+    }
+
+    @Test void queuedSnapshotsApplyOneBoundedCorrectionPerUpdate() {
+        Pair pair = new Pair();
+        pair.guest.getSession().getBlack().restore(
+                new com.example.flappychess.model.Birb.Motion(700, 400, 0, 0));
+        for (int snapshot = 0; snapshot < 20; snapshot++) {
+            pair.time.addAndGet(50_000_000L);
+            pair.host.pulse();
+        }
+        double beforeX = pair.guest.getSession().getBlack().getX();
+        double beforeY = pair.guest.getSession().getBlack().getY();
+
+        while (!pair.toGuest.isEmpty()) pair.guest.receive(pair.toGuest.remove());
+        assertEquals(beforeX, pair.guest.getSession().getBlack().getX(), 1e-7);
+        pair.guest.update(0);
+
+        assertTrue(Math.hypot(pair.guest.getSession().getBlack().getX() - beforeX,
+                pair.guest.getSession().getBlack().getY() - beforeY) <= 12.0 + 1e-6);
+    }
+
     @Test void delayedLinksKeepGuestClocksAndPredictionAlignedWithIndependentClockOrigins() {
         for (int delayMillis : new int[] {0, 100, 300, 1000}) {
             AtomicLong now = new AtomicLong(10_000_000_000L);

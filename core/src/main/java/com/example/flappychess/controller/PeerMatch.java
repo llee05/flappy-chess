@@ -67,10 +67,15 @@ public final class PeerMatch extends InputAdapter {
     private int lastAckedSequence;
     private long lastAckedGuestStep;
     private BirbController.InputState lastAckedInputState = new BirbController.InputState(false, false, false);
+    private SessionSnapshot predictionBaseState;
+    private long predictionBaseStep, lastMappedAuthStep;
+    private BirbController.InputState predictionBaseInputState;
     private int pendingReconcileAck;
     private long pendingReconcileAckSteps;
     private int pendingReconcileGeneration;
     private boolean hasPendingReconcile;
+    private Birb.Motion reconcileTarget;
+    private int reconcileTargetStun;
     private double reconcileErrorX, reconcileErrorY;
     private String error;
 
@@ -249,6 +254,9 @@ public final class PeerMatch extends InputAdapter {
                 if (hasPendingReconcile) {
                     hasPendingReconcile = false;
                     reconcileOwnBird(latest, pendingReconcileAck, pendingReconcileAckSteps, pendingReconcileGeneration);
+                }
+                if (reconcileTarget != null) {
+                    applyReconcileTarget();
                 } else {
                     applyReconcileSmoothing(delta);
                 }
@@ -263,6 +271,7 @@ public final class PeerMatch extends InputAdapter {
         pruneAcknowledgedInputs(ack, generation);
         long currentStep = session.getSimulationSteps();
         long authStep = computeAuthStep(ack, ackSteps);
+        lastMappedAuthStep = Math.min(authStep, currentStep);
         if (authStep == currentStep + 1 && lastStateAgeNanos == 0) {
             pendingReconcileAck = ack;
             pendingReconcileAckSteps = ackSteps;
@@ -275,13 +284,18 @@ public final class PeerMatch extends InputAdapter {
     }
 
     private void pruneAcknowledgedInputs(int ack, int generation) {
-        while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
-            RecordedInput acked = pendingInputs.removeFirst();
-            if (acked.generation() == generation) {
+        for (RecordedInput acked : pendingInputs) {
+            if (acked.sequence() > lastAckedSequence && acked.sequence() <= ack
+                    && acked.generation() == generation) {
                 lastAckedSequence = acked.sequence();
                 lastAckedGuestStep = acked.guestStep();
                 lastAckedInputState = acked.stateAfter();
             }
+        }
+        if (!pendingInputs.isEmpty() && pendingInputs.peekLast().sequence() <= ack) {
+            pendingInputs.clear();
+            predictionBaseState = null;
+            predictionBaseInputState = null;
         }
     }
 
@@ -297,22 +311,40 @@ public final class PeerMatch extends InputAdapter {
         long authStep = computeAuthStep(ack, ackSteps);
         Side ownSide = getOwnSide();
         ReplayResult replayed = replayOwnBird(state, ownSide, authStep, currentStep, generation);
-        Birb own = ownSide == Side.WHITE ? session.getWhite() : session.getBlack();
-        Birb.Motion target = replayed.motion();
+        reconcileTarget = replayed.motion();
+        reconcileTargetStun = replayed.stunSteps();
+    }
+
+    private void applyReconcileTarget() {
+        Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
+        Birb.Motion target = reconcileTarget;
         double dx = target.x() - own.getX();
         double dy = target.y() - own.getY();
         double distance = Math.hypot(dx, dy);
         double blend = distance <= 1e-6 ? 1.0 : Math.min(0.25, MAX_IMMEDIATE_CORRECTION / distance);
         own.reconcile(target, blend);
-        own.stun(replayed.stunSteps());
+        own.stun(reconcileTargetStun);
         reconcileErrorX = target.x() - own.getX();
         reconcileErrorY = target.y() - own.getY();
+        reconcileTarget = null;
     }
 
     private ReplayResult replayOwnBird(SessionSnapshot state, Side ownSide, long authStep, long currentStep, int generation) {
-        Birb.Motion baseMotion = ownSide == Side.WHITE ? state.white() : state.black();
-        int baseStun = ownSide == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps();
-        int replayHitStop = state.hitStopSteps();
+        SessionSnapshot replayState = state;
+        BirbController.InputState replayInputState = lastAckedInputState;
+        long startStep = Math.min(authStep, currentStep);
+        RecordedInput firstUnacknowledged = pendingInputs.stream()
+                .filter(input -> input.generation() == generation && input.sequence() > lastAckedSequence)
+                .findFirst().orElse(null);
+        if (predictionBaseState != null && firstUnacknowledged != null
+                && firstUnacknowledged.guestStep() <= startStep) {
+            replayState = predictionBaseState;
+            replayInputState = predictionBaseInputState;
+            startStep = Math.min(predictionBaseStep, currentStep);
+        }
+        Birb.Motion baseMotion = ownSide == Side.WHITE ? replayState.white() : replayState.black();
+        int baseStun = ownSide == Side.WHITE ? replayState.whiteStunSteps() : replayState.blackStunSteps();
+        int replayHitStop = replayState.hitStopSteps();
         Birb scratchBird = new Birb(baseMotion.x(), baseMotion.y(), 50, 50, ownSide == Side.WHITE ? 1 : -1);
         scratchBird.restore(baseMotion);
         scratchBird.stun(baseStun);
@@ -320,23 +352,22 @@ public final class PeerMatch extends InputAdapter {
                 ? new BirbController(scratchBird, 800, 800)
                 : new BirbController(scratchBird, 800, 800,
                         com.badlogic.gdx.Input.Keys.LEFT, com.badlogic.gdx.Input.Keys.RIGHT, com.badlogic.gdx.Input.Keys.UP);
-        scratchControls.restoreInput(lastAckedInputState);
+        scratchControls.restoreInput(replayInputState);
 
-        long startStep = Math.min(authStep, currentStep);
         if (currentStep - startStep > MAX_REPLAY_STEPS) {
             startStep = currentStep - MAX_REPLAY_STEPS;
         }
 
         for (RecordedInput input : pendingInputs) {
             if (input.generation() == generation && input.guestStep() <= startStep) {
-                applyReplayInput(scratchControls, ownSide, state, replayHitStop, input);
+                applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
             }
         }
         for (long step = startStep; step < currentStep; step++) {
             if (step > startStep) {
                 for (RecordedInput input : pendingInputs) {
                     if (input.generation() == generation && input.guestStep() == step) {
-                        applyReplayInput(scratchControls, ownSide, state, replayHitStop, input);
+                        applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
                     }
                 }
             }
@@ -349,7 +380,7 @@ public final class PeerMatch extends InputAdapter {
         if (currentStep > startStep) {
             for (RecordedInput input : pendingInputs) {
                 if (input.generation() == generation && input.guestStep() >= currentStep) {
-                    applyReplayInput(scratchControls, ownSide, state, replayHitStop, input);
+                    applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
                 }
             }
         }
@@ -396,8 +427,18 @@ public final class PeerMatch extends InputAdapter {
         lastAckedSequence = ack;
         lastAckedGuestStep = ackedStep;
         lastAckedInputState = session.getControls(getOwnSide()).snapshotInput();
+        predictionBaseState = null;
+        predictionBaseInputState = null;
         hasPendingReconcile = false;
+        reconcileTarget = null;
         reconcileErrorX = reconcileErrorY = 0;
+    }
+
+    private void beginPredictionHistory() {
+        if (!pendingInputs.isEmpty() || latest == null) return;
+        predictionBaseState = latest;
+        predictionBaseStep = Math.min(lastMappedAuthStep, session.getSimulationSteps());
+        predictionBaseInputState = session.getControls(getOwnSide()).snapshotInput();
     }
 
     private void recordLocalInput(GameAction action, boolean down) {
@@ -511,6 +552,7 @@ public final class PeerMatch extends InputAdapter {
         advanceHost();
         if (!host && started && !staleHost && now - lastStateAt > MAX_SIMULATION_GAP) {
             staleHost = true;
+            beginPredictionHistory();
             interruptLocalInput();
             JsonValue release = sequenced("release");
             recordLocalInput(null, false);
@@ -584,6 +626,7 @@ public final class PeerMatch extends InputAdapter {
             session.command(getOwnSide(), action, down);
             sendState();
         } else {
+            beginPredictionHistory();
             session.predict(getOwnSide(), action, down);
             JsonValue value = sequenced("input");
             put(value, "action", action.name());
@@ -603,6 +646,7 @@ public final class PeerMatch extends InputAdapter {
 
     public void releaseInput() {
         advanceHost();
+        if (!host) beginPredictionHistory();
         clearLocalInput();
         if (!started || disconnected) return;
         if (host) sendState();
@@ -648,7 +692,10 @@ public final class PeerMatch extends InputAdapter {
         keys.clear();
         held.clear();
         pendingInputs.clear();
+        predictionBaseState = null;
+        predictionBaseInputState = null;
         hasPendingReconcile = false;
+        reconcileTarget = null;
         reconcileErrorX = reconcileErrorY = 0;
     }
 
