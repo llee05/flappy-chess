@@ -1,5 +1,6 @@
 package com.example.flappychess.model;
 
+import com.github.bhlangonijr.chesslib.Bitboard;
 import com.github.bhlangonijr.chesslib.Board;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.PieceType;
@@ -179,5 +180,46 @@ public class ChessGameModel {
         }
 
         return fallback;
+    }
+
+    /**
+     * Determines whether the specified side has sufficient material to checkmate the opponent
+     * by any possible series of legal moves (FIDE Laws of Chess, Article 6.9).
+     *
+     * @param side the side to check for mating capability
+     * @return true if checkmate by this side is legally possible against the opponent's pieces
+     */
+    public boolean hasSufficientMatingMaterial(Side side) {
+        long pawns = board.getBitboard(Piece.make(side, PieceType.PAWN));
+        long rooks = board.getBitboard(Piece.make(side, PieceType.ROOK));
+        long queens = board.getBitboard(Piece.make(side, PieceType.QUEEN));
+        if ((pawns | rooks | queens) != 0L) {
+            return true;
+        }
+
+        long sidePieces = board.getBitboard(side);
+        long knights = board.getBitboard(Piece.make(side, PieceType.KNIGHT));
+        if (knights != 0L) {
+            if (Long.bitCount(sidePieces) > 2) {
+                return true;
+            }
+            Side opp = side.flip();
+            long oppPawns = board.getBitboard(Piece.make(opp, PieceType.PAWN));
+            long oppKnights = board.getBitboard(Piece.make(opp, PieceType.KNIGHT));
+            long oppBishops = board.getBitboard(Piece.make(opp, PieceType.BISHOP));
+            long oppRooks = board.getBitboard(Piece.make(opp, PieceType.ROOK));
+            return (oppPawns | oppKnights | oppBishops | oppRooks) != 0L;
+        }
+
+        long bishops = board.getBitboard(Piece.make(side, PieceType.BISHOP));
+        if (bishops != 0L) {
+            long allBishops = board.getBitboard(Piece.WHITE_BISHOP) | board.getBitboard(Piece.BLACK_BISHOP);
+            boolean sameColor = (allBishops & Bitboard.darkSquares) == 0L || (allBishops & Bitboard.lightSquares) == 0L;
+            long allPawns = board.getBitboard(Piece.WHITE_PAWN) | board.getBitboard(Piece.BLACK_PAWN);
+            long allKnights = board.getBitboard(Piece.WHITE_KNIGHT) | board.getBitboard(Piece.BLACK_KNIGHT);
+            return !sameColor || allPawns != 0L || allKnights != 0L;
+        }
+
+        return false;
     }
 }

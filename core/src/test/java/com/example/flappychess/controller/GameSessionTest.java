@@ -2,6 +2,7 @@ package com.example.flappychess.controller;
 
 import com.badlogic.gdx.Input.Keys;
 import com.example.flappychess.model.ChessGameModel;
+import com.example.flappychess.model.MatchSettings;
 import com.github.bhlangonijr.chesslib.Piece;
 import com.github.bhlangonijr.chesslib.Side;
 import com.github.bhlangonijr.chesslib.Square;
@@ -103,6 +104,77 @@ class GameSessionTest {
         game.update(1);
         assertEquals(y, game.getWhite().getY());
         assertNull(game.getCarrier());
+    }
+
+    @Test void timeoutAgainstLoneKingResultsInDraw() {
+        AtomicLong time = new AtomicLong();
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("7k/8/8/8/8/8/R7/K7 w - - 0 1");
+        GameSession game = new GameSession(model, new MatchSettings(1000, 0), time::get);
+        time.set(Duration.ofMillis(1100).toNanos());
+        game.update(0);
+        assertEquals("Draw", game.getResult());
+        assertEquals("White ran out of time", game.getReason());
+    }
+
+    @Test void blackTimeoutAgainstLoneKingResultsInDraw() {
+        AtomicLong time = new AtomicLong();
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("7k/7r/8/8/8/8/8/K7 b - - 0 1");
+        GameSession game = new GameSession(model, new MatchSettings(1000, 0), time::get);
+        time.set(Duration.ofMillis(1100).toNanos());
+        game.update(0);
+        assertEquals("Draw", game.getResult());
+        assertEquals("Black ran out of time", game.getReason());
+    }
+
+    @Test void timeoutDuringPendingPromotionAgainstLoneKingResultsInDraw() {
+        AtomicLong time = new AtomicLong();
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("k7/4P3/8/8/8/8/8/4K3 w - - 0 1");
+        GameSession game = new GameSession(model, new MatchSettings(1000, 5000), time::get);
+        game.getWhite().setY(125);
+        game.command(Side.WHITE, GameAction.CARRY, true);
+        game.command(Side.WHITE, GameAction.CARRY, false);
+        game.getWhite().setY(25);
+        game.command(Side.WHITE, GameAction.CARRY, true);
+        assertTrue(game.getChess().hasPendingPromotion());
+        time.set(Duration.ofMillis(1100).toNanos());
+        game.update(0);
+        assertEquals("Draw", game.getResult());
+        assertEquals("White ran out of time", game.getReason());
+        assertTrue(game.getHistory().isEmpty());
+        press(game, Keys.Q);
+        assertEquals("Draw", game.getResult());
+        assertTrue(game.getHistory().isEmpty());
+    }
+
+    @Test void timeoutDuringPendingPromotionAgainstMatingMaterialAwardsWin() {
+        AtomicLong time = new AtomicLong();
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("k4r2/4P3/8/8/8/8/8/4K3 w - - 0 1");
+        GameSession game = new GameSession(model, new MatchSettings(1000, 5000), time::get);
+        game.getWhite().setY(125);
+        game.command(Side.WHITE, GameAction.CARRY, true);
+        game.command(Side.WHITE, GameAction.CARRY, false);
+        game.getWhite().setY(25);
+        game.command(Side.WHITE, GameAction.CARRY, true);
+        assertTrue(game.getChess().hasPendingPromotion());
+        time.set(Duration.ofMillis(1100).toNanos());
+        game.update(0);
+        assertEquals("Black wins", game.getResult());
+        assertEquals("White ran out of time", game.getReason());
+    }
+
+    @Test void timeoutAgainstHelpmateMaterialAwardsWin() {
+        AtomicLong time = new AtomicLong();
+        ChessGameModel model = new ChessGameModel();
+        model.restorePosition("7k/7n/8/8/8/8/7P/4K3 w - - 0 1");
+        GameSession game = new GameSession(model, new MatchSettings(1000, 0), time::get);
+        time.set(Duration.ofMillis(1100).toNanos());
+        game.update(0);
+        assertEquals("Black wins", game.getResult());
+        assertEquals("White ran out of time", game.getReason());
     }
 
     @Test void timeoutCompletesDroppedPieceReturnPresentation() {

@@ -100,6 +100,10 @@ public class ChessController {
         return promotionRequest != null;
     }
 
+    public boolean hasSufficientMatingMaterial(Side side) {
+        return model.hasSufficientMatingMaterial(side);
+    }
+
     void restoreRemote(SessionSnapshot state) {
         initialFen = state.initialFen();
         model.restorePosition(state.fen());

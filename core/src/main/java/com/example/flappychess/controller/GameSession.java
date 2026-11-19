@@ -374,7 +374,14 @@ public final class GameSession extends InputAdapter {
         Side side = chess.getSideToMove();
         // Input ticks before a move switches sides, charging the elapsed time correctly.
         clock.tick(nanoTime.getAsLong(), side);
-        if (clock.isExpired(side)) end(sideName(side.flip()) + " wins", sideName(side) + " ran out of time");
+        if (clock.isExpired(side)) {
+            Side opponent = side.flip();
+            if (chess.hasSufficientMatingMaterial(opponent)) {
+                end(sideName(opponent) + " wins", sideName(side) + " ran out of time");
+            } else {
+                end("Draw", sideName(side) + " ran out of time");
+            }
+        }
         else if (clock.getRemainingMillis(side) <= 30_000 && warnedLowTime.add(side)) {
             Birb bird = side == Side.WHITE ? white : black;
             feedback.emit(LOW_TIME, side, birdSquare(bird));
