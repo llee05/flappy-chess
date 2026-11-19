@@ -30,14 +30,15 @@ import java.util.Locale;
 public final class GameRenderer implements Disposable {
     private static final float WORLD_WIDTH = 1600;
     private static final float WORLD_HEIGHT = 800;
-    static final float BOARD_X = 440;
+    static final float BOARD_X = 448;
     static final float BOARD_Y = 56;
-    static final float BOARD_SCALE_X = 0.9f;
+    static final float BOARD_SCALE_X = 0.89f;
     static final float BOARD_SCALE_Y = 0.86f;
-    static final float SQUARE_WIDTH = 90;
+    static final float SQUARE_WIDTH = 89;
     static final float SQUARE_HEIGHT = 86;
     static final float BOARD_WIDTH = SQUARE_WIDTH * 8;
     static final float BOARD_HEIGHT = SQUARE_HEIGHT * 8;
+    private static final float BOARD_CENTER_X = BOARD_X + BOARD_WIDTH / 2;
     private static final Color LIGHT = Color.valueOf("daccaa");
     private static final Color LIGHT_EDGE = Color.valueOf("bdb496");
     private static final Color LIGHT_SHINE = Color.valueOf("e5d9ba");
@@ -273,30 +274,32 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        drawPanelShell(72);
-        drawPanelShell(1192);
+        if (!boardOnly) {
+            drawPanelShell(72);
+            drawPanelShell(1192);
 
-        drawPillar(72);
-        drawPillar(368);
-        drawPillar(1192);
-        drawPillar(1488);
+            drawPillar(72);
+            drawPillar(368);
+            drawPillar(1192);
+            drawPillar(1488);
 
-        largeOrnament(240, 682);
-        divider(240, 628);
-        banner(240, 590);
-        diamond(240, 446, 7, GOLD);
-        cloud(174, 304, 1.25f);
-        cloud(238, 246, 0.8f);
-        divider(240, 170);
+            largeOrnament(240, 682);
+            divider(240, 628);
+            banner(240, 590);
+            diamond(240, 446, 7, GOLD);
+            cloud(174, 304, 1.25f);
+            cloud(238, 246, 0.8f);
+            divider(240, 170);
 
-        drawClockCard(game, Side.BLACK, 650);
-        divider(1360, 620);
-        banner(1360, 584);
-        diamond(1360, 440, 7, GOLD);
-        cloud(1292, 304, 1.25f);
-        cloud(1364, 246, 0.8f);
-        divider(1360, 170);
-        drawClockCard(game, Side.WHITE, 32);
+            drawClockCard(game, Side.BLACK, 650);
+            divider(1360, 620);
+            banner(1360, 584);
+            diamond(1360, 440, 7, GOLD);
+            cloud(1292, 304, 1.25f);
+            cloud(1364, 246, 0.8f);
+            divider(1360, 170);
+            drawClockCard(game, Side.WHITE, 32);
+        }
 
         drawBoardFrame();
     }
@@ -412,12 +415,12 @@ public final class GameRenderer implements Disposable {
         rect(BOARD_X, BOARD_Y - 6, BOARD_WIDTH, 3, FRAME_HIGH);
         rect(BOARD_X, BOARD_Y + BOARD_HEIGHT + 3, BOARD_WIDTH, 3, FRAME_HIGH);
 
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 8, 13, INK);
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 10, 11, FRAME);
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 11, 5, FRAME_HIGH);
-        diamond(800, BOARD_Y - 8, 13, INK);
-        diamond(800, BOARD_Y - 7, 11, FRAME);
-        diamond(800, BOARD_Y - 5, 5, FRAME_HIGH);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 8, 13, INK);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 10, 11, FRAME);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 11, 5, FRAME_HIGH);
+        diamond(BOARD_CENTER_X, BOARD_Y - 8, 13, INK);
+        diamond(BOARD_CENTER_X, BOARD_Y - 7, 11, FRAME);
+        diamond(BOARD_CENTER_X, BOARD_Y - 5, 5, FRAME_HIGH);
     }
 
     private void cloud(float x, float y, float scale) {
