@@ -48,12 +48,20 @@ public class ChessClock {
     }
 
     public long getRemainingMillis(Side side) {
-        return (side == Side.BLACK ? blackRemainingNanos : whiteRemainingNanos) / 1_000_000;
+        return getRemainingNanos(side) / 1_000_000;
+    }
+
+    public long getRemainingNanos(Side side) {
+        return side == Side.BLACK ? blackRemainingNanos : whiteRemainingNanos;
     }
 
     public void restore(long whiteMillis, long blackMillis, long nowNanos) {
-        whiteRemainingNanos = whiteMillis * 1_000_000;
-        blackRemainingNanos = blackMillis * 1_000_000;
+        restoreNanos(whiteMillis * 1_000_000, blackMillis * 1_000_000, nowNanos);
+    }
+
+    public void restoreNanos(long whiteNanos, long blackNanos, long nowNanos) {
+        whiteRemainingNanos = Math.max(0, whiteNanos);
+        blackRemainingNanos = Math.max(0, blackNanos);
         lastTickNanos = nowNanos;
     }
 }

@@ -4,6 +4,8 @@ import com.example.flappychess.model.Birb;
 import com.badlogic.gdx.Input.Keys;
 
 public class BirbController {
+    public record InputState(boolean left, boolean right, boolean jump) { }
+
     private final Birb bird;
     private final double maxWidth;
     private final double maxHeight;
@@ -63,6 +65,16 @@ public class BirbController {
         bird.setHorizontalInput(getHorizontalInput());
         bird.update();
         bird.constrainToBounds(maxWidth, maxHeight);
+    }
+
+    public InputState snapshotInput() {
+        return new InputState(leftPressed, rightPressed, jumpPressed);
+    }
+
+    public void restoreInput(InputState state) {
+        leftPressed = state.left();
+        rightPressed = state.right();
+        jumpPressed = state.jump();
     }
 
     private int getHorizontalInput() {

@@ -620,6 +620,17 @@
         }
       }
     },
+    renderHealth(label, quality, rttMillis, ageMillis) {
+      if (ended) return;
+      const badge = byId('network-health');
+      if (!badge) return;
+      badge.hidden = !label;
+      if (badge.textContent !== label) badge.textContent = label;
+      badge.dataset.quality = quality;
+      badge.dataset.rtt = String(rttMillis);
+      badge.dataset.age = String(ageMillis);
+      document.body.dataset.connectionQuality = quality;
+    },
     interruption(text) {
       const notice = byId('network-interruption');
       notice.hidden = !text;

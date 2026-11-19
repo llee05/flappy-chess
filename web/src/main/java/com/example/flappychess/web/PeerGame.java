@@ -81,6 +81,8 @@ final class PeerGame extends ApplicationAdapter {
     // DOM notices must update even when RAF is suspended in a hidden page.
     private void presentNetwork() {
         PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
+        PeerNetwork.health(match.connectionHealthLabel(), match.getConnectionQuality().name().toLowerCase(),
+                (int) match.getRttMillis(), (int) match.getStateAgeMillis());
         PeerNetwork.interruption(match.isInterrupted() && !match.isDisconnected() ? match.status() : "");
         if (match.isDisconnected() && !reportedDisconnect) {
             reportedDisconnect = true;

@@ -22,6 +22,10 @@ final class PeerNetwork {
     @JSBody(params = {"status", "host", "started", "side"}, script = "window.FlappyNetwork.renderStatus(status, host, started, side);")
     static native void status(String status, boolean host, boolean started, String side);
 
+    @JSBody(params = {"label", "quality", "rttMillis", "ageMillis"},
+            script = "window.FlappyNetwork.renderHealth(label, quality, rttMillis, ageMillis);")
+    static native void health(String label, String quality, int rttMillis, int ageMillis);
+
     @JSBody(params = {"turn", "lastMove", "moves", "carrier", "promotion", "result"},
             script = "window.FlappyNetwork.describeMatch(turn, lastMove, moves, carrier, promotion, result);")
     static native void describe(String turn, String lastMove, int moves, String carrier, boolean promotion, String result);

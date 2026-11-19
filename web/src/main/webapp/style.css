@@ -66,9 +66,12 @@ body[data-room-state="searching"] #join-form,
 body[data-room-state="searching"] .controls { display: none; }
 #copy-room, #cancel-room, #cancel-search { padding: 10px; font-size: 14px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#network-bar { position: fixed; z-index: 5; inset: 0 0 auto; height: 48px; display: flex; align-items: center; gap: 16px; padding: 6px 12px; border-bottom: 2px solid #46516a; background: #20283c; font-size: 12px; }
+#network-bar { position: fixed; z-index: 5; inset: 0 0 auto; height: 48px; display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 2px solid #46516a; background: #20283c; font-size: 12px; }
 #player-role { color: #efb95b; white-space: nowrap; }
 body[data-side="BLACK"] #player-role { color: #78c4d0; }
+#network-health { padding: 2px 6px; border: 1px solid #46516a; background: #171c2c; color: #add2b2; font-size: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#network-health[data-quality="fair"] { border-color: #efb95b; color: #efb95b; }
+#network-health[data-quality="poor"] { border-color: #ed8c78; color: #ed8c78; }
 #network-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; color: #b6c2d0; }
 #leave-room { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
 body.online #game-shell { top: 48px; bottom: 0; }

@@ -748,7 +748,7 @@ class PeerMatchTest {
     }
 
     @Test void protocolVersionMatchesExpectedVersion() {
-        assertEquals(8, PeerMatch.protocolVersion());
+        assertEquals(9, PeerMatch.protocolVersion());
         assertEquals(PeerProtocol.VERSION, PeerMatch.protocolVersion());
     }
 
@@ -767,5 +767,317 @@ class PeerMatchTest {
         assertEquals(1, pair.host.getSession().getSeries().secondHalfPoints());
         assertEquals(1, pair.guest.getSession().getSeries().firstHalfPoints());
         assertEquals(1, pair.guest.getSession().getSeries().secondHalfPoints());
+    }
+
+    private record DelayedWire(long dueAt, boolean toHost, String payload) { }
+
+    private static void deliverDueWires(java.util.List<DelayedWire> wires, long now,
+            PeerMatch host, PeerMatch guest, double[] maxSingleCorrection) {
+        for (int round = 0; round < 10; round++) {
+            var due = new java.util.ArrayList<DelayedWire>();
+            for (DelayedWire wire : wires) {
+                if (wire.dueAt() <= now) due.add(wire);
+            }
+            if (due.isEmpty()) break;
+            wires.removeAll(due);
+            for (DelayedWire wire : due) {
+                double beforeX = guest.getSession().getBlack().getX();
+                double beforeY = guest.getSession().getBlack().getY();
+                (wire.toHost() ? host : guest).receive(wire.payload());
+                if (!wire.toHost() && maxSingleCorrection != null) {
+                    double correction = Math.hypot(
+                            guest.getSession().getBlack().getX() - beforeX,
+                            guest.getSession().getBlack().getY() - beforeY);
+                    maxSingleCorrection[0] = Math.max(maxSingleCorrection[0], correction);
+                }
+            }
+        }
+    }
+
+    @Test void delayedLinksKeepGuestClocksAndPredictionAlignedWithIndependentClockOrigins() {
+        for (int delayMillis : new int[] {0, 100, 300, 1000}) {
+            AtomicLong now = new AtomicLong(10_000_000_000L);
+            long guestClockSkew = 500_000_000_000L;
+            long lagNanos = delayMillis * 1_000_000L;
+            var wires = new java.util.ArrayList<DelayedWire>();
+            PeerMatch host = new PeerMatch(true,
+                    text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)),
+                    now::get, MatchSettings.minutes(5, 0));
+            PeerMatch guest = new PeerMatch(false,
+                    text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)),
+                    () -> now.get() + guestClockSkew);
+            host.open();
+            guest.open();
+            double[] maxSingleCorrection = {0};
+            long maxGuestClockAhead = 0;
+            boolean commanded = false;
+            int timer = 0;
+            for (int n = 0; n < 600; n++) {
+                now.addAndGet(16_666_667L);
+                deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
+                if (host.isStarted() && guest.isStarted()) {
+                    timer++;
+                    if (timer == 20) {
+                        guest.keyDown(Keys.D);
+                        guest.keyDown(Keys.SPACE);
+                        guest.keyUp(Keys.SPACE);
+                        commanded = true;
+                    }
+                    if (timer == 50) {
+                        guest.keyUp(Keys.D);
+                    }
+                    host.update(1f / 60);
+                    guest.update(1f / 60);
+                    if (commanded) {
+                        long clockLead = guest.getSession().snapshot().whiteMillis()
+                                - host.getSession().snapshot().whiteMillis();
+                        maxGuestClockAhead = Math.max(maxGuestClockAhead, clockLead);
+                    }
+                } else {
+                    host.pulse();
+                    guest.pulse();
+                }
+            }
+            assertFalse(host.isDisconnected());
+            assertFalse(guest.isDisconnected());
+            assertEquals(0L, maxGuestClockAhead, "delay=" + delayMillis + "ms");
+            assertTrue(maxSingleCorrection[0] <= 12.0,
+                    "delay=" + delayMillis + "ms maxSingleCorrection=" + maxSingleCorrection[0]);
+            assertEquals(585.0, host.getSession().getBlack().getX(), 0.1);
+            assertEquals(585.0, guest.getSession().getBlack().getX(), 0.1);
+            assertEquals(delayMillis * 2L, guest.getRttMillis(), 20L);
+            assertEquals(delayMillis, guest.getStateAgeMillis(), 20L);
+            PeerMatch.ConnectionQuality expectedQuality = delayMillis == 0
+                    ? PeerMatch.ConnectionQuality.GOOD
+                    : delayMillis == 100
+                    ? PeerMatch.ConnectionQuality.FAIR
+                    : PeerMatch.ConnectionQuality.POOR;
+            assertEquals(expectedQuality, guest.getConnectionQuality());
+            if (expectedQuality == PeerMatch.ConnectionQuality.POOR) {
+                assertTrue(guest.status().contains("Slow connection"));
+                assertTrue(guest.connectionHealthLabel().startsWith("SLOW"));
+            }
+        }
+    }
+
+    @Test void jitteredSnapshotsDoNotGiveClockTimeBackOrSnapGuestAcrossSquares() {
+        AtomicLong now = new AtomicLong();
+        var wires = new java.util.ArrayList<DelayedWire>();
+        int[] outIndex = {0};
+        long[] delaysMillis = {180, 240, 160, 260, 200, 220};
+        PeerMatch host = new PeerMatch(true, text -> {
+            long lag = delaysMillis[outIndex[0]++ % delaysMillis.length] * 1_000_000L;
+            wires.add(new DelayedWire(now.get() + lag, false, text));
+        }, now::get, MatchSettings.minutes(5, 0));
+        PeerMatch guest = new PeerMatch(false, text -> {
+            long lag = delaysMillis[outIndex[0]++ % delaysMillis.length] * 1_000_000L;
+            wires.add(new DelayedWire(now.get() + lag, true, text));
+        }, now::get);
+        host.open();
+        guest.open();
+        double[] maxSingleCorrection = {0};
+        long previousWhiteMillis = Long.MAX_VALUE;
+        int timer = 0;
+        for (int n = 0; n < 420; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
+            if (host.isStarted() && guest.isStarted()) {
+                timer++;
+                if (timer == 20) {
+                    guest.keyDown(Keys.D);
+                    guest.keyDown(Keys.SPACE);
+                    guest.keyUp(Keys.SPACE);
+                }
+                if (timer == 50) {
+                    guest.keyUp(Keys.D);
+                }
+                host.update(1f / 60);
+                guest.update(1f / 60);
+                long currentWhiteMillis = guest.getSession().snapshot().whiteMillis();
+                assertTrue(currentWhiteMillis <= previousWhiteMillis,
+                        "Guest active clock backtracked from " + previousWhiteMillis + " to " + currentWhiteMillis);
+                previousWhiteMillis = currentWhiteMillis;
+            } else {
+                host.pulse();
+                guest.pulse();
+            }
+        }
+        assertFalse(host.isDisconnected());
+        assertFalse(guest.isDisconnected());
+        assertTrue(maxSingleCorrection[0] <= 12.0, "maxSingleCorrection=" + maxSingleCorrection[0]);
+        assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 1.0);
+    }
+
+    @Test void delayedGuestBoundaryDeliveryAndPromotionClockStayAuthoritative() {
+        AtomicLong now = new AtomicLong();
+        long lagNanos = 300_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)),
+                now::get, MatchSettings.minutes(1, 5));
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)),
+                now::get);
+        host.open();
+        guest.open();
+        double[] maxSingleCorrection = {0};
+        for (int n = 0; n < 60; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
+            if (host.isStarted() && guest.isStarted()) {
+                host.update(1f / 60);
+                guest.update(1f / 60);
+            } else {
+                host.pulse();
+                guest.pulse();
+            }
+        }
+        // Host completes White e2-e3 so Black (guest) has the move.
+        host.getSession().getWhite().setY(625);
+        host.keyDown(Keys.E);
+        host.keyUp(Keys.E);
+        host.getSession().getWhite().setY(525);
+        host.keyDown(Keys.E);
+        host.keyUp(Keys.E);
+        for (int n = 0; n < 45; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertEquals(Side.BLACK, guest.getSession().getChess().getSideToMove());
+        // Guest flaps down from the top boundary across the rank 8 / rank 7 border (Y=100, bird Y=75)
+        // into e7, picks up the pawn, flies across the rank 7 / rank 6 border (Y=200, bird Y=175) into e6, and drops.
+        guest.keyDown(Keys.SPACE);
+        guest.keyUp(Keys.SPACE);
+        boolean pickedUp = false;
+        boolean dropped = false;
+        for (int n = 0; n < 180; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+            double centerY = guest.getSession().getBlack().getY() + 25.0;
+            if (!pickedUp && centerY >= 110 && centerY <= 190) {
+                guest.keyDown(Keys.E);
+                guest.keyUp(Keys.E);
+                pickedUp = true;
+                guest.keyDown(Keys.SPACE);
+                guest.keyUp(Keys.SPACE);
+            } else if (pickedUp && !dropped && centerY >= 210 && centerY <= 290) {
+                guest.keyDown(Keys.E);
+                guest.keyUp(Keys.E);
+                dropped = true;
+            }
+        }
+        assertTrue(pickedUp);
+        assertTrue(dropped);
+        assertTrue(maxSingleCorrection[0] <= 12.0, "maxSingleCorrection=" + maxSingleCorrection[0]);
+        assertEquals(2, host.getSession().getHistory().size());
+        assertEquals("e6", host.getSession().getHistory().get(1).notation());
+        assertEquals("e6", guest.getSession().getHistory().get(1).notation());
+        assertEquals(Side.WHITE, guest.getSession().getChess().getSideToMove());
+        assertTrue(Math.abs(guest.getSession().snapshot().blackMillis() - host.getSession().snapshot().blackMillis()) <= 20);
+        assertTrue(Math.abs(guest.getSession().snapshot().whiteMillis() - host.getSession().snapshot().whiteMillis()) <= 20);
+    }
+
+    @Test void delayedGuestDoesNotSelfExpireBeforeAuthoritativeHostTimeoutArrives() {
+        AtomicLong now = new AtomicLong();
+        long lagNanos = 300_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)),
+                now::get, new MatchSettings(500, 0));
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)),
+                now::get);
+        host.open();
+        guest.open();
+        boolean sawHostExpiredWhileGuestAwaitingResult = false;
+        for (int n = 0; n < 120; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            if (host.isStarted() && guest.isStarted()) {
+                host.update(1f / 60);
+                guest.update(1f / 60);
+                if (host.getSession().isGameOver() && !guest.getSession().isGameOver()) {
+                    sawHostExpiredWhileGuestAwaitingResult = true;
+                    assertEquals(0L, guest.getSession().snapshot().whiteMillis());
+                }
+            } else {
+                host.pulse();
+                guest.pulse();
+            }
+        }
+        assertTrue(sawHostExpiredWhileGuestAwaitingResult);
+        assertTrue(guest.getSession().isGameOver());
+        assertEquals(host.getSession().getResult(), guest.getSession().getResult());
+    }
+
+    @Test void delayedPromotionChargesElapsedWaitAndAppliesIncrementWithoutClockLead() {
+        AtomicLong now = new AtomicLong();
+        long lagNanos = 300_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        String promotionFen = "k7/4P3/8/8/8/8/3p4/7K w - - 0 1";
+        java.util.function.Supplier<GameSession> sessions = () -> {
+            ChessGameModel model = new ChessGameModel();
+            model.restorePosition(promotionFen);
+            return new GameSession(model, MatchSettings.minutes(1, 5), now::get);
+        };
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)),
+                now::get, sessions);
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)),
+                now::get, sessions);
+        host.open();
+        guest.open();
+        for (int n = 0; n < 45; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            if (host.isStarted() && guest.isStarted()) {
+                host.update(1f / 60);
+                guest.update(1f / 60);
+            } else {
+                host.pulse();
+                guest.pulse();
+            }
+        }
+        host.getSession().getWhite().setY(125);
+        host.keyDown(Keys.E);
+        host.keyUp(Keys.E);
+        host.getSession().getWhite().setY(25);
+        host.keyDown(Keys.E);
+        host.keyUp(Keys.E);
+        for (int n = 0; n < 60; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertTrue(guest.getSession().getChess().hasPendingPromotion());
+        assertTrue(Math.abs(guest.getSession().snapshot().whiteMillis() - host.getSession().snapshot().whiteMillis()) <= 20);
+        host.keyDown(Keys.Q);
+        host.keyUp(Keys.Q);
+        for (int n = 0; n < 30; n++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertFalse(guest.getSession().getChess().hasPendingPromotion());
+        assertEquals(Piece.WHITE_QUEEN, guest.getSession().getBoardView().getBoard().getPiece(Square.E8));
+        assertTrue(guest.getSession().snapshot().whiteMillis() > 60_000);
+        assertEquals(host.getSession().snapshot().whiteMillis(), guest.getSession().snapshot().whiteMillis());
+        assertTrue(Math.abs(guest.getSession().snapshot().blackMillis() - host.getSession().snapshot().blackMillis()) <= 20);
+    }
+
+    @Test void invalidTimingEchoInStatePacketDisconnectsGuest() {
+        Pair pair = new Pair();
+        pair.host.keyDown(Keys.D);
+        JsonValue packet = parse(pair.toGuest.peek());
+        packet.get("echoSentAt").set(1_000_000L, "1000000");
+        pair.guest.receive(encode(packet));
+        assertTrue(pair.guest.isDisconnected());
     }
 }
