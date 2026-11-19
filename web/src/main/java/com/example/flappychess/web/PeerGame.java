@@ -51,7 +51,9 @@ final class PeerGame extends ApplicationAdapter {
         }, match));
         WebLauncher.catchGameKeys();
         MobileControls.install(match::releaseInput);
-        PeerNetwork.bind(match::receive, match::disconnect, match::pulse);
+        PeerNetwork.bind(message -> { match.receive(message); presentNetwork(); },
+                reason -> { match.disconnect(reason); presentNetwork(); },
+                () -> { match.pulse(); presentNetwork(); });
     }
 
     @Override public void render() {
@@ -65,7 +67,7 @@ final class PeerGame extends ApplicationAdapter {
         WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
         WebLauncher.describeTimeControl(match.getSession().getSettings().label());
         WebLauncher.describeHistory(match.getSession(), renderer.getReview());
-        PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
+        presentNetwork();
         WebLauncher.describeSeries(match.getSession());
         MobileControls.present(match.getSession(), null, null, match.getOwnSide().name());
         GameSession session = match.getSession();
@@ -74,6 +76,12 @@ final class PeerGame extends ApplicationAdapter {
                 history.isEmpty() ? "" : history.get(history.size() - 1).notation(), history.size(),
                 session.getCarrier() == null ? "" : GameSession.sideName(session.getCarrier()),
                 session.getChess().hasPendingPromotion(), session.getResult());
+    }
+
+    // DOM notices must update even when RAF is suspended in a hidden page.
+    private void presentNetwork() {
+        PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
+        PeerNetwork.interruption(match.isInterrupted() && !match.isDisconnected() ? match.status() : "");
         if (match.isDisconnected() && !reportedDisconnect) {
             reportedDisconnect = true;
             PeerNetwork.fail(match.status());

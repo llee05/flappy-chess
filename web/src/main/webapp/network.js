@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 5;
+  const PROTOCOL = 6;
   const QUEUE_SLOTS = 8;
   const SLOT_CONNECT_TIMEOUT = 2500;
   const SLOT_CONFIRM_TIMEOUT = 2500;
@@ -563,6 +563,11 @@
           byId('canvas').focus();
         }
       }
+    },
+    interruption(text) {
+      const notice = byId('network-interruption');
+      notice.hidden = !text;
+      if (notice.textContent !== text) notice.textContent = text;
     },
     describeMatch(turn, lastMove, moves, carrier, promotion, result) {
       const summary = byId('match-summary');

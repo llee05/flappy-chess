@@ -26,6 +26,9 @@ final class PeerNetwork {
             script = "window.FlappyNetwork.describeMatch(turn, lastMove, moves, carrier, promotion, result);")
     static native void describe(String turn, String lastMove, int moves, String carrier, boolean promotion, String result);
 
+    @JSBody(params = {"text"}, script = "window.FlappyNetwork.interruption(text);")
+    static native void interruption(String text);
+
     @JSBody(params = {"reason"}, script = "window.FlappyNetwork.fail(reason);")
     static native void fail(String reason);
 }

@@ -21,7 +21,13 @@ export function touchControls(page) {
   };
   return {
     down, up,
-    async tap(selector) { await down(selector); await up(); },
+    async tap(selector) {
+      await down(selector);
+      // Keep the contact alive for a frame, as a real tap does. Back-to-back
+      // CDP events can be coalesced before Chromium dispatches pointerdown.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      await up();
+    },
     async cancel() { contacts.clear(); await dispatch('touchCancel'); }
   };
 }
