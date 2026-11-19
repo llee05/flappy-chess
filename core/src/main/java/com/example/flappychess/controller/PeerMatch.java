@@ -28,6 +28,8 @@ public final class PeerMatch extends InputAdapter {
 
     private record ReplayResult(Birb.Motion motion, int stunSteps) { }
 
+    private record ScheduledInput(int sequence, long dueAt, GameAction action, boolean down) { }
+
     // Normal background timers can be throttled to one second. Longer gaps cannot
     // safely replay held input, so announce an interruption before resuming flight.
     private static final long MAX_SIMULATION_GAP = 3_000_000_000L;
@@ -36,6 +38,10 @@ public final class PeerMatch extends InputAdapter {
     private static final int MAX_INPUT_HISTORY = 512;
     private static final int MAX_REPLAY_STEPS = 180;
     private static final double MAX_IMMEDIATE_CORRECTION = 12.0;
+    // A guest command waits at most this long after arrival to restore the spacing the
+    // guest reported between consecutive commands; it never runs before it arrives.
+    private static final long MAX_COMMAND_DELAY = 250_000_000L;
+    private static final int MAX_SCHEDULED_INPUTS = 64;
 
     private final boolean host;
     private final MatchSeries series = new MatchSeries(MatchSeries.Players.ONLINE);
@@ -45,6 +51,10 @@ public final class PeerMatch extends InputAdapter {
     private final Set<Integer> keys = new HashSet<>();
     private final Set<GameAction> held = new HashSet<>();
     private final ArrayDeque<RecordedInput> pendingInputs = new ArrayDeque<>();
+    private final ArrayDeque<ScheduledInput> scheduledInputs = new ArrayDeque<>();
+    private int receivedInput;
+    private long lastCommandSentAt = -1, lastCommandDueAt;
+    private boolean appliedInput;
     private GameSession session;
     private SessionSnapshot latest;
     private boolean opened, remoteReady, started, disconnected, ownRematch, remoteRematch;
@@ -151,6 +161,7 @@ public final class PeerMatch extends InputAdapter {
         interruptedUntil = 0;
         simulationGeneration = 0;
         inputSequence = acknowledgedInput = stateSequence = receivedState = 0;
+        clearScheduledInputs();
         lastAppliedInputStep = session.getSimulationSteps();
         resetPredictionHistory(0, 0);
         sendState();
@@ -160,20 +171,46 @@ public final class PeerMatch extends InputAdapter {
         advanceHost();
         if (number(value, "epoch", 1, Integer.MAX_VALUE) != epoch) return;
         int sequence = (int) number(value, "sequence", 1, Integer.MAX_VALUE);
-        if (sequence <= acknowledgedInput) return;
+        if (sequence <= receivedInput) return;
         int generation = (int) number(value, "simulation", 0, Integer.MAX_VALUE);
         if (generation != simulationGeneration || isInterrupted()) return;
         observePacketTiming(value);
-        Side remoteSide = getOwnSide().flip();
-        if (string(value, "type", 16).equals("release")) session.releaseInput(remoteSide);
-        else {
-            GameAction action = GameAction.valueOf(string(value, "action", 12));
-            // A guest never supplies its side, coordinates, board, clock, or outcome.
-            session.command(remoteSide, action, bool(value, "down"));
+        long sentAt = number(value, "sentAt", 0, MAX_WIRE_TIME);
+        // A guest never supplies its side, coordinates, board, clock, or outcome.
+        GameAction action = string(value, "type", 16).equals("release")
+                ? null : GameAction.valueOf(string(value, "action", 12));
+        boolean down = action != null && bool(value, "down");
+        receivedInput = sequence;
+        long now = time.getAsLong();
+        // An ordered backlog can release commands the guest sent apart all at once. Restore the
+        // guest-reported spacing on the host's own timeline, never before arrival and never
+        // more than MAX_COMMAND_DELAY after it, so a guest cannot act in the past or speed up time.
+        long dueAt = now;
+        if (lastCommandSentAt >= 0) {
+            long interval = Math.max(0L, sentAt - lastCommandSentAt);
+            dueAt = Math.max(now, Math.min(now + MAX_COMMAND_DELAY, lastCommandDueAt + interval));
         }
-        acknowledgedInput = sequence;
+        lastCommandSentAt = sentAt;
+        lastCommandDueAt = dueAt;
+        while (scheduledInputs.size() >= MAX_SCHEDULED_INPUTS) applyGuestInput(scheduledInputs.removeFirst());
+        scheduledInputs.addLast(new ScheduledInput(sequence, dueAt, action, down));
+        advanceHost();
+    }
+
+    private void applyGuestInput(ScheduledInput input) {
+        Side remoteSide = getOwnSide().flip();
+        if (input.action() == null) session.releaseInput(remoteSide);
+        else session.command(remoteSide, input.action(), input.down());
+        acknowledgedInput = input.sequence();
         lastAppliedInputStep = session.getSimulationSteps();
-        sendState();
+        appliedInput = true;
+    }
+
+    private void clearScheduledInputs() {
+        scheduledInputs.clear();
+        receivedInput = acknowledgedInput;
+        lastCommandSentAt = -1;
+        lastCommandDueAt = 0;
     }
 
     private void receiveState(JsonValue value) {
@@ -547,6 +584,7 @@ public final class PeerMatch extends InputAdapter {
     private void advanceHost() {
         if (!host || !started || disconnected) return;
         long now = time.getAsLong();
+        long from = Math.min(simulatedAt, now);
         long elapsed = Math.max(0, now - simulatedAt);
         simulatedAt = Math.max(simulatedAt, now);
         int before = lastFeedbackSequence();
@@ -556,6 +594,7 @@ public final class PeerMatch extends InputAdapter {
             interruptedUntil = now + RECOVERY_NOTICE;
             interruptLocalInput();
             session.releaseInput();
+            clearScheduledInputs();
             lastAppliedInputStep = session.getSimulationSteps();
         }
         if (interruptedUntil != 0) {
@@ -563,17 +602,39 @@ public final class PeerMatch extends InputAdapter {
             session.update(0);
             if (now >= interruptedUntil) interruptedUntil = 0;
         } else {
+            long cursor = from;
+            while (!scheduledInputs.isEmpty() && scheduledInputs.peekFirst().dueAt() <= now
+                    && !session.isGameOver()) {
+                ScheduledInput next = scheduledInputs.removeFirst();
+                long dueAt = Math.max(cursor, next.dueAt());
+                simulateHost(cursor, dueAt);
+                cursor = dueAt;
+                // The clock charges the mover up to the command's place on the host timeline.
+                if (!session.isGameOver()) session.atClockTime(dueAt, () -> applyGuestInput(next));
+            }
+            simulateHost(cursor, now);
+        }
+        if (session.isGameOver()) {
+            interruptedUntil = 0;
+            scheduledInputs.clear();
+        }
+        boolean applied = appliedInput;
+        appliedInput = false;
+        if (applied || wasInterrupted != isInterrupted() || lastFeedbackSequence() != before) sendState();
+    }
+
+    private void simulateHost(long from, long to) {
+        session.atClockTime(to, () -> {
             // Keep GameSession's per-update safety cap, but consume every normal
             // timer interval (including one-second browser throttling) exactly once.
             session.update(0);
-            while (elapsed > 0 && !session.isGameOver()) {
-                long slice = Math.min(elapsed, 250_000_000L);
+            long remaining = to - from;
+            while (remaining > 0 && !session.isGameOver()) {
+                long slice = Math.min(remaining, 250_000_000L);
                 session.update(slice / 1_000_000_000f);
-                elapsed -= slice;
+                remaining -= slice;
             }
-        }
-        if (session.isGameOver()) interruptedUntil = 0;
-        if (wasInterrupted != isInterrupted() || lastFeedbackSequence() != before) sendState();
+        });
     }
 
     private int lastFeedbackSequence() {
@@ -728,6 +789,7 @@ public final class PeerMatch extends InputAdapter {
         keys.clear();
         held.clear();
         pendingInputs.clear();
+        scheduledInputs.clear();
         predictionBaseState = null;
         predictionBaseInputState = null;
         hasPendingReconcile = false;

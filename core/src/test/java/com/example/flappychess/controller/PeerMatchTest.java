@@ -1274,6 +1274,81 @@ class PeerMatchTest {
         assertTrue(Math.abs(guest.getSession().snapshot().blackMillis() - host.getSession().snapshot().blackMillis()) <= 20);
     }
 
+    @Test void burstDeliveredGuestCommandsKeepTheirSpacingAcrossASquareBoundary() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.host, Keys.E);
+        assertEquals(Side.BLACK, pair.host.getSession().getChess().getSideToMove());
+        // Bird centre (395, 150) is on d7, five pixels left of the e-file.
+        var start = new com.example.flappychess.model.Birb.Motion(370, 125, 0, 0);
+        pair.host.getSession().getBlack().restore(start);
+        pair.guest.getSession().getBlack().restore(start);
+
+        pair.guest.keyDown(Keys.D);
+        for (int step = 0; step < 12; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.update(1f / 60);
+            pair.guest.update(1f / 60);
+            pair.toGuest.clear();
+        }
+        // The guest saw its bird cross into e7 before picking up 200 ms after steering.
+        assertEquals(Square.E7, birdSquare(pair.guest.getSession().getBlack()));
+        pair.guest.keyDown(Keys.E);
+        pair.guest.keyUp(Keys.E);
+        // An ordered backlog releases steering and pickup to the host together.
+        while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
+        pair.toGuest.clear();
+        pair.advance(15);
+
+        assertEquals(Side.BLACK, pair.host.getSession().getCarrier());
+        assertEquals(Square.E7, pair.host.getSession().getBoardView().getHiddenPieceSquare());
+        assertEquals(Square.E7, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+    }
+
+    @Test void scheduledGuestCommandsNeverRunBeforeArrivalOrBeyondTheBacklogBound() {
+        Pair pair = new Pair();
+        pair.advance(120);
+        pair.guest.keyDown(Keys.D);
+        pair.guest.keyUp(Keys.D);
+        String press = pair.toHost.remove();
+        JsonValue release = parse(pair.toHost.remove());
+        long pressSentAt = parse(press).getLong("sentAt");
+        long claimed = pressSentAt + 10_000_000_000L; // A guest claims a ten-second gap.
+        release.get("sentAt").set(claimed, Long.toString(claimed));
+
+        BirbController.InputState idle = pair.host.getSession().getControls(Side.BLACK).snapshotInput();
+        assertFalse(idle.right());
+        pair.host.receive(press);
+        pair.host.receive(encode(release));
+        assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right());
+        for (int step = 0; step < 14; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.pulse();
+            assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right(), "step " + step);
+        }
+        pair.time.addAndGet(16_666_667L);
+        pair.host.pulse();
+        assertFalse(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right());
+
+        // Out-of-order guest timestamps cannot postpone a command either.
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
+        String left = pair.toHost.remove();
+        JsonValue leftRelease = parse(pair.toHost.remove());
+        long earlier = parse(left).getLong("sentAt") - 1_000_000_000L;
+        leftRelease.get("sentAt").set(earlier, Long.toString(earlier));
+        pair.host.receive(left);
+        assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().left());
+        pair.host.receive(encode(leftRelease));
+        assertFalse(pair.host.getSession().getControls(Side.BLACK).snapshotInput().left());
+        assertFalse(pair.host.isDisconnected());
+    }
+
+    private static Square birdSquare(com.example.flappychess.model.Birb bird) {
+        return com.example.flappychess.view.ChessBoardView.squareForPoint(bird.getX() + 25, bird.getY() + 25);
+    }
+
     @Test void invalidTimingEchoInStatePacketDisconnectsGuest() {
         Pair pair = new Pair();
         pair.host.keyDown(Keys.D);

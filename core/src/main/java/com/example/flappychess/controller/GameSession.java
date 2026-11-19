@@ -64,6 +64,8 @@ public final class GameSession extends InputAdapter {
     private final BirbController whiteControls = new BirbController(white, 800, 800);
     private final BirbController blackControls = new BirbController(black, 800, 800, Keys.LEFT, Keys.RIGHT, Keys.UP);
     private double accumulator;
+    private boolean hasClockTime;
+    private long clockTime;
     private long simulationSteps;
     private boolean replicaSynchronized;
     private int bumpCooldown;
@@ -268,6 +270,23 @@ public final class GameSession extends InputAdapter {
         series = state.series();
     }
 
+    /**
+     * Runs updates or commands as if the monotonic clock read {@code nanos}. An online host
+     * uses this to apply a scheduled guest command at its scheduled time on its own timeline.
+     */
+    void atClockTime(long nanos, Runnable action) {
+        boolean previous = hasClockTime;
+        long previousTime = clockTime;
+        hasClockTime = true;
+        clockTime = nanos;
+        try {
+            action.run();
+        } finally {
+            hasClockTime = previous;
+            clockTime = previousTime;
+        }
+    }
+
     private void advanceDropReturn() {
         if (dropReturn == null) return;
         int remaining = dropReturn.stepsRemaining() - 1;
@@ -407,7 +426,7 @@ public final class GameSession extends InputAdapter {
         if (!isTimed() || isGameOver()) return;
         Side side = chess.getSideToMove();
         // Input ticks before a move switches sides, charging the elapsed time correctly.
-        clock.tick(nanoTime.getAsLong(), side);
+        clock.tick(hasClockTime ? clockTime : nanoTime.getAsLong(), side);
         if (clock.isExpired(side)) {
             Side opponent = side.flip();
             if (chess.hasSufficientMatingMaterial(opponent)) {
