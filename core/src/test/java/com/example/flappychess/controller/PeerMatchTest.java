@@ -799,10 +799,11 @@ class PeerMatchTest {
             if (due.isEmpty()) break;
             wires.removeAll(due);
             for (DelayedWire wire : due) {
+                boolean guestWasStarted = guest.isStarted();
                 double beforeX = guest.getSession().getBlack().getX();
                 double beforeY = guest.getSession().getBlack().getY();
                 (wire.toHost() ? host : guest).receive(wire.payload());
-                if (!wire.toHost() && maxSingleCorrection != null) {
+                if (!wire.toHost() && guestWasStarted && maxSingleCorrection != null) {
                     double correction = Math.hypot(
                             guest.getSession().getBlack().getX() - beforeX,
                             guest.getSession().getBlack().getY() - beforeY);
@@ -850,6 +851,28 @@ class PeerMatchTest {
                 pair.guest.getSession().getBlack().getY() - beforeY) <= 12.0 + 1e-6);
     }
 
+    @Test void partialAcknowledgementReplaysEachFlapTransitionOnce() {
+        Pair pair = new Pair();
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.keyUp(Keys.SPACE);
+        pair.guest.keyDown(Keys.SPACE);
+        while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
+        pair.time.addAndGet(50_000_000L);
+        pair.host.pulse();
+        pair.guest.update(0.05f);
+        pair.guest.update(1f / 60);
+        pair.guest.keyUp(Keys.SPACE);
+        double predictedVelocity = pair.guest.getSession().getBlack().getVelocityY();
+        String acknowledgedThirdInput = pair.toGuest.removeLast();
+        pair.toGuest.clear();
+
+        pair.guest.receive(acknowledgedThirdInput);
+        pair.guest.update(0);
+
+        assertEquals(predictedVelocity, pair.guest.getSession().getBlack().getVelocityY(), 1e-7);
+        assertFalse(pair.toHost.isEmpty());
+    }
+
     @Test void delayedLinksKeepGuestClocksAndPredictionAlignedWithIndependentClockOrigins() {
         for (int delayMillis : new int[] {0, 100, 300, 1000}) {
             AtomicLong now = new AtomicLong(10_000_000_000L);
@@ -868,11 +891,17 @@ class PeerMatchTest {
             double maxGuestX = 0;
             long maxGuestClockAhead = 0;
             boolean commanded = false;
+            boolean initialFlightChecked = false;
             int timer = 0;
             for (int n = 0; n < 600; n++) {
                 now.addAndGet(16_666_667L);
                 deliverDueWires(wires, now.get(), host, guest, maxSingleCorrection);
                 if (host.isStarted() && guest.isStarted()) {
+                    if (!initialFlightChecked) {
+                        assertEquals(host.getSession().getBlack().getY(),
+                                guest.getSession().getBlack().getY(), 5.0, "delay=" + delayMillis + "ms");
+                        initialFlightChecked = true;
+                    }
                     timer++;
                     if (timer == 20) {
                         guest.keyDown(Keys.D);
@@ -898,6 +927,7 @@ class PeerMatchTest {
             }
             assertFalse(host.isDisconnected());
             assertFalse(guest.isDisconnected());
+            assertTrue(initialFlightChecked);
             assertEquals(0L, maxGuestClockAhead, "delay=" + delayMillis + "ms");
             assertTrue(maxSingleCorrection[0] <= 12.0 + 1e-6,
                     "delay=" + delayMillis + "ms maxSingleCorrection=" + maxSingleCorrection[0]);

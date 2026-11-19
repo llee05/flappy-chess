@@ -219,6 +219,9 @@ public final class PeerMatch extends InputAdapter {
             session.getWhite().restore(state.white());
             session.getBlack().restore(state.black());
             session.restoreReplica(state, stateAgeNanos);
+            advanceReplicaByAge(stateAgeNanos);
+            latest = session.snapshot();
+            lastMappedAuthStep = session.getSimulationSteps();
             resetPredictionHistory(0, 0);
         } else if (state.result() != null || bumped || resetInput) {
             session.restoreReplica(state, stateAgeNanos);
@@ -302,7 +305,16 @@ public final class PeerMatch extends InputAdapter {
     private long computeAuthStep(int ack, long ackSteps) {
         long hostStep = (ack == 0 ? 0L : lastAckedGuestStep) + ackSteps;
         long stateAgeSteps = Math.round(lastStateAgeNanos * 60.0 / 1_000_000_000.0);
-        return hostStep + stateAgeSteps;
+        return hostStep + (ack == 0 ? 0 : stateAgeSteps);
+    }
+
+    private void advanceReplicaByAge(long stateAgeNanos) {
+        long remaining = stateAgeNanos;
+        while (remaining > 0) {
+            long slice = Math.min(remaining, 250_000_000L);
+            session.updateReplica(slice / 1_000_000_000f, getOwnSide());
+            remaining -= slice;
+        }
     }
 
     private void reconcileOwnBird(SessionSnapshot state, int ack, long ackSteps, int generation) {
@@ -336,11 +348,15 @@ public final class PeerMatch extends InputAdapter {
         RecordedInput firstUnacknowledged = pendingInputs.stream()
                 .filter(input -> input.generation() == generation && input.sequence() > lastAckedSequence)
                 .findFirst().orElse(null);
-        if (predictionBaseState != null && firstUnacknowledged != null
-                && firstUnacknowledged.guestStep() <= startStep) {
+        boolean usingPredictionBase = predictionBaseState != null && firstUnacknowledged != null;
+        if (usingPredictionBase) {
             replayState = predictionBaseState;
             replayInputState = predictionBaseInputState;
             startStep = Math.min(predictionBaseStep, currentStep);
+        }
+        if (usingPredictionBase && currentStep - startStep > MAX_REPLAY_STEPS) {
+            Birb own = ownSide == Side.WHITE ? session.getWhite() : session.getBlack();
+            return new ReplayResult(own.snapshot(), own.getStunSteps());
         }
         Birb.Motion baseMotion = ownSide == Side.WHITE ? replayState.white() : replayState.black();
         int baseStun = ownSide == Side.WHITE ? replayState.whiteStunSteps() : replayState.blackStunSteps();
@@ -353,10 +369,6 @@ public final class PeerMatch extends InputAdapter {
                 : new BirbController(scratchBird, 800, 800,
                         com.badlogic.gdx.Input.Keys.LEFT, com.badlogic.gdx.Input.Keys.RIGHT, com.badlogic.gdx.Input.Keys.UP);
         scratchControls.restoreInput(replayInputState);
-
-        if (currentStep - startStep > MAX_REPLAY_STEPS) {
-            startStep = currentStep - MAX_REPLAY_STEPS;
-        }
 
         for (RecordedInput input : pendingInputs) {
             if (input.generation() == generation && input.guestStep() <= startStep) {
