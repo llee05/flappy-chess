@@ -1345,6 +1345,34 @@ class PeerMatchTest {
         assertFalse(pair.host.isDisconnected());
     }
 
+    @Test void scheduledInputOverflowDoesNotExecuteAFutureCommandEarly() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.host, Keys.E);
+        var start = new com.example.flappychess.model.Birb.Motion(370, 125, 0, 0);
+        pair.host.getSession().getBlack().restore(start);
+        pair.guest.getSession().getBlack().restore(start);
+
+        pair.guest.keyDown(Keys.D);
+        for (int step = 0; step < 12; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.update(1f / 60);
+            pair.guest.update(1f / 60);
+            pair.toGuest.clear();
+        }
+        pair.guest.keyDown(Keys.E);
+        pair.guest.keyUp(Keys.E);
+        for (int input = 0; input < 32; input++) {
+            pair.guest.keyDown(Keys.A);
+            pair.guest.keyUp(Keys.A);
+        }
+        while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
+
+        assertNull(pair.host.getSession().getCarrier());
+        assertFalse(pair.host.isDisconnected());
+    }
+
     @Test void delayedCollisionAdoptsTheAgeProjectedAuthoritativeState() {
         AtomicLong now = new AtomicLong(10_000_000_000L);
         long lagNanos = 1_000_000_000L;
@@ -1371,6 +1399,7 @@ class PeerMatchTest {
         host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
         int received = 0;
         boolean adopted = false;
+        double projectedWhiteY = -1;
         for (int step = 0; step < 120 && received < 20; step++) {
             now.addAndGet(16_666_667L);
             deliverDueWires(wires, now.get(), host, guest, null);
@@ -1379,6 +1408,11 @@ class PeerMatchTest {
                 adopted = true;
                 // The collision happened a second ago; the guest adopts where it is now.
                 assertEquals(0, guest.getSession().getHitStopSteps());
+                assertEquals(0, guest.getSession().getWhite().getStunSteps());
+                assertNull(guest.getSession().getDropReturn());
+                assertEquals(host.getSession().getWhite().getX(), guest.getSession().getWhite().getX(), 4.0);
+                assertEquals(host.getSession().getWhite().getY(), guest.getSession().getWhite().getY(), 4.0);
+                projectedWhiteY = guest.getSession().getWhite().getY();
                 assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 4.0);
                 assertEquals(host.getSession().getBlack().getY(), guest.getSession().getBlack().getY(), 4.0);
             }
@@ -1388,6 +1422,7 @@ class PeerMatchTest {
                 received++;
                 assertEquals(0, guest.getSession().getHitStopSteps(), "late hit-stop after " + received);
                 assertNotEquals(beforeX, guest.getSession().getBlack().getX(), "frozen after " + received);
+                assertTrue(guest.getSession().getWhite().getY() >= projectedWhiteY);
                 assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 4.0);
             }
         }

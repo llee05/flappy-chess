@@ -287,9 +287,16 @@ public final class GameSession extends InputAdapter {
         }
     }
 
-    /** Consumes hit-stop that already elapsed on the host while a snapshot was in transit. */
-    void elapseReplicaHitStop(long steps) {
-        hitStopSteps = (int) Math.max(0, hitStopSteps - Math.max(0, steps));
+    /** Ages transient presentation state that elapsed while a snapshot was in transit. */
+    void elapseReplicaEffects(long steps) {
+        long elapsed = Math.max(0, steps);
+        long activeSteps = Math.max(0, elapsed - hitStopSteps);
+        hitStopSteps = (int) Math.max(0, hitStopSteps - elapsed);
+        bumpCooldown = (int) Math.max(0, bumpCooldown - activeSteps);
+        if (dropReturn != null) {
+            int remaining = (int) Math.max(0, dropReturn.stepsRemaining() - activeSteps);
+            dropReturn = remaining > 0 ? dropReturn.withStepsRemaining(remaining) : null;
+        }
     }
 
     private void advanceDropReturn() {
