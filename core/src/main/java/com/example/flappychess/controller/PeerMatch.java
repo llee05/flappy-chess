@@ -385,4 +385,5 @@ public final class PeerMatch extends InputAdapter {
     public boolean isInterrupted() { return interruptedUntil != 0 || remoteInterrupted || staleHost; }
     public boolean isStarted() { return started; }
     public boolean isDisconnected() { return disconnected; }
+    public static int protocolVersion() { return PeerProtocol.VERSION; }
 }

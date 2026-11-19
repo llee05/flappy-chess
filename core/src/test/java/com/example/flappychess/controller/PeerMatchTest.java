@@ -736,4 +736,19 @@ class PeerMatchTest {
         assertEquals(GameSession.BUMP_COOLDOWN_STEPS, pair.guest.getSession().getBumpCooldown());
         assertEquals(GameSession.CARRY_HIT_STOP_STEPS, pair.guest.getSession().getHitStopSteps());
     }
+
+    @Test void incompatibleProtocolVersionDisconnectsWithReloadMessage() {
+        Pair pair = new Pair();
+        pair.host.keyDown(Keys.D);
+        JsonValue packet = parse(pair.toGuest.peek());
+        packet.get("version").set(PeerProtocol.VERSION - 1, Integer.toString(PeerProtocol.VERSION - 1));
+        pair.guest.receive(encode(packet));
+        assertTrue(pair.guest.isDisconnected());
+        assertEquals("Incompatible match data. Both players should reload the game.", pair.guest.status());
+    }
+
+    @Test void protocolVersionMatchesExpectedVersion() {
+        assertEquals(8, PeerMatch.protocolVersion());
+        assertEquals(PeerProtocol.VERSION, PeerMatch.protocolVersion());
+    }
 }

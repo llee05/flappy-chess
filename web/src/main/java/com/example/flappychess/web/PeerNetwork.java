@@ -10,8 +10,8 @@ final class PeerNetwork {
     @JSFunctor interface Message extends JSObject { void run(String text); }
     @JSFunctor interface Tick extends JSObject { void run(); }
 
-    @JSBody(params = {"start"}, script = "window.FlappyNetwork.install(start);")
-    static native void install(Start start);
+    @JSBody(params = {"start", "protocolVersion"}, script = "window.FlappyNetwork.install(start, protocolVersion);")
+    static native void install(Start start, int protocolVersion);
 
     @JSBody(params = {"receive", "closed", "pulse"}, script = "window.FlappyNetwork.bind(receive, closed, pulse);")
     static native void bind(Message receive, Message closed, Tick pulse);

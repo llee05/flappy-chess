@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  const PROTOCOL = 6;
+  let PROTOCOL;
+  const VERSION_MISMATCH_REASON = 'Game versions differ. Both players should reload.';
   const QUEUE_SLOTS = 8;
   const SLOT_CONNECT_TIMEOUT = 2500;
   const SLOT_CONFIRM_TIMEOUT = 2500;
@@ -70,7 +71,9 @@
     clearTimeout(confirmTimer);
     clearInterval(timer);
     closed?.(reason);
-    peer?.destroy();
+    const closingPeer = peer;
+    peer = null;
+    setTimeout(() => { try { closingPeer?.destroy(); } catch {} }, 300);
     byId('failure-message').textContent = reason;
     byId('connection-failure').hidden = false;
     byId('return-lobby').focus();
@@ -85,7 +88,17 @@
     try {
       const packet = JSON.parse(data);
       if (packet.type === 'busy') { fail(packet.reason || 'This room already has two players.'); return; }
-      if (packet.type === 'match-offer' || packet.type === 'match-accept' || packet.type === 'match-start') return;
+      if (packet.type === 'match-start') {
+        if (packet.protocol !== PROTOCOL) {
+          fail(VERSION_MISMATCH_REASON);
+          return;
+        }
+        if (!started && connection) {
+          finalizeMatch(connection, false, false);
+        }
+        return;
+      }
+      if (packet.type === 'match-offer' || packet.type === 'match-accept') return;
     } catch { /* The portable protocol decoder reports malformed packets. */ }
     if (receive) receive(data);
     else if (pending.length < 128) pending.push(data);
@@ -115,12 +128,31 @@
   function attach(candidate, host) {
     connection = candidate;
     candidate.on('data', handleMatchData);
-    candidate.on('open', () => {
+    const startHost = () => {
       if (ended) { candidate.close(); return; }
+      try {
+        candidate.send(JSON.stringify({ type: 'match-start', protocol: PROTOCOL }));
+      } catch {}
       finalizeMatch(candidate, host, false);
+    };
+    if (host) {
+      if (candidate.open) startHost();
+      else candidate.on('open', startHost);
+    }
+    candidate.on('close', () => {
+      if (started && connection === candidate) {
+        fail('Your opponent left or the connection was lost. Return to the lobby to play again.');
+      } else if (!ended) {
+        fail('Your friend could not connect. Ask your friend to create another room.');
+      }
     });
-    candidate.on('close', () => fail('Your opponent left or the connection was lost. Return to the lobby to play again.'));
-    candidate.on('error', () => fail('The peer connection failed. Ask your friend to try another room.'));
+    candidate.on('error', () => {
+      if (started && connection === candidate) {
+        fail('The peer connection failed. Return to the lobby to play again.');
+      } else if (!ended) {
+        fail('The peer connection failed. Ask your friend to try another room.');
+      }
+    });
   }
   function nextSlotIndex(fromIndex) {
     const now = Date.now();
@@ -185,13 +217,15 @@
       }
       const compatible = candidate.metadata?.app === 'flappy-chess' && candidate.metadata?.protocol === PROTOCOL;
       if (!compatible || started || !searching) {
-        candidate.on('open', () => {
+        const reject = () => {
           try {
             candidate.send(JSON.stringify({ type: 'busy', reason: compatible
-              ? 'This room already has two players.' : 'Game versions differ. Both players should reload.' }));
+              ? 'This room already has two players.' : VERSION_MISMATCH_REASON }));
           } catch {}
-          setTimeout(() => candidate.close(), 200);
-        });
+          setTimeout(() => { try { candidate.close(); } catch {} }, 200);
+        };
+        if (candidate.open) reject();
+        else candidate.on('open', reject);
         return;
       }
       pendingCandidates.add(candidate);
@@ -212,7 +246,12 @@
         if (typeof data !== 'string' || data.length > 262144) return;
         try {
           const packet = JSON.parse(data);
-          if (packet.type === 'match-accept' && packet.protocol === PROTOCOL) {
+          if (packet.type === 'match-accept') {
+            if (packet.protocol !== PROTOCOL) {
+              try { candidate.send(JSON.stringify({ type: 'busy', reason: VERSION_MISMATCH_REASON })); } catch {}
+              fail(VERSION_MISMATCH_REASON);
+              return;
+            }
             clearTimeout(confirmTimer);
             clearTimeout(slotTimer);
             clearTimeout(searchTimer);
@@ -364,7 +403,12 @@
             advanceSlot(false);
             return;
           }
-          if (packet.type === 'match-offer' && packet.protocol === PROTOCOL && !offered) {
+          if (packet.type === 'match-offer' && !offered) {
+            if (packet.protocol !== PROTOCOL) {
+              try { candidate.send(JSON.stringify({ type: 'busy', reason: VERSION_MISMATCH_REASON })); } catch {}
+              fail(VERSION_MISMATCH_REASON);
+              return;
+            }
             offered = true;
             byId('cancel-search').disabled = true;
             clearTimeout(slotTimer);
@@ -377,7 +421,11 @@
             candidate.send(JSON.stringify({ type: 'match-accept', protocol: PROTOCOL }));
             return;
           }
-          if (packet.type === 'match-start' && packet.protocol === PROTOCOL) {
+          if (packet.type === 'match-start') {
+            if (packet.protocol !== PROTOCOL) {
+              fail(VERSION_MISMATCH_REASON);
+              return;
+            }
             clearTimeout(slotTimer);
             clearTimeout(searchTimer);
             searching = false;
@@ -477,15 +525,22 @@
       peer.on('connection', candidate => {
         const compatible = candidate.metadata?.app === 'flappy-chess' && candidate.metadata?.protocol === PROTOCOL;
         if (!host || connection || !compatible) {
-          candidate.on('open', () => {
-            candidate.send(JSON.stringify({ type: 'busy', reason: compatible
-              ? 'This room already has two players.' : 'Game versions differ. Both players should reload.' }));
-            setTimeout(() => candidate.close(), 200);
-          });
+          const reject = () => {
+            try {
+              candidate.send(JSON.stringify({ type: 'busy', reason: compatible
+                ? 'This room already has two players.' : VERSION_MISMATCH_REASON }));
+            } catch {}
+            setTimeout(() => { try { candidate.close(); } catch {} }, 200);
+          };
+          if (candidate.open) reject();
+          else candidate.on('open', reject);
+          if (!compatible) {
+            fail(VERSION_MISMATCH_REASON);
+          }
           return;
         }
-        attach(candidate, true);
         connectTimeout = setTimeout(() => fail('Your friend could not finish connecting. Please create another room.'), 30000);
+        attach(candidate, true);
       });
       peer.on('error', error => {
         // Signaling may reconnect independently after the data channel is established.
@@ -502,7 +557,8 @@
     } catch (error) { fail(error.message); }
   }
   window.FlappyNetwork = {
-    install(start) {
+    install(start, protocolVersion) {
+      if (typeof protocolVersion === 'number') PROTOCOL = protocolVersion;
       startGame = start;
       byId('matchmake').disabled = false;
       byId('challenge').disabled = false;

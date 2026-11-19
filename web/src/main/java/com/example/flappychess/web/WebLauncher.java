@@ -9,6 +9,7 @@ import com.example.flappychess.model.SoloSettings;
 import com.example.flappychess.controller.GameSession;
 import com.example.flappychess.controller.ChessEngine;
 import com.example.flappychess.controller.MatchSetup;
+import com.example.flappychess.controller.PeerMatch;
 import com.example.flappychess.controller.PostgameReview;
 import com.example.flappychess.controller.StockfishEngine;
 import com.github.bhlangonijr.chesslib.Piece;
@@ -23,7 +24,7 @@ public final class WebLauncher {
         Window.current().getDocument().getElementById("play").addEventListener("click", event -> start(false));
         Window.current().getDocument().getElementById("tutorial").addEventListener("click", event -> start(true));
         Window.current().getDocument().getElementById("level-panel").addEventListener("flappy-solo-start", event -> start(false, true));
-        PeerNetwork.install(WebLauncher::startPeer);
+        PeerNetwork.install(WebLauncher::startPeer, PeerMatch.protocolVersion());
         enablePlay();
     }
 
