@@ -287,7 +287,7 @@ public final class PeerMatch extends InputAdapter {
                 own.reconcile(getOwnSide() == Side.WHITE ? state.white() : state.black(), 1);
                 own.stun(getOwnSide() == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps());
             }
-            if (state.result() != null || bumped && (interrupted || resetInput)) {
+            if (state.result() != null || interrupted) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
                 other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
                 other.stun(getOwnSide() == Side.WHITE ? state.blackStunSteps() : state.whiteStunSteps());

@@ -1460,7 +1460,8 @@ class PeerMatchTest {
         }
         assertTrue(guest.isInterrupted());
         assertFalse(host.isInterrupted());
-        host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(200, 400, 3, 3));
+        host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
         dropToGuest[0] = false;
         boolean recovered = false;
         for (int step = 0; step < 120 && !recovered; step++) {
@@ -1470,6 +1471,9 @@ class PeerMatchTest {
             recovered = !guest.isInterrupted();
             if (!recovered) guest.update(1f / 60);
         }
+        assertNotNull(guest.getSession().getLastBump());
+        assertEquals(host.getSession().getWhite().getX(), guest.getSession().getWhite().getX(), 5.0);
+        assertEquals(host.getSession().getWhite().getY(), guest.getSession().getWhite().getY(), 5.0);
         // The recovery snapshot is a second old; the guest resumes where its bird is now,
         // and later snapshots keep mapping onto that projected timeline.
         for (int step = 0; step < 90; step++) {
