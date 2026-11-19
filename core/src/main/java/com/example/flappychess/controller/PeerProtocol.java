@@ -16,8 +16,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Bounded, reflection-free wire format shared by the JVM tests and browser. */
-public final class PeerProtocol {
-    public static final int VERSION = 8;
+final class PeerProtocol {
+    static final int VERSION = 8;
     static final int MAX_MESSAGE = 262_144;
 
     static JsonValue packet(String type) {

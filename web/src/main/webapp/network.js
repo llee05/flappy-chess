@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  let PROTOCOL = 8;
+  let PROTOCOL;
   const VERSION_MISMATCH_REASON = 'Game versions differ. Both players should reload.';
   const QUEUE_SLOTS = 8;
   const SLOT_CONNECT_TIMEOUT = 2500;
@@ -557,7 +557,6 @@
     } catch (error) { fail(error.message); }
   }
   window.FlappyNetwork = {
-    get protocolVersion() { return PROTOCOL; },
     install(start, protocolVersion) {
       if (typeof protocolVersion === 'number') PROTOCOL = protocolVersion;
       startGame = start;
