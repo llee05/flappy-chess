@@ -49,7 +49,9 @@ export async function checkMobile(browser) {
   assert(flying.x > start.x + 25 && flying.y < start.y - 40, 'Two fingers must steer and flap simultaneously');
   await touch.up(1);
   await sleep(1300);
-  assert((await bird()).y > 730, 'Holding Flap must not repeat a flap');
+  const landed = await bird();
+  assert(landed && landed.y > start.y - 12,
+    `Holding Flap must not repeat a flap: resting ${start.y} -> ${landed?.y}`);
   await touch.up(2);
   assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Touch input must unlock audio');
   await touch.down('[data-hold="A"]');

@@ -30,14 +30,15 @@ import java.util.Locale;
 public final class GameRenderer implements Disposable {
     private static final float WORLD_WIDTH = 1600;
     private static final float WORLD_HEIGHT = 800;
-    static final float BOARD_X = 400;
-    static final float BOARD_Y = 36;
-    static final float BOARD_SCALE_X = 1;
-    static final float BOARD_SCALE_Y = 0.91f;
-    static final float SQUARE_WIDTH = 100;
-    static final float SQUARE_HEIGHT = 91;
+    static final float BOARD_X = 448;
+    static final float BOARD_Y = 56;
+    static final float BOARD_SCALE_X = 0.89f;
+    static final float BOARD_SCALE_Y = 0.86f;
+    static final float SQUARE_WIDTH = 89;
+    static final float SQUARE_HEIGHT = 86;
     static final float BOARD_WIDTH = SQUARE_WIDTH * 8;
     static final float BOARD_HEIGHT = SQUARE_HEIGHT * 8;
+    private static final float BOARD_CENTER_X = BOARD_X + BOARD_WIDTH / 2;
     private static final Color LIGHT = Color.valueOf("daccaa");
     private static final Color LIGHT_EDGE = Color.valueOf("bdb496");
     private static final Color LIGHT_SHINE = Color.valueOf("e5d9ba");
@@ -169,7 +170,7 @@ public final class GameRenderer implements Disposable {
             if (dropReturn != null && square == dropReturn.origin() && piece == dropReturn.piece()) continue;
             if (piece != Piece.NONE) drawPiece(piece, squareX(square) + SQUARE_WIDTH / 2,
                     squareY(square) + SQUARE_HEIGHT / 2 + feedback.dropOffset(square) * BOARD_SCALE_Y,
-                    4, BOARD_SCALE_Y);
+                    4, BOARD_SCALE_X, BOARD_SCALE_Y);
         }
         if (!review.isActive()) {
             drawBird(game.getWhite(), Side.WHITE, game);
@@ -273,30 +274,32 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        drawPanelShell(72);
-        drawPanelShell(1192);
+        if (!boardOnly) {
+            drawPanelShell(72);
+            drawPanelShell(1192);
 
-        drawPillar(72);
-        drawPillar(368);
-        drawPillar(1192);
-        drawPillar(1488);
+            drawPillar(72);
+            drawPillar(368);
+            drawPillar(1192);
+            drawPillar(1488);
 
-        largeOrnament(240, 682);
-        divider(240, 628);
-        banner(240, 590);
-        diamond(240, 446, 7, GOLD);
-        cloud(174, 304, 1.25f);
-        cloud(238, 246, 0.8f);
-        divider(240, 170);
+            largeOrnament(240, 682);
+            divider(240, 628);
+            banner(240, 590);
+            diamond(240, 446, 7, GOLD);
+            cloud(174, 304, 1.25f);
+            cloud(238, 246, 0.8f);
+            divider(240, 170);
 
-        drawClockCard(game, Side.BLACK, 650);
-        divider(1360, 620);
-        banner(1360, 584);
-        diamond(1360, 440, 7, GOLD);
-        cloud(1292, 304, 1.25f);
-        cloud(1364, 246, 0.8f);
-        divider(1360, 170);
-        drawClockCard(game, Side.WHITE, 32);
+            drawClockCard(game, Side.BLACK, 650);
+            divider(1360, 620);
+            banner(1360, 584);
+            diamond(1360, 440, 7, GOLD);
+            cloud(1292, 304, 1.25f);
+            cloud(1364, 246, 0.8f);
+            divider(1360, 170);
+            drawClockCard(game, Side.WHITE, 32);
+        }
 
         drawBoardFrame();
     }
@@ -412,12 +415,12 @@ public final class GameRenderer implements Disposable {
         rect(BOARD_X, BOARD_Y - 6, BOARD_WIDTH, 3, FRAME_HIGH);
         rect(BOARD_X, BOARD_Y + BOARD_HEIGHT + 3, BOARD_WIDTH, 3, FRAME_HIGH);
 
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 8, 13, INK);
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 10, 11, FRAME);
-        diamond(800, BOARD_Y + BOARD_HEIGHT + 11, 5, FRAME_HIGH);
-        diamond(800, BOARD_Y - 8, 13, INK);
-        diamond(800, BOARD_Y - 7, 11, FRAME);
-        diamond(800, BOARD_Y - 5, 5, FRAME_HIGH);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 8, 13, INK);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 10, 11, FRAME);
+        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 11, 5, FRAME_HIGH);
+        diamond(BOARD_CENTER_X, BOARD_Y - 8, 13, INK);
+        diamond(BOARD_CENTER_X, BOARD_Y - 7, 11, FRAME);
+        diamond(BOARD_CENTER_X, BOARD_Y - 5, 5, FRAME_HIGH);
     }
 
     private void cloud(float x, float y, float scale) {
@@ -446,10 +449,10 @@ public final class GameRenderer implements Disposable {
 
     private void drawCoordinates() {
         for (int i = 0; i < 8; i++) {
-            text(Integer.toString(8 - i), BOARD_X + bx(8), BOARD_Y + BOARD_HEIGHT - by(8) - i * SQUARE_HEIGHT,
+            text(Integer.toString(8 - i), BOARD_X + bx(12), BOARD_Y + BOARD_HEIGHT - by(12) - i * SQUARE_HEIGHT,
                     2, i % 2 == 0 ? DARK_EDGE : LIGHT_SHINE);
-            text(Character.toString((char) ('a' + i)), BOARD_X + bx(86) + i * SQUARE_WIDTH,
-                    BOARD_Y + by(18), 2, i % 2 == 0 ? LIGHT_SHINE : DARK_EDGE);
+            text(Character.toString((char) ('a' + i)), BOARD_X + bx(80) + i * SQUARE_WIDTH,
+                    BOARD_Y + by(22), 2, i % 2 == 0 ? LIGHT_SHINE : DARK_EDGE);
         }
     }
 
@@ -502,7 +505,8 @@ public final class GameRenderer implements Disposable {
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
             if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x,
-                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y, 2, BOARD_SCALE_Y);
+                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y,
+                    2, BOARD_SCALE_X, BOARD_SCALE_Y);
         }
     }
 
@@ -569,7 +573,7 @@ public final class GameRenderer implements Disposable {
         float px = dropReturnX(drop, t);
         float py = dropReturnY(drop, t);
         float scale = 2.2f + 1.8f * eased;
-        drawPiece(drop.piece(), px, py, scale, BOARD_SCALE_Y);
+        drawPiece(drop.piece(), px, py, scale, BOARD_SCALE_X, BOARD_SCALE_Y);
     }
 
     private static float dropReturnX(GameSession.DropReturn drop, float t) {
@@ -608,14 +612,14 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPiece(Piece piece, float x, float y, int scale) {
-        drawPiece(piece, x, y, scale, 1);
+        drawPiece(piece, x, y, scale, 1, 1);
     }
 
-    private void drawPiece(Piece piece, float x, float y, float scale, float scaleY) {
-        float size = 25 * scale;
-        float height = size * scaleY;
-        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - size / 2),
-                snap(y - height / 2), size, height);
+    private void drawPiece(Piece piece, float x, float y, float scale, float scaleX, float scaleY) {
+        float width = 25 * scale * scaleX;
+        float height = 25 * scale * scaleY;
+        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - width / 2),
+                snap(y - height / 2), width, height);
     }
 
     private void overlay(GameSession game) {
