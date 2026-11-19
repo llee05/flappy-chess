@@ -24,9 +24,9 @@ export const desktopBirdY = (page, white) => page.evaluate(`new Promise(resolve 
   const renderedY = total / count;
   const viewportTop = (canvas.height - 800 * scale) / 2;
   const worldY = 800 - (renderedY - viewportTop) / scale;
-  // Undo the inset board presentation so the existing rank thresholds keep
-  // their legacy 800px-board meaning, including the sprite's 25px offset.
-  resolve(800 - (worldY - 36) / 0.91);
+  // Undo GameRenderer.BOARD_Y and BOARD_SCALE_Y so the existing rank thresholds
+  // keep their legacy 800px-board meaning, including the sprite's 25px offset.
+  resolve(800 - (worldY - 56) / 0.86);
 }))`);
 
 /** Bird center in 800px board coordinates on touch layouts that crop the canvas to the board, or null. */
