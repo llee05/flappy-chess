@@ -30,12 +30,12 @@ import java.util.Locale;
 public final class GameRenderer implements Disposable {
     private static final float WORLD_WIDTH = 1600;
     private static final float WORLD_HEIGHT = 800;
-    static final float BOARD_X = 400;
-    static final float BOARD_Y = 36;
-    static final float BOARD_SCALE_X = 1;
-    static final float BOARD_SCALE_Y = 0.91f;
-    static final float SQUARE_WIDTH = 100;
-    static final float SQUARE_HEIGHT = 91;
+    static final float BOARD_X = 440;
+    static final float BOARD_Y = 56;
+    static final float BOARD_SCALE_X = 0.9f;
+    static final float BOARD_SCALE_Y = 0.86f;
+    static final float SQUARE_WIDTH = 90;
+    static final float SQUARE_HEIGHT = 86;
     static final float BOARD_WIDTH = SQUARE_WIDTH * 8;
     static final float BOARD_HEIGHT = SQUARE_HEIGHT * 8;
     private static final Color LIGHT = Color.valueOf("daccaa");
@@ -169,7 +169,7 @@ public final class GameRenderer implements Disposable {
             if (dropReturn != null && square == dropReturn.origin() && piece == dropReturn.piece()) continue;
             if (piece != Piece.NONE) drawPiece(piece, squareX(square) + SQUARE_WIDTH / 2,
                     squareY(square) + SQUARE_HEIGHT / 2 + feedback.dropOffset(square) * BOARD_SCALE_Y,
-                    4, BOARD_SCALE_Y);
+                    4, BOARD_SCALE_X, BOARD_SCALE_Y);
         }
         if (!review.isActive()) {
             drawBird(game.getWhite(), Side.WHITE, game);
@@ -446,10 +446,10 @@ public final class GameRenderer implements Disposable {
 
     private void drawCoordinates() {
         for (int i = 0; i < 8; i++) {
-            text(Integer.toString(8 - i), BOARD_X + bx(8), BOARD_Y + BOARD_HEIGHT - by(8) - i * SQUARE_HEIGHT,
+            text(Integer.toString(8 - i), BOARD_X + bx(12), BOARD_Y + BOARD_HEIGHT - by(12) - i * SQUARE_HEIGHT,
                     2, i % 2 == 0 ? DARK_EDGE : LIGHT_SHINE);
-            text(Character.toString((char) ('a' + i)), BOARD_X + bx(86) + i * SQUARE_WIDTH,
-                    BOARD_Y + by(18), 2, i % 2 == 0 ? LIGHT_SHINE : DARK_EDGE);
+            text(Character.toString((char) ('a' + i)), BOARD_X + bx(80) + i * SQUARE_WIDTH,
+                    BOARD_Y + by(22), 2, i % 2 == 0 ? LIGHT_SHINE : DARK_EDGE);
         }
     }
 
@@ -502,7 +502,8 @@ public final class GameRenderer implements Disposable {
         if (side == game.getCarrier()) {
             Square carried = game.getBoardView().getHiddenPieceSquare();
             if (carried != Square.NONE) drawPiece(game.getBoardView().getBoard().getPiece(carried), x,
-                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y, 2, BOARD_SCALE_Y);
+                    carriedY(y, side) + feedback.pickupOffset(side) * BOARD_SCALE_Y,
+                    2, BOARD_SCALE_X, BOARD_SCALE_Y);
         }
     }
 
@@ -569,7 +570,7 @@ public final class GameRenderer implements Disposable {
         float px = dropReturnX(drop, t);
         float py = dropReturnY(drop, t);
         float scale = 2.2f + 1.8f * eased;
-        drawPiece(drop.piece(), px, py, scale, BOARD_SCALE_Y);
+        drawPiece(drop.piece(), px, py, scale, BOARD_SCALE_X, BOARD_SCALE_Y);
     }
 
     private static float dropReturnX(GameSession.DropReturn drop, float t) {
@@ -608,14 +609,14 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPiece(Piece piece, float x, float y, int scale) {
-        drawPiece(piece, x, y, scale, 1);
+        drawPiece(piece, x, y, scale, 1, 1);
     }
 
-    private void drawPiece(Piece piece, float x, float y, float scale, float scaleY) {
-        float size = 25 * scale;
-        float height = size * scaleY;
-        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - size / 2),
-                snap(y - height / 2), size, height);
+    private void drawPiece(Piece piece, float x, float y, float scale, float scaleX, float scaleY) {
+        float width = 25 * scale * scaleX;
+        float height = 25 * scale * scaleY;
+        batch.draw(sprites.piece(piece.getPieceSide(), piece.getPieceType()), snap(x - width / 2),
+                snap(y - height / 2), width, height);
     }
 
     private void overlay(GameSession game) {
