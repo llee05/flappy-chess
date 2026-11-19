@@ -15,6 +15,10 @@ import static com.example.flappychess.controller.PeerProtocol.*;
 
 /** One trusted host, one guest; transport and OpenGL remain outside the match logic. */
 public final class PeerMatch extends InputAdapter {
+    // Normal background timers can be throttled to one second. Longer gaps cannot
+    // safely replay held input, so announce an interruption before resuming flight.
+    private static final long MAX_SIMULATION_GAP = 3_000_000_000L;
+    private static final long RECOVERY_NOTICE = 2_000_000_000L;
     private final boolean host;
     private final MatchSeries series = new MatchSeries(MatchSeries.Players.ONLINE);
     private final Consumer<String> send;
@@ -28,6 +32,9 @@ public final class PeerMatch extends InputAdapter {
     private boolean ownSwap, remoteSwap;
     private int epoch, inputSequence, acknowledgedInput, stateSequence, receivedState;
     private long lastHeard, lastPing, lastSnapshot;
+    private long simulatedAt, lastStateAt, interruptedUntil;
+    private int simulationGeneration;
+    private boolean remoteInterrupted, staleHost;
     private String error;
 
     public PeerMatch(boolean host, Consumer<String> send, LongSupplier time) {
@@ -93,14 +100,20 @@ public final class PeerMatch extends InputAdapter {
         ownRematch = remoteRematch = false;
         ownSwap = remoteSwap = false;
         epoch++;
+        simulatedAt = time.getAsLong();
+        interruptedUntil = 0;
+        simulationGeneration = 0;
         inputSequence = acknowledgedInput = stateSequence = receivedState = 0;
         sendState();
     }
 
     private void receiveInput(JsonValue value) {
+        advanceHost();
         if (number(value, "epoch", 1, Integer.MAX_VALUE) != epoch) return;
         int sequence = (int) number(value, "sequence", 1, Integer.MAX_VALUE);
         if (sequence <= acknowledgedInput) return;
+        int generation = (int) number(value, "simulation", 0, Integer.MAX_VALUE);
+        if (generation != simulationGeneration || isInterrupted()) return;
         Side remoteSide = getOwnSide().flip();
         if (string(value, "type", 16).equals("release")) session.releaseInput(remoteSide);
         else {
@@ -123,6 +136,9 @@ public final class PeerMatch extends InputAdapter {
         if (state.series().players() != MatchSeries.Players.ONLINE || state.series().round() != nextEpoch) {
             throw new IllegalArgumentException("Invalid series round");
         }
+        int generation = (int) number(value, "simulation", 0, Integer.MAX_VALUE);
+        boolean interrupted = bool(value, "interrupted");
+        boolean resetInput = generation != simulationGeneration || interrupted || staleHost;
         int ack = (int) number(value, "ack", 0, Integer.MAX_VALUE);
         int previousFeedback = lastFeedbackSequence();
         boolean bumped = state.feedback().stream()
@@ -139,16 +155,21 @@ public final class PeerMatch extends InputAdapter {
             session = sessions.get();
             session.getWhite().restore(state.white());
             session.getBlack().restore(state.black());
-        } else if (ack >= inputSequence || state.result() != null || bumped) {
+        } else if (ack >= inputSequence || state.result() != null || bumped || resetInput) {
             Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
             Birb.Motion motion = getOwnSide() == Side.WHITE ? state.white() : state.black();
             double distance = Math.hypot(own.getX() - motion.x(), own.getY() - motion.y());
-            own.reconcile(motion, distance > 100 || state.result() != null || bumped ? 1 : 0.25);
+            own.reconcile(motion, distance > 100 || state.result() != null || bumped || resetInput ? 1 : 0.25);
             if (bumped) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
                 other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
             }
         }
+        if (resetInput) interruptLocalInput();
+        simulationGeneration = generation;
+        remoteInterrupted = interrupted;
+        staleHost = false;
+        lastStateAt = time.getAsLong();
         epoch = nextEpoch;
         receivedState = sequence;
         latest = state;
@@ -162,19 +183,47 @@ public final class PeerMatch extends InputAdapter {
 
     public void update(float delta) {
         if (!started || disconnected) return;
-        if (host) {
-            int before = lastFeedbackSequence();
-            session.update(delta);
-            if (lastFeedbackSequence() != before) sendState();
-        } else {
-            session.updateReplica(delta, getOwnSide());
-            if (latest != null) {
+        pulse();
+        if (!host && !disconnected) {
+            session.updateReplica(isInterrupted() ? 0 : delta, getOwnSide());
+            if (!isInterrupted() && latest != null) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
                 other.reconcile(getOwnSide() == Side.WHITE ? latest.black() : latest.white(),
                         1 - Math.exp(-16 * Math.max(0, delta)));
             }
         }
-        pulse();
+    }
+
+    /** The sole authoritative timeline, shared by render, timer and input callbacks. */
+    private void advanceHost() {
+        if (!host || !started || disconnected) return;
+        long now = time.getAsLong();
+        long elapsed = Math.max(0, now - simulatedAt);
+        simulatedAt = Math.max(simulatedAt, now);
+        int before = lastFeedbackSequence();
+        boolean wasInterrupted = isInterrupted();
+        if (elapsed > MAX_SIMULATION_GAP && !session.isGameOver()) {
+            simulationGeneration++;
+            interruptedUntil = now + RECOVERY_NOTICE;
+            interruptLocalInput();
+            session.releaseInput();
+        }
+        if (interruptedUntil != 0) {
+            // Clocks always account for the full real interval, including suspension.
+            session.update(0);
+            if (now >= interruptedUntil) interruptedUntil = 0;
+        } else {
+            // Keep GameSession's per-update safety cap, but consume every normal
+            // timer interval (including one-second browser throttling) exactly once.
+            session.update(0);
+            while (elapsed > 0 && !session.isGameOver()) {
+                long slice = Math.min(elapsed, 250_000_000L);
+                session.update(slice / 1_000_000_000f);
+                elapsed -= slice;
+            }
+        }
+        if (session.isGameOver()) interruptedUntil = 0;
+        if (wasInterrupted != isInterrupted() || lastFeedbackSequence() != before) sendState();
     }
 
     private int lastFeedbackSequence() {
@@ -182,10 +231,16 @@ public final class PeerMatch extends InputAdapter {
         return events.isEmpty() ? 0 : events.get(events.size() - 1).sequence();
     }
 
-    /** Also called by a browser timer so clocks/heartbeats survive a hidden render loop. */
+    /** Also called by a browser timer; rendering is not required for host simulation. */
     public void pulse() {
         if (!opened || disconnected) return;
         long now = time.getAsLong();
+        advanceHost();
+        if (!host && started && !staleHost && now - lastStateAt > MAX_SIMULATION_GAP) {
+            staleHost = true;
+            interruptLocalInput();
+            send.accept(encode(sequenced("release")));
+        }
         if (now - lastHeard > 20_000_000_000L) {
             disconnect("Connection lost. Return to the lobby to start another match.");
             return;
@@ -195,7 +250,6 @@ public final class PeerMatch extends InputAdapter {
             lastPing = now;
         }
         if (host && started) {
-            session.update(0);
             if (now - lastSnapshot >= 50_000_000L) sendState();
         }
     }
@@ -206,6 +260,8 @@ public final class PeerMatch extends InputAdapter {
         put(value, "epoch", epoch);
         put(value, "sequence", ++stateSequence);
         put(value, "ack", acknowledgedInput);
+        put(value, "simulation", simulationGeneration);
+        put(value, "interrupted", isInterrupted());
         put(value, "hostRematch", ownRematch);
         put(value, "guestRematch", remoteRematch);
         put(value, "hostSwap", ownSwap);
@@ -216,6 +272,11 @@ public final class PeerMatch extends InputAdapter {
     }
 
     @Override public boolean keyDown(int key) {
+        pulse();
+        if (isInterrupted()) {
+            keys.add(key);
+            return true;
+        }
         if (key == com.badlogic.gdx.Input.Keys.X && started && !disconnected && session.isGameOver()) {
             if (keys.add(key)) requestRematch(true);
             return true;
@@ -233,6 +294,7 @@ public final class PeerMatch extends InputAdapter {
     }
 
     @Override public boolean keyUp(int key) {
+        advanceHost();
         keys.remove(key);
         GameAction action = GameAction.forKey(key);
         if (action == null) return false;
@@ -258,10 +320,12 @@ public final class PeerMatch extends InputAdapter {
         JsonValue value = packet(type);
         put(value, "epoch", epoch);
         put(value, "sequence", ++inputSequence);
+        put(value, "simulation", simulationGeneration);
         return value;
     }
 
     public void releaseInput() {
+        advanceHost();
         clearLocalInput();
         if (!started || disconnected) return;
         if (host) sendState();
@@ -270,6 +334,12 @@ public final class PeerMatch extends InputAdapter {
 
     private void clearLocalInput() {
         keys.clear();
+        interruptLocalInput();
+    }
+
+    private void interruptLocalInput() {
+        // Retain pressed key identities until key-up: browser auto-repeat after
+        // recovery must not revive a held steering key or repeat a flap.
         held.clear();
         session.releaseInput(getOwnSide());
     }
@@ -300,6 +370,8 @@ public final class PeerMatch extends InputAdapter {
 
     public String status() {
         if (disconnected) return error;
+        if (isInterrupted()) return "Host interrupted. Flight paused."
+                + (session.isTimed() ? " Clocks continue." : "") + " Waiting to resume...";
         if (!started) return "Waiting for the other player...";
         if (ownRematch && remoteRematch && ownSwap != remoteSwap) return "Rematch choices differ. R keeps colors; X swaps. Choose the same option.";
         if (ownRematch) return (ownSwap ? "Swap requested." : "Rematch requested.") + " Waiting for the other player...";
@@ -310,6 +382,7 @@ public final class PeerMatch extends InputAdapter {
 
     public GameSession getSession() { return session; }
     public Side getOwnSide() { return series.state().sideFor(host); }
+    public boolean isInterrupted() { return interruptedUntil != 0 || remoteInterrupted || staleHost; }
     public boolean isStarted() { return started; }
     public boolean isDisconnected() { return disconnected; }
 }

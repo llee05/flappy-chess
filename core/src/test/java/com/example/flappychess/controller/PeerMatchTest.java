@@ -412,6 +412,161 @@ class PeerMatchTest {
         assertTrue(pair.guest.isDisconnected());
     }
 
+    @Test void hiddenHostTimerAdvancesFlightAndClocksAtForegroundSpeed() {
+        Pair foreground = new Pair();
+        Pair hidden = new Pair();
+        for (Pair pair : new Pair[] {foreground, hidden}) {
+            pair.guest.keyDown(Keys.D);
+            pair.guest.keyDown(Keys.SPACE);
+            pair.flush();
+        }
+        foreground.advance(60);
+        hidden.time.set(1_000_000_000L); // Throttled background timer, no renders.
+        hidden.host.pulse();
+        hidden.flush();
+        assertMotionEquals(foreground.host.getSession().getBlack().snapshot(), hidden.host.getSession().getBlack().snapshot());
+        assertTrue(hidden.host.getSession().getBlack().getX() > 600);
+        assertEquals(299_000, hidden.host.getSession().snapshot().whiteMillis());
+        assertFalse(hidden.host.isInterrupted());
+        // A render and a timer at the same instant must not consume time twice.
+        SessionSnapshot once = hidden.host.getSession().snapshot();
+        hidden.host.update(1);
+        hidden.host.pulse();
+        assertEquals(once, hidden.host.getSession().snapshot());
+    }
+
+    @Test void timerAndRenderingShareOneTimelineAndInputsDoNotApplyRetroactively() {
+        Pair pair = new Pair();
+        pair.time.set(200_000_000L);
+        pair.guest.keyDown(Keys.D);
+        pair.flush();
+        assertEquals(425, pair.host.getSession().getBlack().getX());
+        pair.time.set(400_000_000L);
+        pair.host.update(0); // The monotonic clock, not caller delta, owns advancement.
+        assertTrue(pair.host.getSession().getBlack().getX() > 440);
+        var beforeRelease = pair.host.getSession().getBlack().snapshot();
+        pair.guest.releaseInput();
+        pair.flush();
+        pair.host.update(10);
+        assertMotionEquals(beforeRelease, pair.host.getSession().getBlack().snapshot());
+        for (int i = 0; i < 8; i++) {
+            pair.time.addAndGet(250_000_000L);
+            pair.host.pulse();
+            pair.flush();
+        }
+        assertEquals(0, pair.host.getSession().getBlack().getVelocityX());
+        assertEquals(297_600, pair.host.getSession().snapshot().whiteMillis());
+    }
+
+    @Test void hidingEitherOrBothPeersDoesNotChangeHostClockOrPhysics() {
+        for (boolean hostHidden : new boolean[] {false, true}) {
+            for (boolean guestHidden : new boolean[] {false, true}) {
+                Pair pair = new Pair();
+                pair.host.keyDown(Keys.D);
+                pair.guest.keyDown(Keys.D);
+                pair.flush();
+                if (hostHidden) pair.host.releaseInput();
+                if (guestHidden) pair.guest.releaseInput();
+                pair.flush();
+                for (int i = 0; i < 8; i++) {
+                    pair.time.addAndGet(250_000_000L);
+                    if (hostHidden) pair.host.pulse(); else pair.host.update(0.25f);
+                    pair.flush();
+                    if (guestHidden) pair.guest.pulse(); else pair.guest.update(0.25f);
+                    pair.flush();
+                }
+                assertEquals(hostHidden ? 425 : 750, pair.host.getSession().getWhite().getX());
+                assertEquals(guestHidden ? 425 : 750, pair.host.getSession().getBlack().getX());
+                assertEquals(298_000, pair.host.getSession().snapshot().whiteMillis());
+                assertFalse(pair.host.isInterrupted());
+                assertFalse(pair.guest.isInterrupted());
+                var returned = pair.host.getSession().snapshot();
+                pair.host.update(2);
+                assertEquals(returned, pair.host.getSession().snapshot());
+            }
+        }
+    }
+
+    @Test void hostSuspensionAnnouncesInterruptionRejectsQueuedInputsAndResumesWithFreshPress() {
+        Pair pair = new Pair();
+        pair.host.keyDown(Keys.D);
+        pair.guest.keyDown(Keys.D);
+        pair.flush();
+        pair.advance(12);
+        pair.guest.keyDown(Keys.SPACE);
+        String queued = pair.toHost.remove();
+        var before = pair.host.getSession().getBlack().snapshot();
+        pair.time.set(4_200_000_000L);
+        pair.guest.pulse();
+        assertTrue(pair.guest.isInterrupted());
+        assertTrue(pair.guest.status().contains("Host interrupted"));
+        pair.guest.update(0.25f);
+        pair.host.receive(queued); // An input callback can be the first task after thaw.
+        pair.flush();
+        assertTrue(pair.host.isInterrupted());
+        assertTrue(pair.guest.isInterrupted());
+        assertMotionEquals(before, pair.guest.getSession().getBlack().snapshot());
+        assertMotionEquals(before, pair.host.getSession().getBlack().snapshot());
+        assertEquals(295_800, pair.host.getSession().snapshot().whiteMillis());
+        pair.host.keyDown(Keys.SPACE);
+        pair.guest.keyDown(Keys.SPACE);
+        pair.flush();
+        assertMotionEquals(before, pair.host.getSession().getBlack().snapshot());
+        for (int i = 0; i < 8; i++) {
+            pair.time.addAndGet(250_000_000L);
+            pair.host.pulse();
+            pair.flush();
+        }
+        assertFalse(pair.host.isInterrupted());
+        assertFalse(pair.guest.isInterrupted());
+        pair.host.receive(queued); // Old generation must remain invalid after recovery.
+        assertMotionEquals(before, pair.host.getSession().getBlack().snapshot());
+        pair.advance(120);
+        assertEquals(0, pair.host.getSession().getBlack().getVelocityX());
+        assertEquals(0, pair.host.getSession().getWhite().getVelocityX());
+        pair.guest.keyDown(Keys.D); // Auto-repeat cannot revive the old held key.
+        pair.host.keyDown(Keys.D);
+        pair.flush();
+        pair.advance(6);
+        assertEquals(0, pair.host.getSession().getBlack().getVelocityX());
+        assertEquals(0, pair.host.getSession().getWhite().getVelocityX());
+        pair.guest.keyUp(Keys.D);
+        pair.guest.keyDown(Keys.D);
+        pair.flush();
+        pair.advance(6);
+        assertTrue(pair.host.getSession().getBlack().getVelocityX() > 0);
+    }
+
+    @Test void guestStopsPredictionButKeepsClockRunningWhenHostSnapshotsStop() {
+        Pair pair = new Pair();
+        pair.guest.keyDown(Keys.D);
+        pair.flush();
+        pair.time.set(4_000_000_000L);
+        pair.guest.update(0.25f);
+        var frozen = pair.guest.getSession().getBlack().snapshot();
+        assertTrue(pair.guest.isInterrupted());
+        pair.time.set(5_000_000_000L);
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.update(0.25f);
+        assertMotionEquals(frozen, pair.guest.getSession().getBlack().snapshot());
+        assertEquals(295_000, pair.guest.getSession().snapshot().whiteMillis());
+        assertFalse(pair.guest.isDisconnected());
+    }
+
+    @Test void suspensionStillChargesClockAndCanEndGameWithoutReplayingFlight() {
+        Pair pair = new Pair(new MatchSettings(1000, 0));
+        var before = pair.host.getSession().getWhite().snapshot();
+        pair.time.set(5_000_000_000L);
+        pair.host.pulse();
+        pair.flush();
+        assertTrue(pair.host.getSession().isGameOver());
+        assertTrue(pair.guest.getSession().isGameOver());
+        assertEquals(0, pair.host.getSession().snapshot().whiteMillis());
+        assertFalse(pair.host.isInterrupted());
+        assertFalse(pair.guest.isInterrupted());
+        assertMotionEquals(before, pair.host.getSession().getWhite().snapshot());
+    }
+
     @Test void heartbeatKeepsHostClockRunningWithoutRenderingAndDetectsLostPeers() {
         Pair pair = new Pair();
         pair.time.set(3_000_000_000L);

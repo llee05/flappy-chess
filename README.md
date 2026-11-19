@@ -93,8 +93,16 @@ next round. Scores follow players: one point for a win, half a point for a draw.
 Local series use the same choices; Player 1 keeps A/D, Space, E even when Black,
 and Player 2 keeps the arrow keys and Enter. Disconnection freezes
 the match and offers a return to the lobby. There is no match recovery or host
-migration. Keep the host's game visible for continuous physics; clocks continue
-when the tab is hidden, but browsers can suspend background pages.
+migration. Host flight and clocks continue from a monotonic timer when rendering
+stops in a hidden tab, including ordinary one-second background timer throttling.
+If the host stops running for more than three seconds (for example, mobile app
+suspension), flight pauses and both players see **Host interrupted**. The guest
+shows this notice when host snapshots stop arriving. On the host's return, a
+two-second recovery notice gives both players time to release controls; old held
+inputs are discarded and flight resumes automatically. Clocks continue throughout,
+including the suspended interval, and can expire normally. A connection silent
+for more than twenty seconds still ends the match. A suspended device can only
+update its own display when the browser runs again.
 
 The host is trusted to run the rules and clock, so rooms are intended for
 friends rather than ranked competitive play. Guest movement is predicted

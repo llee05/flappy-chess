@@ -564,6 +564,11 @@
         }
       }
     },
+    interruption(text) {
+      const notice = byId('network-interruption');
+      notice.hidden = !text;
+      if (notice.textContent !== text) notice.textContent = text;
+    },
     describeMatch(turn, lastMove, moves, carrier, promotion, result) {
       const summary = byId('match-summary');
       const text = result || `${turn} to move. ${moves} moves played.`
