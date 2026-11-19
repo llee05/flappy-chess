@@ -73,7 +73,7 @@ body[data-side="BLACK"] #player-role { color: #78c4d0; }
 #leave-room { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
 body.online #game-shell { top: 48px; bottom: 0; }
 body.online #canvas { height: 100%; margin-top: 0; }
-#network-interruption { position: fixed; z-index: 10; top: max(56px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); margin: auto; max-width: 520px; padding: 12px; border: 2px solid #efb95b; background: #20283cf5; color: #efb95b; text-align: center; pointer-events: none; }
+#network-interruption { position: absolute; z-index: 10; top: 8px; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); margin: auto; max-width: 520px; padding: 12px; border: 2px solid #efb95b; background: #20283cf5; color: #efb95b; text-align: center; pointer-events: none; }
 #connection-failure { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #141b2de8; }
 #failure-title { font-size: clamp(18px, 5vw, 26px); color: #ed8c78; }
 #status { min-height: 24px; color: #add2b2; font-size: 14px; }

@@ -22,6 +22,7 @@
       </div>
     </header>
     <div id="board-stage">
+      <aside id="network-interruption" hidden role="status" aria-live="polite"></aside>
       <canvas id="canvas" tabindex="0" aria-label="Flappy Chess game board. Use the touch controls, or A/D, Space and E for player one; arrow keys and Enter for player two."></canvas>
       <div id="solo-fallback-note" class="solo-fallback-note" hidden aria-hidden="true">Backup AI</div>
       <section id="mobile-dialog" class="mobile-only" hidden role="region" aria-labelledby="mobile-dialog-title">
@@ -214,7 +215,6 @@
     <span id="network-status" role="status" aria-live="polite"></span>
     <button id="leave-room" type="button" aria-label="Leave online match and return to lobby">LOBBY</button>
   </aside>
-  <aside id="network-interruption" hidden role="status" aria-live="polite"></aside>
   <output id="match-summary" class="sr-only" aria-live="polite"></output>
   <output id="lesson-summary" class="sr-only" aria-live="polite"></output>
   <output id="action-feedback" class="sr-only" aria-live="polite"></output>
