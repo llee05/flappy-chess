@@ -40,6 +40,7 @@ public final class WebLauncher {
         launch(new ApplicationAdapter() {
             @Override public void create() {
                 game.create();
+                game.setSoundEnabled(soundEnabled());
                 MobileControls.install(game::releaseInput);
                 catchGameKeys();
                 describeTimeControl(game.getSession().getSettings().label());
@@ -200,8 +201,11 @@ public final class WebLauncher {
     @JSBody(params = {"stage", "text"}, script = "const summary = document.getElementById('lesson-summary'); summary.dataset.stage = stage; if (summary.textContent !== text) summary.textContent = text; document.body.dataset.mode = stage ? 'tutorial' : 'local';")
     private static native void describeLesson(String stage, String text);
 
-    @JSBody(params = {"text", "sound"}, script = "const summary = document.getElementById('action-feedback'); if (summary.textContent !== text) summary.textContent = text; document.body.dataset.sound = sound ? 'on' : 'off';")
+    @JSBody(params = {"text", "sound"}, script = "const summary = document.getElementById('action-feedback'); if (summary.textContent !== text) summary.textContent = text; document.body.dataset.sound = sound ? 'on' : 'off'; if (window.FlappySound) window.FlappySound.sync(sound);")
     static native void describeFeedback(String text, boolean sound);
+
+    @JSBody(script = "return !window.FlappySound || window.FlappySound.enabled();")
+    static native boolean soundEnabled();
 
     @JSBody(script = "const note = document.getElementById('solo-fallback-note'); if (note) note.hidden = true; const solo = document.getElementById('solo-summary'); if (solo) delete solo.dataset.fallback; window.FlappyNetwork.leave();")
     static native void leaveGame();

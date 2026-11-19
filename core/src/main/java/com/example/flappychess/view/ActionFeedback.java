@@ -511,6 +511,7 @@ final class ActionFeedback implements Disposable {
         messageColor = MINT;
     }
     void toggleSound() { if (audio != null) audio.toggle(); }
+    void setSoundEnabled(boolean enabled) { if (audio != null) audio.setEnabled(enabled); }
     boolean isSoundEnabled() { return audio != null && audio.isEnabled(); }
     @Override public void dispose() { if (audio != null) audio.dispose(); }
 }

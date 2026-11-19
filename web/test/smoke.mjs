@@ -34,6 +34,12 @@ await withBrowser(async browser => {
   await until(() => evaluate("document.getElementById('play')?.disabled === false"), 'loading the compiled game');
   await screenshot('welcome');
   assert.deepEqual(await evaluate("window.FlappySettings.read()"), { minutes: 5, increment: 0 });
+  assert.equal(await evaluate("document.getElementById('lobby-sound').getAttribute('aria-pressed')"), 'true');
+  await evaluate("document.getElementById('lobby-sound').click()");
+  assert.equal(await evaluate("document.getElementById('lobby-sound').getAttribute('aria-pressed')"), 'false');
+  assert.equal(await evaluate("localStorage.getItem('flappy-chess-sound')"), 'false');
+  await evaluate("document.getElementById('lobby-sound').click()");
+  assert.equal(await evaluate("document.getElementById('lobby-sound').getAttribute('aria-pressed')"), 'true');
   await evaluate("document.getElementById('match-minutes').value = '10'; document.getElementById('match-increment').value = '5'; document.getElementById('match-increment').dispatchEvent(new Event('change'))");
   await evaluate("document.getElementById('play').click()");
   await until(() => evaluate("document.body.dataset.game === 'ready'"), 'creating the game');
@@ -48,6 +54,10 @@ await withBrowser(async browser => {
   await screenshot('gameplay');
   await until(() => evaluate("Howler._howls.length === 9 && Howler._howls.every(sound => sound.state() === 'loaded')"), 'decoding all sound assets');
   assert.equal(await evaluate('Howler.ctx.state'), 'running', 'Sound must unlock on keyboard input');
+  await press('KeyM', 'm', 77);
+  await until(() => evaluate("document.body.dataset.sound === 'off' && document.getElementById('lobby-sound').getAttribute('aria-pressed') === 'false'"), 'muting sound with M');
+  await press('KeyM', 'm', 77);
+  await until(() => evaluate("document.body.dataset.sound === 'on' && document.getElementById('lobby-sound').getAttribute('aria-pressed') === 'true'"), 'restoring sound with M');
   assert.deepEqual(await evaluate("[document.getElementById('canvas').width, document.getElementById('canvas').height]"), [1200, 800]);
   // Movement expectations are model-space distances. The 1600-wide HUD is
   // fitted into this 1200-wide canvas, so compare against their rendered size.

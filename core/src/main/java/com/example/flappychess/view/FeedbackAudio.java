@@ -54,7 +54,11 @@ final class FeedbackAudio implements Disposable {
     }
 
     void toggle() {
-        enabled = !enabled;
+        setEnabled(!enabled);
+    }
+
+    void setEnabled(boolean enabled) {
+        this.enabled = enabled;
         if (!enabled) for (Sound sound : sounds.values()) sound.stop();
         if (preferences != null) {
             try { preferences.putBoolean("sound", enabled).flush(); }

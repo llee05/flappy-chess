@@ -87,6 +87,10 @@ await withBrowser(async browser => {
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
     assert.equal(await page.evaluate('document.body.dataset.connection'), 'open');
     assert.equal(await page.evaluate('document.body.dataset.timeControl'), '1+5', 'Both peers must use the creator\'s time control');
+    assert.equal(await page.evaluate("document.getElementById('network-bar').hidden"), false);
+    assert.equal(await page.evaluate("document.getElementById('network-bar').getBoundingClientRect().height > 0"), true);
+    assert.equal(await page.evaluate("document.getElementById('leave-room').getBoundingClientRect().width > 0"), true);
+    assert.equal(await page.evaluate("document.getElementById('player-role').textContent"), `YOU · ${side === 'WHITE' ? 'WHITE ↓' : 'BLACK ↑'}`);
   }
   // Both pages must display the host's pickup and legal pawn move.
   // The white bird starts over e2 and can reach e3 with a single flap.
@@ -154,16 +158,25 @@ await withBrowser(async browser => {
     await sleep(350);
   }
   await guest.until(() => guest.evaluate("document.getElementById('history-summary').dataset.ended === 'true'"), 'synchronizing timeout');
-  await host.press('KeyX', 'x', 88);
+  assert.equal(await guest.evaluate("document.getElementById('leave-room').getBoundingClientRect().width > 0"), true,
+    'Lobby remains available on the mobile result');
+  await host.press('KeyR', 'r', 82);
   await advance(100);
   await sleep(200);
   await guest.press('KeyX', 'x', 88);
   await advance(100);
   await sleep(200);
+  for (const page of [host, guest]) {
+    assert.match(await page.evaluate("document.getElementById('network-status').textContent"), /choices differ/i);
+    assert.equal(await page.evaluate("document.getElementById('network-status').getBoundingClientRect().width > 0"), true,
+      'Rematch disagreement must be visible');
+  }
+  await host.press('KeyX', 'x', 88);
   await advance(100);
   for (const [page, side] of [[host, 'BLACK'], [guest, 'WHITE']]) {
     await page.until(() => page.evaluate("document.getElementById('series-summary').dataset.round === '2'"), 'agreeing a swap over WebRTC');
     assert.equal(await page.evaluate('document.body.dataset.side'), side);
+    assert.equal(await page.evaluate("document.getElementById('player-role').textContent"), `YOU · ${side === 'WHITE' ? 'WHITE ↓' : 'BLACK ↑'}`);
     assert.equal(await page.evaluate("document.getElementById('series-summary').dataset.secondPoints"), '1');
   }
   assert.equal(await guest.evaluate("document.getElementById('touch-first').dataset.side"), 'WHITE');
@@ -180,7 +193,7 @@ await withBrowser(async browser => {
     return page.evaluate(expression);
   }, message);
 
-  await guest.press('Escape', 'Escape', 27);
+  await guest.evaluate("document.getElementById('leave-room').click()");
   await pumpUntil(guest, "!location.hash && document.getElementById('host')?.disabled === false", 'returning guest to lobby');
   await host.until(() => failure(host), 'notifying host of disconnect');
   await host.screenshot('online-disconnected');

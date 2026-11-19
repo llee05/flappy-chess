@@ -66,13 +66,13 @@ body[data-room-state="searching"] #join-form,
 body[data-room-state="searching"] .controls { display: none; }
 #copy-room, #cancel-room, #cancel-search { padding: 10px; font-size: 14px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-#network-bar { position: fixed; inset: 0 0 auto; height: 48px; display: flex; align-items: center; gap: 16px; padding: 6px 12px; border-bottom: 2px solid #46516a; background: #20283c; font-size: 12px; }
-body.online #network-bar { display: none; }
+#network-bar { position: fixed; z-index: 5; inset: 0 0 auto; height: 48px; display: flex; align-items: center; gap: 16px; padding: 6px 12px; border-bottom: 2px solid #46516a; background: #20283c; font-size: 12px; }
 #player-role { color: #efb95b; white-space: nowrap; }
 body[data-side="BLACK"] #player-role { color: #78c4d0; }
 #network-status { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; color: #b6c2d0; }
 #leave-room { width: auto; margin: 0; padding: 6px 12px; font-size: 12px; }
-body.online #canvas { height: 100dvh; margin-top: 0; }
+body.online #game-shell { top: 48px; bottom: 0; }
+body.online #canvas { height: 100%; margin-top: 0; }
 #connection-failure { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; background: #141b2de8; }
 #failure-title { font-size: clamp(18px, 5vw, 26px); color: #ed8c78; }
 #status { min-height: 24px; color: #add2b2; font-size: 14px; }
@@ -86,7 +86,7 @@ body.online #canvas { height: 100dvh; margin-top: 0; }
 
 /* The renderer crops to the square board; DOM controls keep their native size. */
 body.mobile { --network-space: 0px; }
-body.mobile.online { --network-space: 0px; }
+body.mobile.online { --network-space: calc(44px + env(safe-area-inset-top)); }
 .mobile #game-shell {
   top: var(--network-space); bottom: auto; height: calc(100dvh - var(--network-space));
   display: flex; flex-direction: column; overflow: hidden;
@@ -96,6 +96,7 @@ body.mobile.online { --network-space: 0px; }
     linear-gradient(90deg, transparent 0 24px, #e9e4c9 24px 96px, transparent 96px) 82% 70% / 220px 22px no-repeat,
     linear-gradient(180deg, #4d83ad 0 32%, #6ba8c4 32% 68%, #a8d5d4 68% 100%);
 }
+body.mobile.online #game-shell { top: var(--network-space); bottom: auto; height: calc(100dvh - var(--network-space)); }
 .mobile.online #game-shell { padding-top: 0; }
 .mobile .mobile-only { display: block; }
 .mobile #canvas { pointer-events: none; }
@@ -133,7 +134,10 @@ body.mobile.online { --network-space: 0px; }
 .mobile .setting-controls { gap: 8px; }
 .mobile fieldset { padding: 10px; }
 .mobile .controls { display: none; }
-.mobile #network-bar { height: var(--network-space); padding-top: calc(6px + env(safe-area-inset-top)); gap: 8px; }
+.mobile #network-bar { height: var(--network-space); padding-top: calc(5px + env(safe-area-inset-top)); padding-bottom: 5px; gap: 8px; }
+.mobile #player-role { font-size: 11px; }
+.mobile #network-status { font-size: 10px; }
+.mobile #leave-room { padding: 5px 8px; font-size: 11px; }
 .mobile .local-action:disabled { cursor: default; }
 @media (max-width: 360px) {
   .mobile .setting-controls { grid-template-columns: 1fr; }

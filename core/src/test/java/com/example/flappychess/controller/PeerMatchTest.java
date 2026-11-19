@@ -148,11 +148,16 @@ class PeerMatchTest {
         pair.host.getSession().getWhite().setY(25);
         pair.press(pair.host, Keys.E);
         assertTrue(pair.guest.getSession().getChess().hasPendingPromotion());
+        pair.time.set(Duration.ofSeconds(2).toNanos());
         pair.press(pair.guest, Keys.Q);
         assertTrue(pair.host.getSession().getChess().hasPendingPromotion());
+        assertTrue(pair.host.getSession().getHistory().isEmpty());
+        pair.time.set(Duration.ofSeconds(4).toNanos());
         pair.press(pair.host, Keys.N);
         assertFalse(pair.guest.getSession().getChess().hasPendingPromotion());
         assertEquals(Piece.WHITE_KNIGHT, pair.guest.getSession().getBoardView().getBoard().getPiece(Square.E8));
+        assertEquals(296_000, pair.guest.getSession().getClock().getRemainingMillis(Side.WHITE));
+        assertEquals(300_000, pair.guest.getSession().getClock().getRemainingMillis(Side.BLACK));
     }
 
     @Test void focusReleaseStopsOnlyThePlayerWhoLostFocus() {
