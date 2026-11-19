@@ -539,8 +539,8 @@
           }
           return;
         }
-        attach(candidate, true);
         connectTimeout = setTimeout(() => fail('Your friend could not finish connecting. Please create another room.'), 30000);
+        attach(candidate, true);
       });
       peer.on('error', error => {
         // Signaling may reconnect independently after the data channel is established.
