@@ -29,6 +29,31 @@ export const desktopBirdY = (page, white) => page.evaluate(`new Promise(resolve 
   resolve(800 - (worldY - 36) / 0.91);
 }))`);
 
+/** Bird center X in the 800px board's model coordinates on the desktop layout, or null. */
+export const desktopBirdX = (page, white) => page.evaluate(`new Promise(resolve => requestAnimationFrame(() => {
+  const canvas = document.getElementById('canvas');
+  const context = new OffscreenCanvas(canvas.width, canvas.height).getContext('2d');
+  context.drawImage(canvas, 0, 0);
+  const scale = Math.min(canvas.width / 1600, canvas.height / 800);
+  const viewportLeft = (canvas.width - 1600 * scale) / 2;
+  const boardLeft = viewportLeft + 448 * scale;
+  const boardRight = boardLeft + 712 * scale;
+  const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+  const rgb = ${color(white)};
+  let total = 0, count = 0;
+  for (let i = 0; i < pixels.length; i += 4) {
+    const x = (i / 4) % canvas.width;
+    if (x >= boardLeft && x <= boardRight
+        && pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) {
+      total += x;
+      count++;
+    }
+  }
+  if (!count) { resolve(null); return; }
+  const worldX = (total / count - viewportLeft) / scale;
+  resolve((worldX - 448) / 0.89);
+}))`);
+
 /** Bird center in 800px board coordinates on touch layouts that crop the canvas to the board, or null. */
 export const touchBird = (page, white = true) => page.evaluate(`new Promise(resolve => requestAnimationFrame(() => {
   const canvas = document.getElementById('canvas');

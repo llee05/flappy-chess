@@ -1,12 +1,46 @@
 import assert from 'node:assert/strict';
-import { sleep } from './browser.mjs';
-import { desktopBirdY } from './flight.mjs';
+import { desktopBirdX, desktopBirdY } from './flight.mjs';
 
 export async function checkHistory(browser) {
   const page = await browser.page();
   const { send, evaluate, key, press, until, screenshot } = page;
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
   const birdY = white => desktopBirdY(page, white);
+  const reachFile = async (white, file) => {
+    const left = white ? ['KeyA', 'a', 65] : ['ArrowLeft', 'ArrowLeft', 37];
+    const right = white ? ['KeyD', 'd', 68] : ['ArrowRight', 'ArrowRight', 39];
+    let held = null, previous = null, settled = 0;
+    const hold = async direction => {
+      if (held === direction) return;
+      if (held) await key('keyUp', ...held);
+      held = direction;
+      if (held) await key('keyDown', ...held);
+    };
+    try {
+      await until(async () => {
+        const x = await desktopBirdX(page, white);
+        if (x === null) return false;
+        const center = file * 100 + 50;
+        if (x > center + 40) {
+          settled = 0;
+          await hold(left);
+        } else if (x < center - 40) {
+          settled = 0;
+          await hold(right);
+        } else {
+          await hold(null);
+          // Wing animation shifts the sampled color centroid by a few pixels.
+          settled = previous !== null && Math.abs(x - previous) < 6 ? settled + 1 : 0;
+        }
+        previous = x;
+        return settled >= 3;
+      }, `flying ${white ? 'White' : 'Black'} to file ${String.fromCharCode(97 + file)}`, 15000);
+    } catch (error) {
+      throw new Error(`${error.message}\nLast observed bird X: ${previous}`);
+    } finally {
+      await hold(null);
+    }
+  };
   const reachRank = async (white, top, bottom) => {
     let lastFlap = 0;
     await until(async () => {
@@ -31,10 +65,7 @@ export async function checkHistory(browser) {
   await press('KeyE', 'e', 69);
   await screenshot('history-after-e4');
   await until(async () => (await history()).last === 'e2e4', 'recording e4');
-  await key('keyDown', 'ArrowLeft', 'ArrowLeft', 37);
-  await sleep(250);
-  await key('keyUp', 'ArrowLeft', 'ArrowLeft', 37);
-  await sleep(650);
+  await reachFile(false, 3);
   await reachRank(false, 100, 200);
   await press('Enter', 'Enter', 13);
   await reachRank(false, 300, 400);
@@ -43,10 +74,7 @@ export async function checkHistory(browser) {
   await reachRank(true, 400, 500);
   await press('KeyE', 'e', 69);
   await press('Space', ' ', 32);
-  await key('keyDown', 'KeyA', 'a', 65);
-  await sleep(250);
-  await key('keyUp', 'KeyA', 'a', 65);
-  await sleep(400);
+  await reachFile(true, 3);
   await reachRank(true, 300, 400);
   await press('KeyE', 'e', 69);
   await until(async () => (await history()).last === 'e4d5', 'recording the capture');
