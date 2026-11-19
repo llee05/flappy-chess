@@ -1025,6 +1025,43 @@ class PeerMatchTest {
         }
     }
 
+    @Test void fourSecondStateAgeKeepsReplicaClockCurrentWithoutGuestAdjudication() {
+        AtomicLong now = new AtomicLong();
+        long lagNanos = 4_000_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)),
+                now::get, new MatchSettings(6_000, 0));
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)), now::get);
+        host.open();
+        guest.open();
+        boolean clockAligned = false;
+        boolean guestReachedZeroBeforeResult = false;
+        for (int step = 0; step < 300; step++) {
+            now.addAndGet(50_000_000L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(0.05f);
+            guest.update(0.05f);
+            if (host.isStarted() && guest.isStarted() && !clockAligned) {
+                assertEquals(host.getSession().snapshot().whiteMillis(),
+                        guest.getSession().snapshot().whiteMillis(), 50L);
+                assertEquals(4_000L, guest.getStateAgeMillis(), 50L);
+                clockAligned = true;
+            }
+            if (host.getSession().isGameOver() && guest.getSession().getResult() == null
+                    && guest.getSession().snapshot().whiteMillis() == 0) {
+                guestReachedZeroBeforeResult = true;
+            }
+        }
+
+        assertTrue(clockAligned);
+        assertTrue(guestReachedZeroBeforeResult);
+        assertEquals(host.getSession().getResult(), guest.getSession().getResult());
+        assertFalse(host.isDisconnected());
+        assertFalse(guest.isDisconnected());
+    }
+
     @Test void jitteredSnapshotsDoNotGiveClockTimeBackOrSnapGuestAcrossSquares() {
         AtomicLong now = new AtomicLong();
         var wires = new java.util.ArrayList<DelayedWire>();

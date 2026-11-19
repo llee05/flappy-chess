@@ -308,12 +308,13 @@ public final class PeerMatch extends InputAdapter {
 
     private long computeAuthStep(int ack, long ackSteps) {
         long hostStep = (ack == 0 ? 0L : lastAckedGuestStep) + ackSteps;
-        long stateAgeSteps = Math.round(lastStateAgeNanos * 60.0 / 1_000_000_000.0);
+        long physicsAgeNanos = Math.min(lastStateAgeNanos, MAX_SIMULATION_GAP);
+        long stateAgeSteps = Math.round(physicsAgeNanos * 60.0 / 1_000_000_000.0);
         return hostStep + (ack == 0 ? 0 : stateAgeSteps);
     }
 
     private void advanceReplicaByAge(long stateAgeNanos) {
-        long remaining = stateAgeNanos;
+        long remaining = Math.min(stateAgeNanos, MAX_SIMULATION_GAP);
         while (remaining > 0) {
             long slice = Math.min(remaining, 250_000_000L);
             session.updateReplica(slice / 1_000_000_000f, getOwnSide());
@@ -539,7 +540,7 @@ public final class PeerMatch extends InputAdapter {
             lastRemoteReceivedAt = now;
         }
         long age = hasTimingSample ? (now + clockOffsetNanos) - remoteSentAt : 0L;
-        return Math.max(0L, Math.min(MAX_SIMULATION_GAP, age));
+        return Math.max(0L, Math.min(MAX_WIRE_TIME, age));
     }
 
     /** The sole authoritative timeline, shared by render, timer and input callbacks. */
