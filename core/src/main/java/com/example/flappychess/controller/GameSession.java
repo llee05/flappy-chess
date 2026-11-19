@@ -64,6 +64,8 @@ public final class GameSession extends InputAdapter {
     private final BirbController whiteControls = new BirbController(white, 800, 800);
     private final BirbController blackControls = new BirbController(black, 800, 800, Keys.LEFT, Keys.RIGHT, Keys.UP);
     private double accumulator;
+    private long simulationSteps;
+    private boolean replicaSynchronized;
     private int bumpCooldown;
     private int hitStopSteps;
     private DropReturn dropReturn;
@@ -106,12 +108,14 @@ public final class GameSession extends InputAdapter {
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
             if (hitStopSteps > 0) {
+                simulationSteps++;
                 hitStopSteps--;
                 accumulator -= STEP;
                 continue;
             }
             if (beforeStep != null) beforeStep.run();
             if (isGameOver()) { accumulator = 0; return; }
+            simulationSteps++;
             advanceDropReturn();
             double prevWhiteX = white.getX(), prevWhiteY = white.getY();
             double prevBlackX = black.getX(), prevBlackY = black.getY();
@@ -196,6 +200,7 @@ public final class GameSession extends InputAdapter {
         if (isTimed()) clock.tick(nanoTime.getAsLong(), chess.getSideToMove());
         accumulator += Math.max(0, Math.min(delta, 0.25f));
         while (accumulator + 1e-9 >= STEP) {
+            simulationSteps++;
             if (hitStopSteps > 0) {
                 hitStopSteps--;
                 accumulator -= STEP;
@@ -216,8 +221,37 @@ public final class GameSession extends InputAdapter {
     }
 
     public void restoreReplica(SessionSnapshot state) {
+        restoreReplica(state, 0L);
+    }
+
+    public void restoreReplica(SessionSnapshot state, long stateAgeNanos) {
+        int previousMoves = history.size();
+        Side previousTurn = chess.getSideToMove();
+        boolean wasGameOver = isGameOver();
+        long now = nanoTime.getAsLong();
+        if (replicaSynchronized && isTimed() && !wasGameOver) {
+            clock.tick(now, previousTurn);
+        }
         chess.restoreRemote(state);
-        clock.restore(state.whiteMillis(), state.blackMillis(), nanoTime.getAsLong());
+        long ageNanos = state.settings().timed() && state.result() == null ? Math.max(0L, stateAgeNanos) : 0L;
+        Side activeSide = chess.getSideToMove();
+        long whiteNanos = Math.max(0L, state.whiteMillis() * 1_000_000L - (activeSide == Side.WHITE ? ageNanos : 0L));
+        long blackNanos = Math.max(0L, state.blackMillis() * 1_000_000L - (activeSide == Side.BLACK ? ageNanos : 0L));
+        if (replicaSynchronized && state.settings().timed() && state.result() == null && !wasGameOver
+                && state.history().size() == previousMoves && activeSide == previousTurn) {
+            long currentActive = clock.getRemainingNanos(activeSide);
+            long incomingActive = activeSide == Side.WHITE ? whiteNanos : blackNanos;
+            // Preserve local sub-millisecond phase within the 1ms snapshot truncation window,
+            // and avoid routinely giving time back on small positive transit jitter.
+            if (currentActive > 0
+                    && ((currentActive >= incomingActive && currentActive <= incomingActive + 999_999L)
+                    || (incomingActive > currentActive && incomingActive - currentActive <= 100_000_000L))) {
+                if (activeSide == Side.WHITE) whiteNanos = currentActive;
+                else blackNanos = currentActive;
+            }
+        }
+        clock.restoreNanos(whiteNanos, blackNanos, now);
+        replicaSynchronized = true;
         carrier = state.carrier();
         white.stun(state.whiteStunSteps());
         black.stun(state.blackStunSteps());
@@ -413,6 +447,8 @@ public final class GameSession extends InputAdapter {
     public ChessClock getClock() { return clock; }
     public Birb getWhite() { return white; }
     public Birb getBlack() { return black; }
+    BirbController getControls(Side side) { return side == Side.WHITE ? whiteControls : blackControls; }
+    public long getSimulationSteps() { return simulationSteps; }
     public Side getCarrier() { return carrier; }
     public int getBumpCooldown() { return bumpCooldown; }
     public int getHitStopSteps() { return hitStopSteps; }

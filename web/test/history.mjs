@@ -4,9 +4,51 @@ import { desktopBirdY } from './flight.mjs';
 
 export async function checkHistory(browser) {
   const page = await browser.page();
-  const { send, evaluate, key, press, until, screenshot } = page;
+  const { send, evaluate, key: dispatchKey, until: pollUntil, screenshot } = page;
+  const trace = [], held = new Set();
+  const record = entry => {
+    trace.push({ at: Date.now(), ...entry, held: [...held] });
+    if (trace.length > 200) trace.shift();
+  };
+  const key = async (type, code, value, number) => {
+    if (type === 'keyDown') held.add(code); else if (type === 'keyUp') held.delete(code);
+    record({ type, code });
+    return dispatchKey(type, code, value, number);
+  };
+  const press = async (code, value, number) => {
+    await key('keyDown', code, value, number);
+    await key('keyUp', code, value, number);
+  };
+  const until = async (check, message, timeout) => {
+    try {
+      return await pollUntil(check, message, timeout);
+    } catch (error) {
+      if (error.message.startsWith('Timed out:')) {
+        let state;
+        try {
+          state = await evaluate(`(() => {
+            const data = id => ({...document.getElementById(id).dataset});
+            const feedback = document.getElementById('action-feedback');
+            return {
+              history: data('history-summary'),
+              solo: data('solo-summary'),
+              feedback: {text: feedback.textContent, data: {...feedback.dataset}}
+            };
+          })()`);
+        } catch (diagnosticError) {
+          state = { captureError: diagnosticError.message };
+        }
+        console.error('History timeout diagnostics:', JSON.stringify({ message, state, held: [...held], trace }, null, 2));
+      }
+      throw error;
+    }
+  };
   const history = () => evaluate("({...document.getElementById('history-summary').dataset})");
-  const birdY = white => desktopBirdY(page, white);
+  const birdY = async white => {
+    const y = await desktopBirdY(page, white);
+    record({ type: 'sample', axis: 'y', side: white ? 'white' : 'black', value: y });
+    return y;
+  };
   const reachRank = async (white, top, bottom) => {
     let lastFlap = 0;
     await until(async () => {
