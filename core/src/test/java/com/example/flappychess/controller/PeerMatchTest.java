@@ -1345,15 +1345,8 @@ class PeerMatchTest {
         assertFalse(pair.host.isDisconnected());
     }
 
-    @Test void scheduledInputOverflowDoesNotExecuteAFutureCommandEarly() {
+    @Test void scheduledInputOverflowResetsGuestInputWithoutHoldingADroppedRelease() {
         Pair pair = new Pair();
-        pair.press(pair.host, Keys.E);
-        pair.host.getSession().getWhite().setY(425);
-        pair.press(pair.host, Keys.E);
-        var start = new com.example.flappychess.model.Birb.Motion(370, 125, 0, 0);
-        pair.host.getSession().getBlack().restore(start);
-        pair.guest.getSession().getBlack().restore(start);
-
         pair.guest.keyDown(Keys.D);
         for (int step = 0; step < 12; step++) {
             pair.time.addAndGet(16_666_667L);
@@ -1363,14 +1356,31 @@ class PeerMatchTest {
         }
         pair.guest.keyDown(Keys.E);
         pair.guest.keyUp(Keys.E);
-        for (int input = 0; input < 32; input++) {
+        for (int input = 0; input < 30; input++) {
             pair.guest.keyDown(Keys.A);
             pair.guest.keyUp(Keys.A);
         }
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
         while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
 
+        pair.flush();
         assertNull(pair.host.getSession().getCarrier());
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.guest.getSession().getControls(Side.BLACK).snapshotInput());
+        pair.advance(20);
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
+        pair.flush();
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
         assertFalse(pair.host.isDisconnected());
+        assertFalse(pair.guest.isDisconnected());
     }
 
     @Test void delayedCollisionAdoptsTheAgeProjectedAuthoritativeState() {

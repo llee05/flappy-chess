@@ -192,7 +192,14 @@ public final class PeerMatch extends InputAdapter {
             long interval = Math.max(0L, sentAt - lastCommandSentAt);
             dueAt = Math.max(now, Math.min(now + MAX_COMMAND_DELAY, lastCommandDueAt + interval));
         }
-        if (scheduledInputs.size() >= MAX_SCHEDULED_INPUTS) return;
+        if (scheduledInputs.size() >= MAX_SCHEDULED_INPUTS) {
+            simulationGeneration++;
+            session.releaseInput(getOwnSide().flip());
+            clearScheduledInputs();
+            lastAppliedInputStep = session.getSimulationSteps();
+            sendState();
+            return;
+        }
         lastCommandSentAt = sentAt;
         lastCommandDueAt = dueAt;
         scheduledInputs.addLast(new ScheduledInput(sequence, dueAt, action, down));
