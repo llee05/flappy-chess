@@ -750,6 +750,7 @@ class PeerMatchTest {
     @Test void protocolVersionMatchesExpectedVersion() {
         assertEquals(8, PeerMatch.protocolVersion());
         assertEquals(PeerProtocol.VERSION, PeerMatch.protocolVersion());
+    }
 
     @Test void timeoutAgainstLoneKingResultsInDrawOnBothPeers() {
         Pair pair = new Pair(Duration.ofMillis(1000), "7k/8/8/8/8/8/R7/K7 w - - 0 1");

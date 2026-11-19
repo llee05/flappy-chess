@@ -190,18 +190,6 @@ public class ChessGameModel {
      * @return true if checkmate by this side is legally possible against the opponent's pieces
      */
     public boolean hasSufficientMatingMaterial(Side side) {
-        return hasSufficientMatingMaterial(board, side);
-    }
-
-    /**
-     * Determines whether the specified side has sufficient material on the given board
-     * to checkmate the opponent by any possible series of legal moves (FIDE Laws of Chess, Article 6.9).
-     *
-     * @param board the board to evaluate
-     * @param side the side to check for mating capability
-     * @return true if checkmate by this side is legally possible against the opponent's pieces
-     */
-    public static boolean hasSufficientMatingMaterial(Board board, Side side) {
         long pawns = board.getBitboard(Piece.make(side, PieceType.PAWN));
         long rooks = board.getBitboard(Piece.make(side, PieceType.ROOK));
         long queens = board.getBitboard(Piece.make(side, PieceType.QUEEN));
