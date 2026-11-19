@@ -1,6 +1,6 @@
 (() => {
   'use strict';
-  const PROTOCOL = 5;
+  const PROTOCOL = 6;
   const QUEUE_SLOTS = 8;
   const SLOT_CONNECT_TIMEOUT = 2500;
   const SLOT_CONFIRM_TIMEOUT = 2500;
