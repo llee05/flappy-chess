@@ -471,8 +471,8 @@ public final class PeerMatch extends InputAdapter {
 
     private void beginPredictionHistory() {
         if (!pendingInputs.isEmpty() || latest == null) return;
-        predictionBaseState = latest;
-        predictionBaseStep = Math.min(lastMappedAuthStep, session.getSimulationSteps());
+        predictionBaseState = session.snapshot();
+        predictionBaseStep = session.getSimulationSteps();
         predictionBaseInputState = session.getControls(getOwnSide()).snapshotInput();
     }
 

@@ -898,6 +898,56 @@ class PeerMatchTest {
         assertFalse(pair.toHost.isEmpty());
     }
 
+    @Test void secondDelayedInputBurstStartsFromCurrentReplicaState() {
+        AtomicLong now = new AtomicLong(10_000_000_000L);
+        long lagNanos = 300_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)), now::get);
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)), now::get);
+        host.open();
+        guest.open();
+        for (int step = 0; step < 120 && (!host.isStarted() || !guest.isStarted()); step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertTrue(host.isStarted());
+        assertTrue(guest.isStarted());
+
+        guest.keyDown(Keys.D);
+        for (int step = 0; step < 6; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        guest.keyUp(Keys.D);
+        for (int step = 0; step < 45; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+
+        double secondBurstX = guest.getSession().getBlack().getX();
+        guest.keyDown(Keys.SPACE);
+        guest.keyUp(Keys.SPACE);
+        double minimumX = secondBurstX;
+        for (int step = 0; step < 15; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+            minimumX = Math.min(minimumX, guest.getSession().getBlack().getX());
+        }
+
+        assertTrue(minimumX >= secondBurstX - 1e-7,
+                "Second burst rewound X from " + secondBurstX + " to " + minimumX);
+    }
+
     @Test void delayedLinksKeepGuestClocksAndPredictionAlignedWithIndependentClockOrigins() {
         for (int delayMillis : new int[] {0, 100, 300, 1000}) {
             AtomicLong now = new AtomicLong(10_000_000_000L);
