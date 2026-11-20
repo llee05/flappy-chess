@@ -26,7 +26,9 @@ public final class PeerMatch extends InputAdapter {
             boolean down,
             BirbController.InputState stateAfter) { }
 
-    private record ReplayResult(Birb.Motion motion, int stunSteps) { }
+    private record ReplayResult(Birb.Motion motion, int stunSteps, int hitStopSteps) { }
+
+    private record ScheduledInput(int sequence, long dueAt, GameAction action, boolean down) { }
 
     // Normal background timers can be throttled to one second. Longer gaps cannot
     // safely replay held input, so announce an interruption before resuming flight.
@@ -36,6 +38,10 @@ public final class PeerMatch extends InputAdapter {
     private static final int MAX_INPUT_HISTORY = 512;
     private static final int MAX_REPLAY_STEPS = 180;
     private static final double MAX_IMMEDIATE_CORRECTION = 12.0;
+    // A guest command waits at most this long after arrival to restore the spacing the
+    // guest reported between consecutive commands; it never runs before it arrives.
+    private static final long MAX_COMMAND_DELAY = 250_000_000L;
+    private static final int MAX_SCHEDULED_INPUTS = 64;
 
     private final boolean host;
     private final MatchSeries series = new MatchSeries(MatchSeries.Players.ONLINE);
@@ -45,6 +51,10 @@ public final class PeerMatch extends InputAdapter {
     private final Set<Integer> keys = new HashSet<>();
     private final Set<GameAction> held = new HashSet<>();
     private final ArrayDeque<RecordedInput> pendingInputs = new ArrayDeque<>();
+    private final ArrayDeque<ScheduledInput> scheduledInputs = new ArrayDeque<>();
+    private int receivedInput;
+    private long lastCommandSentAt = -1, lastCommandDueAt;
+    private boolean appliedInput;
     private GameSession session;
     private SessionSnapshot latest;
     private boolean opened, remoteReady, started, disconnected, ownRematch, remoteRematch;
@@ -75,6 +85,7 @@ public final class PeerMatch extends InputAdapter {
     private int pendingReconcileGeneration;
     private boolean hasPendingReconcile;
     private Birb.Motion reconcileTarget;
+    private Birb.Motion otherTarget;
     private int reconcileTargetStun;
     private double reconcileErrorX, reconcileErrorY;
     private String error;
@@ -150,7 +161,9 @@ public final class PeerMatch extends InputAdapter {
         simulatedAt = time.getAsLong();
         interruptedUntil = 0;
         simulationGeneration = 0;
+        otherTarget = null;
         inputSequence = acknowledgedInput = stateSequence = receivedState = 0;
+        clearScheduledInputs();
         lastAppliedInputStep = session.getSimulationSteps();
         resetPredictionHistory(0, 0);
         sendState();
@@ -160,20 +173,53 @@ public final class PeerMatch extends InputAdapter {
         advanceHost();
         if (number(value, "epoch", 1, Integer.MAX_VALUE) != epoch) return;
         int sequence = (int) number(value, "sequence", 1, Integer.MAX_VALUE);
-        if (sequence <= acknowledgedInput) return;
+        if (sequence <= receivedInput) return;
         int generation = (int) number(value, "simulation", 0, Integer.MAX_VALUE);
         if (generation != simulationGeneration || isInterrupted()) return;
         observePacketTiming(value);
-        Side remoteSide = getOwnSide().flip();
-        if (string(value, "type", 16).equals("release")) session.releaseInput(remoteSide);
-        else {
-            GameAction action = GameAction.valueOf(string(value, "action", 12));
-            // A guest never supplies its side, coordinates, board, clock, or outcome.
-            session.command(remoteSide, action, bool(value, "down"));
+        long sentAt = number(value, "sentAt", 0, MAX_WIRE_TIME);
+        // A guest never supplies its side, coordinates, board, clock, or outcome.
+        GameAction action = string(value, "type", 16).equals("release")
+                ? null : GameAction.valueOf(string(value, "action", 12));
+        boolean down = action != null && bool(value, "down");
+        receivedInput = sequence;
+        long now = time.getAsLong();
+        // An ordered backlog can release commands the guest sent apart all at once. Restore the
+        // guest-reported spacing on the host's own timeline, never before arrival and never
+        // more than MAX_COMMAND_DELAY after it, so a guest cannot act in the past or speed up time.
+        long dueAt = now;
+        if (lastCommandSentAt >= 0) {
+            long interval = Math.max(0L, sentAt - lastCommandSentAt);
+            dueAt = Math.max(now, Math.min(now + MAX_COMMAND_DELAY, lastCommandDueAt + interval));
         }
-        acknowledgedInput = sequence;
+        if (scheduledInputs.size() >= MAX_SCHEDULED_INPUTS) {
+            simulationGeneration++;
+            session.releaseInput(getOwnSide().flip());
+            clearScheduledInputs();
+            lastAppliedInputStep = session.getSimulationSteps();
+            sendState();
+            return;
+        }
+        lastCommandSentAt = sentAt;
+        lastCommandDueAt = dueAt;
+        scheduledInputs.addLast(new ScheduledInput(sequence, dueAt, action, down));
+        advanceHost();
+    }
+
+    private void applyGuestInput(ScheduledInput input) {
+        Side remoteSide = getOwnSide().flip();
+        if (input.action() == null) session.releaseInput(remoteSide);
+        else session.command(remoteSide, input.action(), input.down());
+        acknowledgedInput = input.sequence();
         lastAppliedInputStep = session.getSimulationSteps();
-        sendState();
+        appliedInput = true;
+    }
+
+    private void clearScheduledInputs() {
+        scheduledInputs.clear();
+        receivedInput = acknowledgedInput;
+        lastCommandSentAt = -1;
+        lastCommandDueAt = 0;
     }
 
     private void receiveState(JsonValue value) {
@@ -203,6 +249,7 @@ public final class PeerMatch extends InputAdapter {
             throw new IllegalArgumentException("Unagreed color swap");
         }
         if (resetInput) interruptLocalInput();
+        boolean generationChanged = generation != simulationGeneration;
         simulationGeneration = generation;
         remoteInterrupted = interrupted;
         staleHost = false;
@@ -219,29 +266,51 @@ public final class PeerMatch extends InputAdapter {
             session.getWhite().restore(state.white());
             session.getBlack().restore(state.black());
             session.restoreReplica(state, stateAgeNanos);
+            long snapshotStep = session.getSimulationSteps();
             advanceReplicaByAge(stateAgeNanos);
+            projectOtherBird(state, snapshotStep);
             latest = session.snapshot();
             lastMappedAuthStep = session.getSimulationSteps();
             resetPredictionHistory(0, 0);
         } else if (state.result() != null || bumped || resetInput) {
             session.restoreReplica(state, stateAgeNanos);
             Birb own = getOwnSide() == Side.WHITE ? session.getWhite() : session.getBlack();
-            Birb.Motion motion = getOwnSide() == Side.WHITE ? state.white() : state.black();
-            own.reconcile(motion, 1);
-            own.stun(getOwnSide() == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps());
-            if (state.result() != null || bumped) {
+            // Guest step at which the host acknowledged input; result snapshots are frozen.
+            long ackedStep = session.getSimulationSteps() - ackSteps;
+            if (state.result() == null && !interrupted) {
+                // Flight continued on the host while this snapshot was in transit: adopt the
+                // authoritative collision or recovery state where it is now, not where it was.
+                long snapshotStep = snapshotStep(ack, ackSteps, resetInput);
+                // Re-anchor so later snapshots map onto the same projected timeline.
+                ackedStep = snapshotStep - ackSteps - stateAgeSteps();
+                ReplayResult projected = projectOwnBird(state, ack, generation, snapshotStep, generationChanged);
+                own.restore(projected.motion());
+                own.stun(projected.stunSteps());
+                long ageStep = ageProjectionStep();
+                projectOtherBird(state, ageStep);
+                session.elapseReplicaEffects(session.getSimulationSteps() - ageStep);
+            } else {
+                // Results and interruptions freeze flight, so the snapshot is still current.
+                own.reconcile(getOwnSide() == Side.WHITE ? state.white() : state.black(), 1);
+                own.stun(getOwnSide() == Side.WHITE ? state.whiteStunSteps() : state.blackStunSteps());
+            }
+            if (state.result() != null || interrupted) {
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
                 other.reconcile(getOwnSide() == Side.WHITE ? state.black() : state.white(), 1);
                 other.stun(getOwnSide() == Side.WHITE ? state.blackStunSteps() : state.whiteStunSteps());
+                if (state.result() != null) otherTarget = null;
             }
             if (bumped && state.result() == null && !resetInput) {
-                rebasePredictionHistory(state, ack, ackSteps, generation);
+                rebasePredictionHistory(state, ack, generation, snapshotStep(ack, ackSteps, false));
             } else {
-                resetPredictionHistory(ack, session.getSimulationSteps() - ackSteps);
+                resetPredictionHistory(ack, ackedStep);
             }
         } else {
             session.restoreReplica(state, stateAgeNanos);
             scheduleOrReconcileOwnBird(state, ack, ackSteps, generation);
+            long ageStep = ageProjectionStep();
+            projectOtherBird(state, ageStep);
+            session.elapseReplicaEffects(session.getSimulationSteps() - ageStep);
         }
         remoteRematch = bool(value, "hostRematch");
         remoteSwap = bool(value, "hostSwap");
@@ -268,7 +337,9 @@ public final class PeerMatch extends InputAdapter {
                     applyReconcileSmoothing(delta);
                 }
                 Birb other = getOwnSide() == Side.WHITE ? session.getBlack() : session.getWhite();
-                other.reconcile(getOwnSide() == Side.WHITE ? latest.black() : latest.white(),
+                Birb.Motion target = otherTarget != null ? otherTarget
+                        : getOwnSide() == Side.WHITE ? latest.black() : latest.white();
+                other.reconcile(target,
                         1 - Math.exp(-16 * Math.max(0, delta)));
             }
         }
@@ -308,9 +379,16 @@ public final class PeerMatch extends InputAdapter {
 
     private long computeAuthStep(int ack, long ackSteps) {
         long hostStep = (ack == 0 ? 0L : lastAckedGuestStep) + ackSteps;
+        return hostStep + (ack == 0 ? 0 : stateAgeSteps());
+    }
+
+    private long stateAgeSteps() {
         long physicsAgeNanos = Math.min(lastStateAgeNanos, MAX_SIMULATION_GAP);
-        long stateAgeSteps = Math.round(physicsAgeNanos * 60.0 / 1_000_000_000.0);
-        return hostStep + (ack == 0 ? 0 : stateAgeSteps);
+        return Math.round(physicsAgeNanos * 60.0 / 1_000_000_000.0);
+    }
+
+    private long ageProjectionStep() {
+        return Math.max(0, session.getSimulationSteps() - Math.min(MAX_REPLAY_STEPS, stateAgeSteps()));
     }
 
     private void advanceReplicaByAge(long stateAgeNanos) {
@@ -361,30 +439,77 @@ public final class PeerMatch extends InputAdapter {
         }
         if (usingPredictionBase && currentStep - startStep > MAX_REPLAY_STEPS) {
             Birb own = ownSide == Side.WHITE ? session.getWhite() : session.getBlack();
-            return new ReplayResult(own.snapshot(), own.getStunSteps());
+            return new ReplayResult(own.snapshot(), own.getStunSteps(), session.getHitStopSteps());
         }
-        Birb.Motion baseMotion = ownSide == Side.WHITE ? replayState.white() : replayState.black();
-        int baseStun = ownSide == Side.WHITE ? replayState.whiteStunSteps() : replayState.blackStunSteps();
+        return simulateBird(replayState, ownSide, replayInputState, startStep, currentStep, generation, true);
+    }
+
+    /**
+     * Guest step at which an active-flight snapshot was authoritative: its measured age before
+     * now. During recovery the guest's own steps stopped while it waited, so only that age
+     * locates the snapshot. Otherwise the acknowledgement mapping of normal reconciliation can
+     * show the snapshot is older (for example before timing samples exist), and the older wins.
+     */
+    private long snapshotStep(int ack, long ackSteps, boolean recovering) {
+        long currentStep = session.getSimulationSteps();
+        long step = currentStep - stateAgeSteps();
+        if (!recovering) step = Math.min(step, computeAuthStep(ack, ackSteps));
+        return Math.max(currentStep - MAX_REPLAY_STEPS, Math.min(step, currentStep));
+    }
+
+    /**
+     * Projects an authoritative active-flight snapshot forward to the guest's present,
+     * replaying only input the host had not applied when it sent the snapshot.
+     */
+    private ReplayResult projectOwnBird(SessionSnapshot state, int ack, int generation, long snapshotStep,
+            boolean generationChanged) {
+        pruneAcknowledgedInputs(ack, generation);
+        while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
+            pendingInputs.removeFirst();
+        }
+        // A new simulation generation starts with every held input released on the host.
+        BirbController.InputState inputState = generationChanged
+                ? new BirbController.InputState(false, false, false) : lastAckedInputState;
+        return simulateBird(state, getOwnSide(), inputState, snapshotStep, session.getSimulationSteps(), generation, true);
+    }
+
+    private void projectOtherBird(SessionSnapshot state, long snapshotStep) {
+        Side otherSide = getOwnSide().flip();
+        Birb other = otherSide == Side.WHITE ? session.getWhite() : session.getBlack();
+        ReplayResult projected = simulateBird(state, otherSide, session.getControls(otherSide).snapshotInput(),
+                snapshotStep, session.getSimulationSteps(), simulationGeneration, false);
+        other.restore(projected.motion());
+        other.stun(projected.stunSteps());
+        otherTarget = projected.motion();
+    }
+
+    private ReplayResult simulateBird(SessionSnapshot replayState, Side side,
+            BirbController.InputState replayInputState, long startStep, long currentStep, int generation,
+            boolean replayPendingInput) {
+        Birb.Motion baseMotion = side == Side.WHITE ? replayState.white() : replayState.black();
+        int baseStun = side == Side.WHITE ? replayState.whiteStunSteps() : replayState.blackStunSteps();
         int replayHitStop = replayState.hitStopSteps();
-        Birb scratchBird = new Birb(baseMotion.x(), baseMotion.y(), 50, 50, ownSide == Side.WHITE ? 1 : -1);
+        Birb scratchBird = new Birb(baseMotion.x(), baseMotion.y(), 50, 50, side == Side.WHITE ? 1 : -1);
         scratchBird.restore(baseMotion);
         scratchBird.stun(baseStun);
-        BirbController scratchControls = ownSide == Side.WHITE
+        BirbController scratchControls = side == Side.WHITE
                 ? new BirbController(scratchBird, 800, 800)
                 : new BirbController(scratchBird, 800, 800,
                         com.badlogic.gdx.Input.Keys.LEFT, com.badlogic.gdx.Input.Keys.RIGHT, com.badlogic.gdx.Input.Keys.UP);
         scratchControls.restoreInput(replayInputState);
 
-        for (RecordedInput input : pendingInputs) {
-            if (input.generation() == generation && input.guestStep() <= startStep) {
-                applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
+        if (replayPendingInput) {
+            for (RecordedInput input : pendingInputs) {
+                if (input.generation() == generation && input.guestStep() <= startStep) {
+                    applyReplayInput(scratchControls, side, replayState, replayHitStop, input);
+                }
             }
         }
         for (long step = startStep; step < currentStep; step++) {
-            if (step > startStep) {
+            if (replayPendingInput && step > startStep) {
                 for (RecordedInput input : pendingInputs) {
                     if (input.generation() == generation && input.guestStep() == step) {
-                        applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
+                        applyReplayInput(scratchControls, side, replayState, replayHitStop, input);
                     }
                 }
             }
@@ -394,14 +519,14 @@ public final class PeerMatch extends InputAdapter {
                 scratchControls.update();
             }
         }
-        if (currentStep > startStep) {
+        if (replayPendingInput && currentStep > startStep) {
             for (RecordedInput input : pendingInputs) {
                 if (input.generation() == generation && input.guestStep() >= currentStep) {
-                    applyReplayInput(scratchControls, ownSide, replayState, replayHitStop, input);
+                    applyReplayInput(scratchControls, side, replayState, replayHitStop, input);
                 }
             }
         }
-        return new ReplayResult(scratchBird.snapshot(), scratchBird.getStunSteps());
+        return new ReplayResult(scratchBird.snapshot(), scratchBird.getStunSteps(), Math.max(0, replayHitStop));
     }
 
     private static void applyReplayInput(BirbController controls, Side ownSide, SessionSnapshot state,
@@ -451,12 +576,12 @@ public final class PeerMatch extends InputAdapter {
         reconcileErrorX = reconcileErrorY = 0;
     }
 
-    private void rebasePredictionHistory(SessionSnapshot state, int ack, long ackSteps, int generation) {
+    private void rebasePredictionHistory(SessionSnapshot state, int ack, int generation, long baseStep) {
         pruneAcknowledgedInputs(ack, generation);
         while (!pendingInputs.isEmpty() && pendingInputs.peekFirst().sequence() <= ack) {
             pendingInputs.removeFirst();
         }
-        lastMappedAuthStep = Math.min(computeAuthStep(ack, ackSteps), session.getSimulationSteps());
+        lastMappedAuthStep = Math.min(baseStep, session.getSimulationSteps());
         if (pendingInputs.isEmpty()) {
             predictionBaseState = null;
             predictionBaseInputState = null;
@@ -547,6 +672,7 @@ public final class PeerMatch extends InputAdapter {
     private void advanceHost() {
         if (!host || !started || disconnected) return;
         long now = time.getAsLong();
+        long from = Math.min(simulatedAt, now);
         long elapsed = Math.max(0, now - simulatedAt);
         simulatedAt = Math.max(simulatedAt, now);
         int before = lastFeedbackSequence();
@@ -556,6 +682,7 @@ public final class PeerMatch extends InputAdapter {
             interruptedUntil = now + RECOVERY_NOTICE;
             interruptLocalInput();
             session.releaseInput();
+            clearScheduledInputs();
             lastAppliedInputStep = session.getSimulationSteps();
         }
         if (interruptedUntil != 0) {
@@ -563,17 +690,39 @@ public final class PeerMatch extends InputAdapter {
             session.update(0);
             if (now >= interruptedUntil) interruptedUntil = 0;
         } else {
+            long cursor = from;
+            while (!scheduledInputs.isEmpty() && scheduledInputs.peekFirst().dueAt() <= now
+                    && !session.isGameOver()) {
+                ScheduledInput next = scheduledInputs.removeFirst();
+                long dueAt = Math.max(cursor, next.dueAt());
+                simulateHost(cursor, dueAt);
+                cursor = dueAt;
+                // The clock charges the mover up to the command's place on the host timeline.
+                if (!session.isGameOver()) session.atClockTime(dueAt, () -> applyGuestInput(next));
+            }
+            simulateHost(cursor, now);
+        }
+        if (session.isGameOver()) {
+            interruptedUntil = 0;
+            scheduledInputs.clear();
+        }
+        boolean applied = appliedInput;
+        appliedInput = false;
+        if (applied || wasInterrupted != isInterrupted() || lastFeedbackSequence() != before) sendState();
+    }
+
+    private void simulateHost(long from, long to) {
+        session.atClockTime(to, () -> {
             // Keep GameSession's per-update safety cap, but consume every normal
             // timer interval (including one-second browser throttling) exactly once.
             session.update(0);
-            while (elapsed > 0 && !session.isGameOver()) {
-                long slice = Math.min(elapsed, 250_000_000L);
+            long remaining = to - from;
+            while (remaining > 0 && !session.isGameOver()) {
+                long slice = Math.min(remaining, 250_000_000L);
                 session.update(slice / 1_000_000_000f);
-                elapsed -= slice;
+                remaining -= slice;
             }
-        }
-        if (session.isGameOver()) interruptedUntil = 0;
-        if (wasInterrupted != isInterrupted() || lastFeedbackSequence() != before) sendState();
+        });
     }
 
     private int lastFeedbackSequence() {
@@ -728,10 +877,12 @@ public final class PeerMatch extends InputAdapter {
         keys.clear();
         held.clear();
         pendingInputs.clear();
+        scheduledInputs.clear();
         predictionBaseState = null;
         predictionBaseInputState = null;
         hasPendingReconcile = false;
         reconcileTarget = null;
+        otherTarget = null;
         reconcileErrorX = reconcileErrorY = 0;
     }
 

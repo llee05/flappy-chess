@@ -1274,6 +1274,233 @@ class PeerMatchTest {
         assertTrue(Math.abs(guest.getSession().snapshot().blackMillis() - host.getSession().snapshot().blackMillis()) <= 20);
     }
 
+    @Test void burstDeliveredGuestCommandsKeepTheirSpacingAcrossASquareBoundary() {
+        Pair pair = new Pair();
+        pair.press(pair.host, Keys.E);
+        pair.host.getSession().getWhite().setY(425);
+        pair.press(pair.host, Keys.E);
+        assertEquals(Side.BLACK, pair.host.getSession().getChess().getSideToMove());
+        // Bird centre (395, 150) is on d7, five pixels left of the e-file.
+        var start = new com.example.flappychess.model.Birb.Motion(370, 125, 0, 0);
+        pair.host.getSession().getBlack().restore(start);
+        pair.guest.getSession().getBlack().restore(start);
+
+        pair.guest.keyDown(Keys.D);
+        for (int step = 0; step < 12; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.update(1f / 60);
+            pair.guest.update(1f / 60);
+            pair.toGuest.clear();
+        }
+        // The guest saw its bird cross into e7 before picking up 200 ms after steering.
+        assertEquals(Square.E7, birdSquare(pair.guest.getSession().getBlack()));
+        pair.guest.keyDown(Keys.E);
+        pair.guest.keyUp(Keys.E);
+        // An ordered backlog releases steering and pickup to the host together.
+        while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
+        pair.toGuest.clear();
+        pair.advance(15);
+
+        assertEquals(Side.BLACK, pair.host.getSession().getCarrier());
+        assertEquals(Square.E7, pair.host.getSession().getBoardView().getHiddenPieceSquare());
+        assertEquals(Square.E7, pair.guest.getSession().getBoardView().getHiddenPieceSquare());
+    }
+
+    @Test void scheduledGuestCommandsNeverRunBeforeArrivalOrBeyondTheBacklogBound() {
+        Pair pair = new Pair();
+        pair.advance(120);
+        pair.guest.keyDown(Keys.D);
+        pair.guest.keyUp(Keys.D);
+        String press = pair.toHost.remove();
+        JsonValue release = parse(pair.toHost.remove());
+        long pressSentAt = parse(press).getLong("sentAt");
+        long claimed = pressSentAt + 10_000_000_000L; // A guest claims a ten-second gap.
+        release.get("sentAt").set(claimed, Long.toString(claimed));
+
+        BirbController.InputState idle = pair.host.getSession().getControls(Side.BLACK).snapshotInput();
+        assertFalse(idle.right());
+        pair.host.receive(press);
+        pair.host.receive(encode(release));
+        assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right());
+        for (int step = 0; step < 14; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.pulse();
+            assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right(), "step " + step);
+        }
+        pair.time.addAndGet(16_666_667L);
+        pair.host.pulse();
+        assertFalse(pair.host.getSession().getControls(Side.BLACK).snapshotInput().right());
+
+        // Out-of-order guest timestamps cannot postpone a command either.
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
+        String left = pair.toHost.remove();
+        JsonValue leftRelease = parse(pair.toHost.remove());
+        long earlier = parse(left).getLong("sentAt") - 1_000_000_000L;
+        leftRelease.get("sentAt").set(earlier, Long.toString(earlier));
+        pair.host.receive(left);
+        assertTrue(pair.host.getSession().getControls(Side.BLACK).snapshotInput().left());
+        pair.host.receive(encode(leftRelease));
+        assertFalse(pair.host.getSession().getControls(Side.BLACK).snapshotInput().left());
+        assertFalse(pair.host.isDisconnected());
+    }
+
+    @Test void scheduledInputOverflowResetsGuestInputWithoutHoldingADroppedRelease() {
+        Pair pair = new Pair();
+        pair.guest.keyDown(Keys.D);
+        for (int step = 0; step < 12; step++) {
+            pair.time.addAndGet(16_666_667L);
+            pair.host.update(1f / 60);
+            pair.guest.update(1f / 60);
+            pair.toGuest.clear();
+        }
+        pair.guest.keyDown(Keys.E);
+        pair.guest.keyUp(Keys.E);
+        for (int input = 0; input < 30; input++) {
+            pair.guest.keyDown(Keys.A);
+            pair.guest.keyUp(Keys.A);
+        }
+        pair.guest.keyDown(Keys.SPACE);
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
+        while (!pair.toHost.isEmpty()) pair.host.receive(pair.toHost.remove());
+
+        pair.flush();
+        assertNull(pair.host.getSession().getCarrier());
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.guest.getSession().getControls(Side.BLACK).snapshotInput());
+        pair.advance(20);
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
+        pair.guest.keyDown(Keys.A);
+        pair.guest.keyUp(Keys.A);
+        pair.flush();
+        assertEquals(new BirbController.InputState(false, false, false),
+                pair.host.getSession().getControls(Side.BLACK).snapshotInput());
+        assertFalse(pair.host.isDisconnected());
+        assertFalse(pair.guest.isDisconnected());
+    }
+
+    @Test void delayedCollisionAdoptsTheAgeProjectedAuthoritativeState() {
+        AtomicLong now = new AtomicLong(10_000_000_000L);
+        long lagNanos = 1_000_000_000L;
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, false, text)), now::get);
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)), now::get);
+        host.open();
+        guest.open();
+        for (int step = 0; step < 360; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertTrue(host.isStarted() && guest.isStarted());
+
+        host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 625, 0, 0));
+        host.keyDown(Keys.E);
+        host.keyUp(Keys.E);
+        assertEquals(Side.WHITE, host.getSession().getCarrier());
+        host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        int received = 0;
+        boolean adopted = false;
+        double projectedWhiteY = -1;
+        for (int step = 0; step < 120 && received < 20; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            if (!adopted && guest.getSession().getLastBump() != null) {
+                adopted = true;
+                // The collision happened a second ago; the guest adopts where it is now.
+                assertEquals(0, guest.getSession().getHitStopSteps());
+                assertEquals(0, guest.getSession().getWhite().getStunSteps());
+                assertNull(guest.getSession().getDropReturn());
+                assertEquals(host.getSession().getWhite().getX(), guest.getSession().getWhite().getX(), 4.0);
+                assertEquals(host.getSession().getWhite().getY(), guest.getSession().getWhite().getY(), 4.0);
+                projectedWhiteY = guest.getSession().getWhite().getY();
+                assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 4.0);
+                assertEquals(host.getSession().getBlack().getY(), guest.getSession().getBlack().getY(), 4.0);
+            }
+            double beforeX = guest.getSession().getBlack().getX();
+            guest.update(1f / 60);
+            if (adopted) {
+                received++;
+                assertEquals(0, guest.getSession().getHitStopSteps(), "late hit-stop after " + received);
+                assertNotEquals(beforeX, guest.getSession().getBlack().getX(), "frozen after " + received);
+                assertTrue(guest.getSession().getWhite().getY() >= projectedWhiteY);
+                assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 4.0);
+            }
+        }
+        assertTrue(adopted);
+        assertEquals(1, host.getSession().getFeedback().events().stream()
+                .filter(event -> event.kind() == GameFeedback.Kind.BUMP_DROP).count());
+        assertFalse(guest.isDisconnected());
+    }
+
+    @Test void delayedRecoverySnapshotAdoptsTheAgeProjectedAuthoritativeState() {
+        AtomicLong now = new AtomicLong(10_000_000_000L);
+        long lagNanos = 1_000_000_000L;
+        boolean[] dropToGuest = {false};
+        var wires = new java.util.ArrayList<DelayedWire>();
+        PeerMatch host = new PeerMatch(true, text -> {
+            if (!dropToGuest[0]) wires.add(new DelayedWire(now.get() + lagNanos, false, text));
+        }, now::get);
+        PeerMatch guest = new PeerMatch(false,
+                text -> wires.add(new DelayedWire(now.get() + lagNanos, true, text)), now::get);
+        host.open();
+        guest.open();
+        for (int step = 0; step < 360; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        // The guest stops hearing the host long enough to pause its own flight.
+        dropToGuest[0] = true;
+        for (int step = 0; step < 300; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertTrue(guest.isInterrupted());
+        assertFalse(host.isInterrupted());
+        host.getSession().getWhite().restore(new com.example.flappychess.model.Birb.Motion(425, 425, 0, 0));
+        host.getSession().getBlack().restore(new com.example.flappychess.model.Birb.Motion(455, 425, -3.6, 0));
+        dropToGuest[0] = false;
+        boolean recovered = false;
+        for (int step = 0; step < 120 && !recovered; step++) {
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            recovered = !guest.isInterrupted();
+            if (!recovered) guest.update(1f / 60);
+        }
+        assertNotNull(guest.getSession().getLastBump());
+        assertEquals(host.getSession().getWhite().getX(), guest.getSession().getWhite().getX(), 5.0);
+        assertEquals(host.getSession().getWhite().getY(), guest.getSession().getWhite().getY(), 5.0);
+        // The recovery snapshot is a second old; the guest resumes where its bird is now,
+        // and later snapshots keep mapping onto that projected timeline.
+        for (int step = 0; step < 90; step++) {
+            assertEquals(host.getSession().getBlack().getX(), guest.getSession().getBlack().getX(), 5.0, "step " + step);
+            assertEquals(host.getSession().getBlack().getY(), guest.getSession().getBlack().getY(), 5.0, "step " + step);
+            now.addAndGet(16_666_667L);
+            deliverDueWires(wires, now.get(), host, guest, null);
+            host.update(1f / 60);
+            guest.update(1f / 60);
+        }
+        assertFalse(guest.isDisconnected());
+    }
+
+    private static Square birdSquare(com.example.flappychess.model.Birb bird) {
+        return com.example.flappychess.view.ChessBoardView.squareForPoint(bird.getX() + 25, bird.getY() + 25);
+    }
+
     @Test void invalidTimingEchoInStatePacketDisconnectsGuest() {
         Pair pair = new Pair();
         pair.host.keyDown(Keys.D);
