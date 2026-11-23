@@ -323,6 +323,11 @@ promotion/game-over screens. Square coordinates, legal destination diamonds,
 capture brackets, and a coral check warning keep the board readable. The active
 clock changes to a warning color in the final 30 seconds.
 
+The desktop setup and browser main menu use an original procedural pixel sky.
+Distant clouds sit behind flying birds; nearer clouds cover the distant birds,
+while foreground birds fly over both cloud layers. The browser respects reduced
+motion for the menu flights.
+
 `PixelSprites` and `PixelFont` build their small texture atlases from original
 code-defined artwork at startup. An 800x400 framebuffer is scaled with nearest
 filtering inside the 1600x800 logical fit viewport, keeping the pixel grid

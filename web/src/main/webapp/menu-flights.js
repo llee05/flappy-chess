@@ -102,6 +102,7 @@
     context.setTransform(ratio, 0, 0, ratio, 0, 0);
     context.imageSmoothingEnabled = false;
     resetBirds();
+    draw(0);
   }
 
   function resetBird(bird, index, initial) {
@@ -109,6 +110,7 @@
     const availableTracks = mobile ? mobileTracks : tracks;
     bird.direction = index % 2 === 0 ? 1 : -1;
     bird.side = index % 2;
+    bird.foreground = index % 2 === 1;
     bird.piece = pieceChoices[(index * 2 + Math.floor(Math.random() * 3)) % pieceChoices.length];
     bird.scale = mobile ? 0.72 + Math.random() * 0.13 : 0.78 + Math.random() * 0.3;
     bird.speed = (mobile ? 34 : 45) + Math.random() * (mobile ? 18 : 38);
@@ -173,9 +175,36 @@
     context.restore();
   }
 
+  // Hand-authored rectangular silhouettes on a four-pixel grid, never smoothed.
+  function drawCloud(x, y, scale, foreground) {
+    const pixel = 4 * scale;
+    const left = Math.round(x / pixel) * pixel;
+    const top = Math.round(y / pixel) * pixel;
+    context.fillStyle = foreground ? '#b6ddee' : '#a1cfe8';
+    context.fillRect(left, top + 5 * pixel, 30 * pixel, 5 * pixel);
+    context.fillStyle = foreground ? '#f3fbff' : '#d4edf7';
+    context.fillRect(left + 2 * pixel, top + 4 * pixel, 26 * pixel, 4 * pixel);
+    context.fillRect(left + 6 * pixel, top + pixel, 9 * pixel, 6 * pixel);
+    context.fillRect(left + 8 * pixel, top, 5 * pixel, 2 * pixel);
+    context.fillRect(left + 17 * pixel, top + 2 * pixel, 7 * pixel, 5 * pixel);
+  }
+
+  function drawCloudLayer(foreground) {
+    const scale = width <= 720 ? 0.75 : 1.5;
+    // Front clouds cross the flight tracks, hiding the distant birds as they pass.
+    const clouds = foreground
+      ? [[0.09, 0.16], [0.68, 0.34], [0.26, 0.60], [0.77, 0.79]]
+      : [[0.35, 0.06], [0.82, 0.12], [0.02, 0.45], [0.52, 0.72], [0.10, 0.89]];
+    for (const [x, y] of clouds) drawCloud(x * width - 60 * scale, y * height, scale, foreground);
+  }
+
   function draw(time) {
-    context.clearRect(0, 0, width, height);
-    for (const bird of birds) drawBird(bird, time);
+    context.fillStyle = '#68b5e5';
+    context.fillRect(0, 0, width, height);
+    drawCloudLayer(false);
+    for (const bird of birds) if (!bird.foreground) drawBird(bird, time);
+    drawCloudLayer(true);
+    for (const bird of birds) if (bird.foreground) drawBird(bird, time);
   }
 
   function animate(time) {
