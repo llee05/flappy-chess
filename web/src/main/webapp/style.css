@@ -639,13 +639,13 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   --lobby-wood-light: #79465a;
   overflow: hidden;
   color: var(--lobby-cream);
-  background: #4c356c;
+  background: #68b5e5;
 }
 #welcome.menu-open { overflow-y: auto; }
 #welcome::before {
-  background: #4c356c url('./art/lobby-park-background-redesign.webp') center center / cover no-repeat;
-  filter: saturate(.88) brightness(.86);
-  transform: scale(1.015);
+  background: #68b5e5;
+  filter: none;
+  transform: none;
 }
 #welcome::after {
   content: '';
@@ -653,9 +653,7 @@ body[data-room-state="searching"] .lobby-details { display: none; }
   z-index: 0;
   inset: 0;
   pointer-events: none;
-  background:
-    linear-gradient(90deg, #21162ac7 0, #2e1c3587 25%, transparent 51%),
-    linear-gradient(0deg, #24172d78 0, transparent 38%, #24172d20 100%);
+  background: transparent;
 }
 #welcome > * { z-index: 1; }
 #menu-flights {

@@ -55,6 +55,11 @@ public final class GameRenderer implements Disposable {
     private static final Color GOLD = Color.valueOf("efb95b");
     private static final Color GOLD_BRIGHT = Color.valueOf("ffe5a1");
     private static final Color BLUE = Color.valueOf("78c4d0");
+    private static final Color MENU_SKY = Color.valueOf("68b5e5");
+    private static final Color MENU_CLOUD_FAR = Color.valueOf("d4edf7");
+    private static final Color MENU_CLOUD_FAR_SHADE = Color.valueOf("a1cfe8");
+    private static final Color MENU_CLOUD_NEAR = Color.valueOf("f3fbff");
+    private static final Color MENU_CLOUD_NEAR_SHADE = Color.valueOf("b6ddee");
     private static final Color SKY_HIGH = Color.valueOf("1c2e48");
     private static final Color SKY_MID = Color.valueOf("2c4559");
     private static final Color SKY_LOW = Color.valueOf("345569");
@@ -679,9 +684,56 @@ public final class GameRenderer implements Disposable {
         batch.end();
     }
 
+    /** Menu-only scenery: far clouds, distant birds, near clouds, foreground birds. */
+    private void drawMenuSky() {
+        rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, MENU_SKY);
+        menuCloud(80, 650, false);
+        menuCloud(920, 690, false);
+        menuCloud(1100, 310, false);
+        menuCloud(400, 70, false);
+        shapes.end();
+        batch.begin();
+        menuBird(0, 180, 48);
+        menuBird(1, 600, 48);
+        batch.end();
+        beginShapes();
+        menuCloud(180, 160, true);
+        menuCloud(1220, 580, true);
+        menuCloud(20, 390, true);
+        menuCloud(1120, 80, true);
+        shapes.end();
+        batch.begin();
+        menuBird(2, 710, 64);
+        menuBird(3, 120, 64);
+        batch.end();
+        beginShapes();
+    }
+
+    private void menuCloud(float x, float y, boolean near) {
+        float p = 6;
+        rect(x, y, 30 * p, 5 * p, near ? MENU_CLOUD_NEAR_SHADE : MENU_CLOUD_FAR_SHADE);
+        Color light = near ? MENU_CLOUD_NEAR : MENU_CLOUD_FAR;
+        rect(x + 2 * p, y + 2 * p, 26 * p, 4 * p, light);
+        rect(x + 6 * p, y + 3 * p, 9 * p, 6 * p, light);
+        rect(x + 8 * p, y + 8 * p, 5 * p, 2 * p, light);
+        rect(x + 17 * p, y + 3 * p, 7 * p, 5 * p, light);
+    }
+
+    private void menuBird(int index, float y, float size) {
+        boolean right = index % 2 == 0;
+        float progress = ((reducedMotion ? 0 : animationTime * (index < 2 ? 42 : 62))
+                + index * 410 + 140) % (WORLD_WIDTH + 160);
+        float x = right ? progress - 80 : WORLD_WIDTH + 80 - progress;
+        int frame = reducedMotion ? 1 : (int) (animationTime * 8 + index) % 3;
+        float bob = reducedMotion ? 0 : (float) Math.sin(animationTime * 2 + index) * 8;
+        batch.setColor(Color.WHITE);
+        batch.draw(sprites.bird(right ? Side.WHITE : Side.BLACK, frame),
+                snap(x + (right ? 0 : size)), snap(y + bob), right ? size : -size, size);
+    }
+
     private void setupOverlay(MatchSetup setup) {
         beginShapes();
-        rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, VEIL);
+        drawMenuSky();
         stepped(492, 146, 616, 510, PANEL, EDGE);
         stepped(580, 500, 216, 44, CARD, EDGE);
         stepped(804, 500, 216, 44, CARD, EDGE);
