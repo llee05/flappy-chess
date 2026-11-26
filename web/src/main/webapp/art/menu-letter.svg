@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="48" viewBox="0 0 144 48" shape-rendering="crispEdges">
+<g transform="translate(87 10) scale(-1 1)">
+<path d="M0 0H6V2H12V4H18V6H23V9H19V12H15V15H9V13H5V10H2V6H0Z" fill="#fff1ce" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<path d="M3 3H6V5H13V7H19V9H12V8H7V6H4ZM7 9H11V11H16V12H11V11H8Z" fill="#d9aa72"/>
+</g>
+<g transform="translate(124 4)">
+<path d="M0 0H6V2H12V4H18V6H23V9H19V12H15V15H9V13H5V10H2V6H0Z" fill="#fff1ce" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<path d="M3 3H6V5H13V7H19V9H12V8H7V6H4ZM7 9H11V11H16V12H11V11H8Z" fill="#d9aa72"/>
+</g>
+<path d="M83 20L120 13L125 38L88 45Z" fill="#e5b779" stroke="#60372f" stroke-width="1.5" stroke-linejoin="miter"/>
+<path d="M85 21L120 15L122 36L89 42Z" fill="#ffeac1"/>
+<path d="M85 22L105 31L120 16M89 41L101 29M122 36L110 27" fill="none" stroke="#60372f" stroke-width="1.2" stroke-linejoin="miter"/>
+<path d="M103 27H110V29H112V35H109V37H104V35H101V30H103Z" fill="#bd4b44" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="105" y="29" width="3" height="4" fill="#e58a68"/>
+<path d="M64 27H78V29H64ZM57 33H73V35H57ZM66 39H78V41H66Z" fill="#60372f"/>
+</svg>
