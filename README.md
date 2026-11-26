@@ -328,6 +328,14 @@ Distant clouds sit behind flying birds; nearer clouds cover the distant birds,
 while foreground birds fly over both cloud layers. The browser respects reduced
 motion for the menu flights.
 
+The browser menu's parchment scroll, suspension birds, ribbon illustrations,
+and utility icons are original SVG pixel art (about 20 KB in total). Mode names
+and utility labels are native HTML text in the Lobby Pixel font, with visible
+keyboard focus and a crossed-out speaker when muted. On phones the utility
+labels stack below their icons; shorter viewports can scroll the menu. See
+[`web/src/main/webapp/art/README.md`](web/src/main/webapp/art/README.md) for asset
+editing notes.
+
 `PixelSprites` and `PixelFont` build their small texture atlases from original
 code-defined artwork at startup. An 800x400 framebuffer is scaled with nearest
 filtering inside the 1600x800 logical fit viewport, keeping the pixel grid

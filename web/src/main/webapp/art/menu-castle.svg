@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="144" height="48" viewBox="0 0 144 48" shape-rendering="crispEdges">
+<g transform="translate(2 29) scale(0.7)">
+<path d="M0 15V9H4V5H10V2H19V0H27V3H32V8H38V12H44V18H41V21H5V19H0Z" fill="#c4dfeb"/>
+<path d="M2 14V9H6V6H12V3H20V1H26V5H30V10H36V14H42V17H36V19H8V17H2Z" fill="#f0f7ed"/>
+<path d="M9 13V9H13V7H18V9H20V13H16V15H12V12H15V10H13V11H11V14H16V16H20V14H23V9H21V6H15V5H10V7H7V13Z" fill="#aeced7"/>
+</g>
+<g transform="translate(106 28) scale(0.75)">
+<path d="M0 15V9H4V5H10V2H19V0H27V3H32V8H38V12H44V18H41V21H5V19H0Z" fill="#c4dfeb"/>
+<path d="M2 14V9H6V6H12V3H20V1H26V5H30V10H36V14H42V17H36V19H8V17H2Z" fill="#f0f7ed"/>
+<path d="M9 13V9H13V7H18V9H20V13H16V15H12V12H15V10H13V11H11V14H16V16H20V14H23V9H21V6H15V5H10V7H7V13Z" fill="#aeced7"/>
+</g>
+<g transform="translate(45 19) scale(0.8)">
+<path d="M0 15V9H4V5H10V2H19V0H27V3H32V8H38V12H44V18H41V21H5V19H0Z" fill="#c4dfeb"/>
+<path d="M2 14V9H6V6H12V3H20V1H26V5H30V10H36V14H42V17H36V19H8V17H2Z" fill="#f0f7ed"/>
+<path d="M9 13V9H13V7H18V9H20V13H16V15H12V12H15V10H13V11H11V14H16V16H20V14H23V9H21V6H15V5H10V7H7V13Z" fill="#aeced7"/>
+</g>
+<path d="M65 43V22H75V16H93V22H104V43Z" fill="#e5bf8b" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<path d="M60 24L74 12L89 24ZM83 22L94 13L107 24Z" fill="#a94740" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<path d="M65 25H78V40H65ZM83 25H102V40H83Z" fill="#fff1ce"/>
+<path d="M73 43V33H75V30H79V33H81V43Z" fill="#60372f"/>
+<rect x="86" y="28" width="3" height="5" fill="#60372f"/>
+<rect x="94" y="28" width="3" height="5" fill="#60372f"/>
+<rect x="67" y="29" width="3" height="4" fill="#60372f"/>
+<rect x="74" y="6" width="1" height="8" fill="#60372f"/>
+<path d="M75 5H83V9H79V10H75Z" fill="#c65044" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="95" y="6" width="1" height="9" fill="#60372f"/>
+<path d="M96 5H103V9H96Z" fill="#c65044" stroke="#60372f" stroke-width="1" stroke-linejoin="miter"/>
+<rect x="61" y="44" width="48" height="2" fill="#7d9f9a"/>
+</svg>
