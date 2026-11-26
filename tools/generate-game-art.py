@@ -155,7 +155,8 @@ def strap(x):
     rect(2, 1, 3, 16, '#edab70')
     rect(11, 1, 2, 16, '#6d3338')
     path('M3 18H6V20H10V18H13V21L10 23H6L3 21Z', '#efb95b')
-    rect(7, 18, 3, 3, '#ffe5a1')
+    # Keep ornaments distinct from the exact bird highlight colors sampled by CI.
+    rect(7, 18, 3, 3, '#ffe4a0')
     end()
 
 
