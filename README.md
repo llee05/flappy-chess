@@ -315,11 +315,12 @@ about one square (100 pixels), reaching its peak in about 0.7 seconds. Movement
 tuning lives in `Birb`; its constants use pixels per physics step, not per frame.
 The board scales with the window while retaining its original 800x800 logical
 coordinates. Focus loss releases held controls. GPU resources are disposed on exit.
-The pixel-art presentation pairs moss-and-sand stone tiles with slate-blue
-panels, hand-authored chess sprites, and animated birds. Gold identifies the
-white bird; blue identifies the black bird. Pixel lettering, stepped frames,
-control keycaps, and segmented clock bars carry the style through the HUD and
-promotion/game-over screens. Square coordinates, legal destination diamonds,
+The pixel-art presentation frames cream-and-sage board squares with three
+hanging parchment scrolls against a bright layered sky. A continuous wooden
+rod, crimson leather straps, suspension birds, tassels, shield pennants, and
+mountain castles share the browser menu's palette and ornaments. Gold identifies
+the white bird; blue identifies the black bird. Slate clock faces retain active
+turn indicators, segmented time bars, and low-time warnings. Square coordinates, legal destination diamonds,
 capture brackets, and a coral check warning keep the board readable. The active
 clock changes to a warning color in the final 30 seconds.
 
@@ -336,8 +337,12 @@ labels stack below their icons; shorter viewports can scroll the menu. See
 [`web/src/main/webapp/art/README.md`](web/src/main/webapp/art/README.md) for asset
 editing notes.
 
-`PixelSprites` and `PixelFont` build their small texture atlases from original
-code-defined artwork at startup. An 800x400 framebuffer is scaled with nearest
+`PixelSprites` loads the outlined chess atlas and builds the animated bird atlas;
+`PixelFont` builds its small lettering atlas at startup. The original scroll
+scenery is an 800x400 nearest-filtered PNG (about 17 KB); regenerate it with
+`python3 tools/generate-game-art.py` (requires `rsvg-convert`). It reuses the
+menu's editable SVG ornaments and adds original scrolls, clouds, and landscapes.
+An 800x400 framebuffer is scaled with nearest
 filtering inside the 1600x800 logical fit viewport, keeping the pixel grid
 consistent as the window resizes. Visual pixel snapping does not affect bird
 physics or the coordinates used for pickup/drop.
