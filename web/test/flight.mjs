@@ -2,6 +2,8 @@
 // Specs use these instead of fixed delays so a slow runner only takes longer.
 
 const color = white => white ? '[255,229,161]' : '[198,240,231]';
+// GameRenderer's presentation rectangle; flight thresholds use the 800px model board.
+const board = { x: 448, y: 88, scaleX: 0.89, scaleY: 0.78 };
 
 /** Bird center in the 800px board's top-left coordinates on the desktop layout, or null. */
 export const desktopBirdY = (page, white) => page.evaluate(`new Promise(resolve => requestAnimationFrame(() => {
@@ -26,7 +28,7 @@ export const desktopBirdY = (page, white) => page.evaluate(`new Promise(resolve 
   const worldY = 800 - (renderedY - viewportTop) / scale;
   // Undo GameRenderer.BOARD_Y and BOARD_SCALE_Y so the existing rank thresholds
   // keep their legacy 800px-board meaning, including the sprite's 25px offset.
-  resolve(800 - (worldY - 56) / 0.86);
+  resolve(800 - (worldY - ${board.y}) / ${board.scaleY});
 }))`);
 
 /** Bird center in 800px board coordinates on touch layouts that crop the canvas to the board, or null. */
@@ -43,7 +45,12 @@ export const touchBird = (page, white = true) => page.evaluate(`new Promise(reso
       x += (i / 4) % 800; y += Math.floor(i / 4 / 800); count++;
     }
   }
-  resolve(count ? {x: x / count, y: y / count} : null);
+  // boardOnly shows the middle 800px of the 1600px world. Undo that crop and
+  // the board inset/scales before comparing with model-space flight bands.
+  resolve(count ? {
+    x: (x / count + 400 - ${board.x}) / ${board.scaleX},
+    y: (y / count - (800 - ${board.y} - 800 * ${board.scaleY})) / ${board.scaleY}
+  } : null);
 }))`);
 
 // A flap climbs about 100px (Birb.JUMP_SPEED and GRAVITY). It replaces the

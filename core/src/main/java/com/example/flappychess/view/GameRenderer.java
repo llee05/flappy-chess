@@ -31,21 +31,21 @@ import java.util.Locale;
 public final class GameRenderer implements Disposable {
     private static final float WORLD_WIDTH = 1600;
     private static final float WORLD_HEIGHT = 800;
+    // Matches the inset in tools/generate-game-art.py; all flight feedback uses these scales.
     static final float BOARD_X = 448;
-    static final float BOARD_Y = 56;
+    static final float BOARD_Y = 88;
     static final float BOARD_SCALE_X = 0.89f;
-    static final float BOARD_SCALE_Y = 0.86f;
+    static final float BOARD_SCALE_Y = 0.78f;
     static final float SQUARE_WIDTH = 89;
-    static final float SQUARE_HEIGHT = 86;
+    static final float SQUARE_HEIGHT = 78;
     static final float BOARD_WIDTH = SQUARE_WIDTH * 8;
     static final float BOARD_HEIGHT = SQUARE_HEIGHT * 8;
-    private static final float BOARD_CENTER_X = BOARD_X + BOARD_WIDTH / 2;
-    private static final Color LIGHT = Color.valueOf("daccaa");
-    private static final Color LIGHT_EDGE = Color.valueOf("bdb496");
-    private static final Color LIGHT_SHINE = Color.valueOf("e5d9ba");
-    private static final Color DARK = Color.valueOf("78958e");
-    private static final Color DARK_EDGE = Color.valueOf("657e7c");
-    private static final Color DARK_SHINE = Color.valueOf("87a297");
+    private static final Color LIGHT = Color.valueOf("ffe9c3");
+    private static final Color LIGHT_EDGE = Color.valueOf("dfc69e");
+    private static final Color LIGHT_SHINE = Color.valueOf("fff0cf");
+    private static final Color DARK = Color.valueOf("87a897");
+    private static final Color DARK_EDGE = Color.valueOf("739488");
+    private static final Color DARK_SHINE = Color.valueOf("96b3a0");
     private static final Color PANEL = Color.valueOf("20283c");
     private static final Color CARD = Color.valueOf("29364c");
     private static final Color EDGE = Color.valueOf("4b6d75");
@@ -60,20 +60,6 @@ public final class GameRenderer implements Disposable {
     private static final Color MENU_CLOUD_FAR_SHADE = Color.valueOf("a1cfe8");
     private static final Color MENU_CLOUD_NEAR = Color.valueOf("f3fbff");
     private static final Color MENU_CLOUD_NEAR_SHADE = Color.valueOf("b6ddee");
-    private static final Color SKY_HIGH = Color.valueOf("1c2e48");
-    private static final Color SKY_MID = Color.valueOf("2c4559");
-    private static final Color SKY_LOW = Color.valueOf("345569");
-    private static final Color HUD_PANEL = Color.valueOf("3c6477");
-    private static final Color HUD_PANEL_HIGH = Color.valueOf("4a7788");
-    private static final Color HUD_PANEL_GLOW = Color.valueOf("446f80");
-    private static final Color HUD_INSET = Color.valueOf("6f857c");
-    private static final Color FRAME = Color.valueOf("d9caa5");
-    private static final Color FRAME_HIGH = Color.valueOf("f0dba7");
-    private static final Color FRAME_SHADE = Color.valueOf("9c8e73");
-    private static final Color ORNAMENT_HIGH = Color.valueOf("f4ce7b");
-    private static final Color PILLAR_FILL = Color.valueOf("769289");
-    private static final Color CLOUD = Color.valueOf("e4d6ad");
-    private static final Color CLOUD_SHADE = Color.valueOf("cbb992");
     private static final Color MUTED = Color.valueOf("94a3b8");
     private static final Color DANGER = Color.valueOf("ed8c78");
     private static final Color SELECTED = Color.valueOf("baa96d");
@@ -86,6 +72,7 @@ public final class GameRenderer implements Disposable {
     private final ShapeRenderer shapes = new ShapeRenderer();
     private final PixelFont font = new PixelFont();
     private final PixelSprites sprites = new PixelSprites();
+    private final Texture scrollArtwork = new Texture(Gdx.files.internal("images/game-scrolls.png"));
     private final ActionFeedback feedback = new ActionFeedback();
     private final PostgameReview review = new PostgameReview();
     // A fixed raster gives shapes, lettering, and sprites the same two-logical-pixel grid.
@@ -100,6 +87,7 @@ public final class GameRenderer implements Disposable {
     public GameRenderer() { this(false); }
 
     public GameRenderer(boolean online) {
+        scrollArtwork.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         canvas.getColorBufferTexture().setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         canvasImage = new TextureRegion(canvas.getColorBufferTexture());
         canvasImage.flip(false, true);
@@ -164,9 +152,12 @@ public final class GameRenderer implements Disposable {
         shapes.setProjectionMatrix(rasterProjection);
         batch.setProjectionMatrix(rasterProjection);
         canvas.begin();
-        ScreenUtils.clear(SKY_HIGH);
+        ScreenUtils.clear(MENU_SKY);
+        batch.begin();
+        batch.setColor(Color.WHITE);
+        batch.draw(scrollArtwork, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+        batch.end();
         beginShapes();
-        drawSkyBackdrop();
         drawBoard(game);
         drawPanels(game);
         if (!review.isActive()) {
@@ -213,7 +204,7 @@ public final class GameRenderer implements Disposable {
         }
         canvas.end();
 
-        ScreenUtils.clear(SKY_HIGH);
+        ScreenUtils.clear(MENU_SKY);
         viewport.apply();
         batch.setProjectionMatrix(viewport.getCamera().combined);
         float shakeX = review.isActive() ? 0 : feedback.shakeX();
@@ -239,7 +230,7 @@ public final class GameRenderer implements Disposable {
                 rect(x + bx(2), y + by(4), bx(96), by(94), base);
                 rect(x + bx(4), y + by(96), bx(92), by(2), shine);
                 rect(x + bx(2), y + by(6), bx(2), by(88), shine);
-                // Sparse, deterministic stone flecks: no texture shimmer between frames.
+                // Sparse paper grain stays fixed to the board as the birds fly.
                 for (int i = 0; i < 4; i++) {
                     int dx = 12 + (row * 17 + col * 29 + i * 23) % 74;
                     int dy = 12 + (row * 31 + col * 11 + i * 19) % 74;
@@ -289,177 +280,36 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanels(GameSession game) {
-        if (!boardOnly) {
-            drawPanelShell(72);
-            drawPanelShell(1192);
-
-            drawPillar(72);
-            drawPillar(368);
-            drawPillar(1192);
-            drawPillar(1488);
-
-            largeOrnament(240, 682);
-            divider(240, 628);
-            banner(240, 590);
-            diamond(240, 446, 7, GOLD);
-            cloud(174, 304, 1.25f);
-            cloud(238, 246, 0.8f);
-            divider(240, 170);
-
-            drawClockCard(game, Side.BLACK, 650);
-            divider(1360, 620);
-            banner(1360, 584);
-            diamond(1360, 440, 7, GOLD);
-            cloud(1292, 304, 1.25f);
-            cloud(1364, 246, 0.8f);
-            divider(1360, 170);
-            drawClockCard(game, Side.WHITE, 32);
-        }
-
-        drawBoardFrame();
-    }
-
-    private void drawSkyBackdrop() {
-        rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT, SKY_HIGH);
-        rect(16, 12, WORLD_WIDTH - 32, WORLD_HEIGHT - 24, SKY_MID);
-        rect(34, 24, WORLD_WIDTH - 68, WORLD_HEIGHT - 48, SKY_LOW);
-        rect(54, 36, WORLD_WIDTH - 108, WORLD_HEIGHT - 72, SKY_MID);
-    }
-
-    private void drawPanelShell(float x) {
-        stepped(x, 10, 336, 780, HUD_PANEL, FRAME_SHADE);
-        rect(x + 18, 28, 300, 744, HUD_PANEL_HIGH);
-        rect(x + 28, 38, 280, 724, HUD_PANEL);
-        rect(x + 42, 54, 252, 692, HUD_PANEL_GLOW);
-        corners(x + 34, 44, 268, 712, 26, 3, HUD_INSET);
-        rect(x + 40, 68, 3, 664, HUD_PANEL_HIGH);
-        rect(x + 293, 68, 3, 664, EDGE);
-    }
-
-    private void drawPillar(float x) {
-        rect(x + 6, 82, 42, 636, INK);
-        rect(x + 4, 90, 42, 620, FRAME_SHADE);
-        rect(x + 8, 86, 34, 628, FRAME);
-        rect(x + 11, 96, 28, 608, PILLAR_FILL);
-        rect(x + 14, 104, 6, 592, HUD_INSET);
-        rect(x + 35, 104, 4, 592, EDGE);
-
-        stepped(x + 8, 620, 34, 62, PILLAR_FILL, FRAME_SHADE);
-        diamond(x + 25, 651, 14, INK);
-        diamond(x + 25, 651, 10, FRAME_HIGH);
-        diamond(x + 25, 651, 5, GOLD);
-        stepped(x + 8, 118, 34, 62, PILLAR_FILL, FRAME_SHADE);
-        diamond(x + 25, 149, 14, INK);
-        diamond(x + 25, 149, 10, FRAME_HIGH);
-        diamond(x + 25, 149, 5, GOLD);
-
-        pillarCap(x, false);
-        pillarCap(x, true);
-    }
-
-    private void pillarCap(float x, boolean base) {
-        if (base) {
-            rect(x - 10, 16, 70, 24, INK);
-            rect(x - 8, 20, 66, 24, FRAME_SHADE);
-            rect(x - 3, 26, 56, 18, FRAME);
-            rect(x + 4, 32, 42, 10, PILLAR_FILL);
-            rect(x - 4, 46, 58, 18, FRAME_SHADE);
-            rect(x, 50, 50, 16, FRAME);
-            rect(x + 5, 56, 40, 8, PILLAR_FILL);
-            rect(x + 4, 66, 42, 22, FRAME);
-        } else {
-            rect(x + 4, 712, 42, 22, FRAME);
-            rect(x, 734, 50, 16, FRAME);
-            rect(x - 4, 738, 58, 18, FRAME_SHADE);
-            rect(x + 5, 740, 40, 8, PILLAR_FILL);
-            rect(x - 3, 754, 56, 18, FRAME);
-            rect(x - 8, 756, 66, 24, FRAME_SHADE);
-            rect(x - 10, 774, 70, 10, INK);
-            rect(x + 4, 758, 42, 10, PILLAR_FILL);
-        }
-    }
-
-    private void largeOrnament(float x, float y) {
-        diamond(x + 4, y - 4, 24, INK);
-        diamond(x, y, 22, GOLD);
-        diamond(x - 3, y + 4, 13, ORNAMENT_HIGH);
-    }
-
-    private void divider(float x, float y) {
-        rect(x - 104, y - 1, 86, 3, FRAME_SHADE);
-        rect(x - 104, y + 2, 86, 3, GOLD);
-        rect(x + 18, y - 1, 86, 3, FRAME_SHADE);
-        rect(x + 18, y + 2, 86, 3, GOLD);
-        diamond(x, y + 2, 9, GOLD);
-        diamond(x, y + 3, 4, FRAME_HIGH);
-    }
-
-    private void banner(float centerX, float rodY) {
-        float left = centerX - 60;
-        float right = centerX + 60;
-        rect(left + 5, rodY - 160, 120, 150, INK);
-        triangle(left + 5, rodY - 160, centerX + 5, rodY - 208, right + 5, rodY - 160, INK);
-        rect(left, rodY - 156, 120, 146, FRAME_SHADE);
-        triangle(left, rodY - 156, centerX, rodY - 202, right, rodY - 156, FRAME_SHADE);
-        rect(left + 4, rodY - 152, 112, 140, FRAME);
-        triangle(left + 4, rodY - 152, centerX, rodY - 194, right - 4, rodY - 152, FRAME);
-        rect(left + 9, rodY - 148, 102, 132, HUD_PANEL);
-        triangle(left + 9, rodY - 148, centerX, rodY - 184, right - 9, rodY - 148, HUD_PANEL);
-        rect(left + 12, rodY - 142, 4, 122, HUD_PANEL_HIGH);
-        rect(right - 16, rodY - 142, 4, 122, EDGE);
-
-        rect(centerX - 82, rodY, 164, 9, INK);
-        rect(centerX - 78, rodY + 4, 156, 8, FRAME_SHADE);
-        rect(centerX - 72, rodY + 7, 144, 5, FRAME_HIGH);
-        rect(centerX - 90, rodY + 1, 14, 16, FRAME_SHADE);
-        rect(centerX + 76, rodY + 1, 14, 16, FRAME_SHADE);
-        diamond(centerX - 88, rodY + 9, 8, GOLD);
-        diamond(centerX + 88, rodY + 9, 8, GOLD);
-    }
-
-    private void drawBoardFrame() {
-        rect(BOARD_X - 14, BOARD_Y - 14, BOARD_WIDTH + 28, 14, INK);
-        rect(BOARD_X - 14, BOARD_Y + BOARD_HEIGHT, BOARD_WIDTH + 28, 14, INK);
-        rect(BOARD_X - 14, BOARD_Y - 14, 14, BOARD_HEIGHT + 28, INK);
-        rect(BOARD_X + BOARD_WIDTH, BOARD_Y - 14, 14, BOARD_HEIGHT + 28, INK);
-
-        rect(BOARD_X - 10, BOARD_Y - 10, BOARD_WIDTH + 20, 10, FRAME_SHADE);
-        rect(BOARD_X - 10, BOARD_Y + BOARD_HEIGHT, BOARD_WIDTH + 20, 10, FRAME);
-        rect(BOARD_X - 10, BOARD_Y - 10, 10, BOARD_HEIGHT + 20, FRAME);
-        rect(BOARD_X + BOARD_WIDTH, BOARD_Y - 10, 10, BOARD_HEIGHT + 20, FRAME_SHADE);
-        rect(BOARD_X, BOARD_Y - 6, BOARD_WIDTH, 3, FRAME_HIGH);
-        rect(BOARD_X, BOARD_Y + BOARD_HEIGHT + 3, BOARD_WIDTH, 3, FRAME_HIGH);
-
-        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 8, 13, INK);
-        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 10, 11, FRAME);
-        diamond(BOARD_CENTER_X, BOARD_Y + BOARD_HEIGHT + 11, 5, FRAME_HIGH);
-        diamond(BOARD_CENTER_X, BOARD_Y - 8, 13, INK);
-        diamond(BOARD_CENTER_X, BOARD_Y - 7, 11, FRAME);
-        diamond(BOARD_CENTER_X, BOARD_Y - 5, 5, FRAME_HIGH);
-    }
-
-    private void cloud(float x, float y, float scale) {
-        float p = 8 * scale;
-        rect(x + p, y, p * 7, p, CLOUD_SHADE);
-        rect(x, y + p, p * 10, p, CLOUD_SHADE);
-        rect(x + p, y + p * 2, p * 8, p, CLOUD);
-        rect(x + p * 2, y + p * 3, p * 6, p, CLOUD);
-        rect(x + p * 3, y + p * 4, p * 2, p, CLOUD);
-        rect(x + p * 6, y + p * 4, p, p, CLOUD);
+        if (boardOnly) return;
+        drawClockCard(game, Side.BLACK, 590);
+        drawClockCard(game, Side.WHITE, 98);
     }
 
     private void drawClockCard(GameSession game, Side side, float y) {
         boolean active = !game.isGameOver() && game.getChess().getSideToMove() == side;
         long seconds = game.getClock().getRemainingSeconds(side);
         Color color = game.isTimed() && seconds <= 30 ? DANGER : accent(side);
-        Color border = side == Side.WHITE ? color : EDGE;
-        stepped(1260, y, 200, 112, CARD, border);
-        outline(1268, y + 8, 184, 96, 3, active ? color : PANEL);
-        if (active) rect(1260, y + 22, 5, 68, color);
+        // A warm gold bevel surrounds the slate face, with a side-colored active inset.
+        clockBevel(1220, y - 4, 216, 86, INK);
+        clockBevel(1216, y, 216, 86, INK);
+        clockBevel(1218, y + 2, 212, 82, GOLD);
+        clockBevel(1222, y + 6, 204, 74, GOLD_BRIGHT);
+        clockBevel(1226, y + 10, 196, 66, PANEL);
+        clockBevel(1230, y + 14, 188, 58, active ? color : CARD);
+        clockBevel(1232, y + 16, 184, 54, PANEL);
+        diamond(1228, y + 43, 3, active ? color : GOLD);
+        diamond(1420, y + 43, 3, active ? color : GOLD);
         for (int i = 0; i < 19; i++) {
             double fraction = game.isTimed() ? seconds * 1000.0 / game.getSettings().initialMillis() : 1;
-            rect(1278 + i * 9, y + 12, 7, 4, i < (int) Math.ceil(19 * Math.min(1, fraction)) ? color : EDGE);
+            rect(1242 + i * 9, y + 15, 7, 3,
+                    i < (int) Math.ceil(19 * Math.min(1, fraction)) ? color : EDGE);
         }
+    }
+
+    private void clockBevel(float x, float y, float width, float height, Color color) {
+        rect(x + 12, y, width - 24, height, color);
+        rect(x + 6, y + 6, width - 12, height - 12, color);
+        rect(x, y + 12, width, height - 24, color);
     }
 
     private void drawCoordinates() {
@@ -472,10 +322,11 @@ public final class GameRenderer implements Disposable {
     }
 
     private void drawPanelText(GameSession game) {
-        drawBirdSprite(Side.BLACK, 240, 510, 6.5f, false, 0);
-        drawBirdSprite(Side.WHITE, 1360, 504, 6.5f, true, 0);
-        drawClockText(game, Side.BLACK, 650);
-        drawClockText(game, Side.WHITE, 32);
+        if (boardOnly) return;
+        drawBirdSprite(Side.BLACK, 284, 464, 6.5f, false, 0);
+        drawBirdSprite(Side.WHITE, 1324, 460, 6.5f, true, 0);
+        drawClockText(game, Side.BLACK, 590);
+        drawClockText(game, Side.WHITE, 98);
     }
 
     private CompletedMove lastMove(GameSession game) {
@@ -487,8 +338,8 @@ public final class GameRenderer implements Disposable {
     private void drawClockText(GameSession game, Side side, float y) {
         long seconds = game.getClock().getRemainingSeconds(side);
         if (game.isTimed()) centered(String.format(Locale.ROOT, "%02d:%02d", seconds / 60, seconds % 60),
-                1360, y + 72, 5, seconds <= 30 ? DANGER : CREAM);
-        else centered("UNTIMED", 1360, y + 68, 3, CREAM);
+                1324, y + 64, 6, seconds <= 30 ? DANGER : GOLD_BRIGHT);
+        else centered("UNTIMED", 1324, y + 58, 4, GOLD_BRIGHT);
     }
 
     private void drawBirdMarkers(GameSession game) {
@@ -830,6 +681,7 @@ public final class GameRenderer implements Disposable {
         feedback.dispose();
         canvas.dispose();
         sprites.dispose();
+        scrollArtwork.dispose();
         font.dispose();
         batch.dispose();
         shapes.dispose();
