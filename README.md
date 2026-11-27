@@ -133,6 +133,9 @@ npm ci --prefix web --ignore-scripts  # Install the test-only local PeerServer
 CHROME_BIN=google-chrome ./gradlew :web:browserTest
 ```
 
+`./gradlew :web:networkTest` runs the lobby and online readiness unit checks
+using Node.js alone, without Chromium or a signaling server. CI runs these too.
+
 The local-play smoke check uses Chromium's DevTools protocol without npm
 dependencies. It loads the game under `/flappy-chess/`, exercises pickup/drop,
 keyboard input, coasting after focus loss, resizing, WebGL, and returning to the

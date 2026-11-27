@@ -606,13 +606,16 @@
       try { connection.send(text); }
       catch { fail('The peer connection closed. Return to the lobby to play again.'); }
     },
-    renderStatus(text, host, playing, side) {
+    renderStatus(text, host, playing, side, timeControl) {
       if (ended) return;
       byId('player-role').textContent = `YOU · ${side === 'WHITE' ? 'WHITE ↓' : 'BLACK ↑'}`;
       byId('player-role').title = host ? 'You are the room creator' : 'You are the room guest';
       document.body.dataset.side = side;
       if (byId('network-status').textContent !== text) byId('network-status').textContent = text;
       if (playing) {
+        // Data/timer callbacks can start play before the next frame. Publish the
+        // authoritative settings in the same callback, before exposing readiness.
+        document.body.dataset.timeControl = timeControl;
         byId('welcome').hidden = true;
         if (document.body.dataset.game !== 'ready') {
           document.body.dataset.game = 'ready';
