@@ -89,6 +89,47 @@ class PeerMatchTest {
         assertEquals(pair.host.getSession().snapshot(), PeerProtocol.snapshot(PeerProtocol.snapshot(pair.host.getSession().snapshot())));
     }
 
+    @Test void guestCannotStartOrPlayUntilDelayedSnapshotInstallsExactHostSettings() {
+        for (MatchSettings settings : new MatchSettings[] {
+                MatchSettings.minutes(1, 5), MatchSettings.UNTIMED,
+                MatchSettings.minutes(60, 60), MatchSettings.DEFAULT }) {
+            for (boolean guestReadyFirst : new boolean[] {false, true}) {
+                AtomicLong time = new AtomicLong();
+                ArrayDeque<String> toGuest = new ArrayDeque<>(), toHost = new ArrayDeque<>();
+                PeerMatch host = new PeerMatch(true, toGuest::add, time::get, settings);
+                PeerMatch guest = new PeerMatch(false, toHost::add, time::get);
+                if (guestReadyFirst) {
+                    guest.open();
+                    host.receive(toHost.remove()); // Ready arrives before the host's first frame.
+                    assertFalse(host.isStarted());
+                    host.open();
+                } else {
+                    host.open();
+                    guest.receive(toGuest.remove());
+                    guest.open();
+                    host.receive(toHost.remove());
+                }
+                assertTrue(host.isStarted());
+                assertFalse(guest.isStarted(), "Loading/ready packets cannot start a replica");
+                assertFalse(guest.keyDown(Keys.D), "No input before authoritative settings arrive");
+                double blackX = guest.getSession().getBlack().getX();
+                time.addAndGet(100_000_000L);
+                guest.update(0.1f); // Placeholder frame while the initial state is delayed.
+                assertEquals(blackX, guest.getSession().getBlack().getX());
+                assertEquals(MatchSettings.DEFAULT, guest.getSession().getSettings());
+
+                while (!toGuest.isEmpty()) guest.receive(toGuest.remove());
+                // This is the state observed by the packet callback, before another update/render.
+                assertTrue(guest.isStarted());
+                assertFalse(guest.isDisconnected());
+                assertEquals(settings, guest.getSession().getSettings());
+                assertEquals(settings.initialMillis(), guest.getSession().getClock().getRemainingMillis(Side.BLACK));
+                assertEquals(settings.timed(), guest.getSession().isTimed());
+                assertTrue(guest.keyDown(Keys.D));
+            }
+        }
+    }
+
     @Test void untimedReplicasDoNotConsumeClockTimeAndRematchesKeepHostSettings() {
         Pair untimed = new Pair(MatchSettings.UNTIMED);
         untimed.advance(180);

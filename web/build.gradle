@@ -29,6 +29,12 @@ tasks.register('dist', JavaExec) {
 
 tasks.named('assemble') { dependsOn 'dist' }
 
+tasks.register('networkTest', Exec) {
+    group = 'verification'
+    description = 'Check online lobby and readiness publication in Node, without a browser.'
+    commandLine 'node', '--test', file('test/network.test.mjs').absolutePath
+}
+
 tasks.register('run', JavaExec) {
     group = 'application'
     description = 'Build and serve the browser game at http://localhost:8080.'

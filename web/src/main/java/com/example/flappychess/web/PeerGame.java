@@ -65,7 +65,6 @@ final class PeerGame extends ApplicationAdapter {
         match.update(Gdx.graphics.getDeltaTime());
         renderer.render(match.getSession());
         WebLauncher.describeFeedback(renderer.feedbackMessage(), renderer.isSoundEnabled());
-        WebLauncher.describeTimeControl(match.getSession().getSettings().label());
         WebLauncher.describeHistory(match.getSession(), renderer.getReview());
         presentNetwork();
         WebLauncher.describeSeries(match.getSession());
@@ -80,7 +79,8 @@ final class PeerGame extends ApplicationAdapter {
 
     // DOM notices must update even when RAF is suspended in a hidden page.
     private void presentNetwork() {
-        PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name());
+        PeerNetwork.status(match.status(), host, match.isStarted(), match.getOwnSide().name(),
+                match.getSession().getSettings().label());
         PeerNetwork.health(match.connectionHealthLabel(), match.getConnectionQuality().name().toLowerCase(),
                 (int) match.getRttMillis(), (int) match.getStateAgeMillis());
         PeerNetwork.interruption(match.isInterrupted() && !match.isDisconnected() ? match.status() : "");
